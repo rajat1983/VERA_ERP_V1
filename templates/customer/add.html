@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block content %}
+
+<h3>Add Customer</h3>
+
+<form method="post">
+  Name:  <input class="form-control mb-2" name="name"  required>
+  Email:  <input class="form-control mb-2" name="email" >
+  Phone :<input class="form-control mb-2" name="phone" >
+  Address :<input class="form-control mb-2" name="address" >
+   Status:
+<select name="status" class="form-control">
+  <option value="active">Active</option>
+  <option value="inactive">Inactive</option>
+</select>
+  <button class="btn btn-success">Save</button>
+   <a href="/customers" class="btn btn-secondary">Cancel</a>
+</form> &nbsp;
+
+{% endblock %}
+
+

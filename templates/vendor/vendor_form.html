@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+
+            <div class="card shadow">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">{{ action }} Vendor</h5>
+                </div>
+
+                <div class="card-body">
+<form method="post">
+
+  <label>Name *</label>
+  <input name="name" class="form-control mb-2"
+         value="{{ vendor.name if vendor else '' }}" required>
+
+  <label>Email</label>
+  <input name="email" class="form-control mb-2"
+         value="{{ vendor.email if vendor else 'testvendor@gmail.com' }}">
+
+  <label>Phone</label>
+  <input name="phone" class="form-control mb-2" value="{{ vendor.phone if vendor else '' }}">
+
+  <label>Address</label>
+  <textarea name="address" class="form-control mb-2">{{ vendor.address if vendor else '' }}</textarea>
+
+  <label>GST Number</label>
+  <input name="gst_number" class="form-control mb-2" value="{{ vendor.gst_number if vendor else '' }}">
+  <label>Status</label>
+
+ <select name="status" class="form-control">
+  <option value="active">Active</option>
+  <option value="inactive">Inactive</option>
+</select>
+  
+  
+
+  <button class="btn btn-success mt-2">Save</button>
+  <a href="/vendors" class="btn btn-secondary mt-2">Cancel</a>
+
+</form>
+</div>
+            </div>
+
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,7 @@
+- [x] Standardize imports in employee_controller.py to use 'from models import employee_model as model' and use 'model' consistently.
+- [x] Uncomment and fix the search_employees function in employee_model.py.
+- [x] Improve email validation using a proper regex in employee_controller.py.
+- [x] Add validation to the add function in employee_controller.py.
+- [x] Remove the duplicate update_employee function in employee_model.py and use model.update in controller.
+- [x] Add flash messages for add and delete operations in employee_controller.py.
+- [x] Test the application after changes.

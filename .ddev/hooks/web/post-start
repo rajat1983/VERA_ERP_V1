@@ -1,0 +1,22 @@
+#!/bin/bash
+
+LOG="/tmp/ollama-hook.log"
+echo "=== OLLAMA AUTO-START HOOK ===" > $LOG
+date >> $LOG
+
+set +e
+
+# Start Ollama if not running
+if ! ss -tulpen | grep -q 11434; then
+  echo "Starting Ollama..." >> $LOG
+  nohup /usr/local/bin/ollama serve >> $LOG 2>&1 &
+  sleep 5
+else
+  echo "Ollama already running" >> $LOG
+fi
+
+# Ensure model
+echo "Ensuring mistral model..." >> $LOG
+/../usr/local/bin/ollama pull mistral >> $LOG 2>&1 || true
+
+echo "=== HOOK END ===" >> $LOG

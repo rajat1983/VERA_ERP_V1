@@ -1,0 +1,102 @@
+{% extends "base.html" %}
+{% block content %}
+
+<h3>Vendors</h3>
+<a href="/vendors/add" class="btn btn-primary mb-3"> + Add Vendor</a>
+
+<form method="get" class="mb-3">
+  <div class="input-group">
+    <input type="text" id="vendorSearch" class="form-control " placeholder="Search by name or Email..."
+  onkeyup="autoSearchVendor()"/>    
+        <button class="btn btn-outline-success my-2 my-sm-0">Search</button>
+    <a href="/vendors" class="btn btn-outline-dark">Reset</a>
+  </div>
+</form>
+
+<table class="table table-bordered table-striped">
+  <thead>
+    <tr>
+      <th>ID</th>
+      <th>Name</th>
+      <th>Email</th>
+      <th>Phone</th>
+      <th>Address</th>
+      <th>GST</th>
+      <th>Status</th>
+      <th>Action</th>
+    </tr>
+  </thead>
+  <tbody id="vendorTable">
+  {% for v in vendors %}
+    <tr>
+      <td>{{ v.id }}</td>
+      <td>{{ v.name }}</td>
+      <td>{{ v.email }}</td>
+      <td>{{ v.phone }}</td>
+      <td>{{ v.address }}</td>
+      <td>{{ v.gst_number }}</td>
+      <td>{{ v.status }}</td>
+      <td>
+        <a href="/vendors/edit/{{ v.id }}" class="btn btn-warning btn-sm">Edit</a>
+        <a href="/vendors/delete/{{ v.id }}" class="btn btn-danger btn-sm">Delete</a>
+      </td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+<nav>
+  <ul class="pagination">
+
+    <!-- Prev -->
+    <li class="page-item {% if page == 1 %}disabled{% endif %}">
+      <a class="page-link" href="?page={{ page-1 }}">Previous</a>
+    </li>
+
+    <!-- Page Numbers -->
+    {% for p in range(1, total_pages + 1) %}
+    <li class="page-item {% if p == page %}active{% endif %}">
+      <a class="page-link" href="?page={{ p }}">{{ p }}</a>
+    </li>
+    {% endfor %}
+
+    <!-- Next -->
+    <li class="page-item {% if page == total_pages %}disabled{% endif %}">
+      <a class="page-link" href="?page={{ page+1 }}">Next</a>
+    </li>
+
+  </ul>
+</nav>
+<script>
+  function autoSearchVendor() {
+  const q = document.getElementById("vendorSearch").value;
+
+   fetch(`/vendor-search?q=${encodeURIComponent(q)}`)
+    .then(res => res.json())
+    .then(data => {
+      let rows = "";
+
+      data.forEach(vr => {
+        rows += `
+          <tr>
+            <td>${vr.id}</td>
+            <td>${vr.name}</td>
+            <td>${vr.email}</td>
+            <td>${vr.phone}</td>
+            <td>${vr.address }</td>
+            <td>${vr.gst_number }</td>
+            <td>${vr.status }</td>
+                     
+            <td>
+              <a href="/products/edit/${vr.id}" class="btn btn-sm btn-warning">Edit</a>
+              <a href="products/delete/${vr.id}" class="btn btn-sm btn-danger">Delete</a>
+            </td>
+          </tr>
+        `;
+      });
+
+      document.getElementById("vendorTable").innerHTML = rows;
+    })
+    .catch(err => console.error(err));
+}
+</script>
+{% endblock %}

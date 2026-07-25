@@ -1,0 +1,158 @@
+#ddev-generated
+# If you remove the ddev-generated line above you
+# are responsible for maintaining this file. DDEV will not then
+# update it, for example if you add `additional_hostnames`, etc.
+
+http:
+  routers:
+    python-mysql-ddev-xhgui-80-http:
+      entrypoints:
+        - http-8143
+      rule: HostRegexp(`^python-mysql-ddev\.ddev\.site$`)
+      
+      service: "python-mysql-ddev-xhgui-80"
+      ruleSyntax: v3
+      tls: false
+      # middlewares:
+      #   - "python-mysql-ddev-redirectHttps"
+    python-mysql-ddev-phpmyadmin-80-http:
+      entrypoints:
+        - http-8036
+      rule: HostRegexp(`^python-mysql-ddev\.ddev\.site$`)
+      
+      service: "python-mysql-ddev-phpmyadmin-80"
+      ruleSyntax: v3
+      tls: false
+      # middlewares:
+      #   - "python-mysql-ddev-redirectHttps"
+    python-mysql-ddev-web-80-http:
+      entrypoints:
+        - http-80
+      rule: HostRegexp(`^python-mysql-ddev\.ddev\.site$`)
+      
+      service: "python-mysql-ddev-web-80"
+      ruleSyntax: v3
+      tls: false
+      # middlewares:
+      #   - "python-mysql-ddev-redirectHttps"
+    python-mysql-ddev-web-8025-http:
+      entrypoints:
+        - http-8025
+      rule: HostRegexp(`^python-mysql-ddev\.ddev\.site$`)
+      
+      service: "python-mysql-ddev-web-8025"
+      ruleSyntax: v3
+      tls: false
+      # middlewares:
+      #   - "python-mysql-ddev-redirectHttps"
+    python-mysql-ddev-web-5000-http:
+      entrypoints:
+        - http-5000
+      rule: HostRegexp(`^python-mysql-ddev\.ddev\.site$`)
+      
+      service: "python-mysql-ddev-web-5000"
+      ruleSyntax: v3
+      tls: false
+      # middlewares:
+      #   - "python-mysql-ddev-redirectHttps"
+    
+    
+    python-mysql-ddev-xhgui-80-https:
+      entrypoints:
+        - http-8142
+      rule: HostRegexp(`^python-mysql-ddev\.ddev\.site$`)
+      
+      service: "python-mysql-ddev-xhgui-80"
+      ruleSyntax: v3
+      
+      tls: true
+      
+    
+    python-mysql-ddev-phpmyadmin-80-https:
+      entrypoints:
+        - http-8037
+      rule: HostRegexp(`^python-mysql-ddev\.ddev\.site$`)
+      
+      service: "python-mysql-ddev-phpmyadmin-80"
+      ruleSyntax: v3
+      
+      tls: true
+      
+    
+    
+    
+    python-mysql-ddev-web-80-https:
+      entrypoints:
+        - http-443
+      rule: HostRegexp(`^python-mysql-ddev\.ddev\.site$`)
+      
+      service: "python-mysql-ddev-web-80"
+      ruleSyntax: v3
+      
+      tls: true
+      
+    python-mysql-ddev-web-8025-https:
+      entrypoints:
+        - http-8026
+      rule: HostRegexp(`^python-mysql-ddev\.ddev\.site$`)
+      
+      service: "python-mysql-ddev-web-8025"
+      ruleSyntax: v3
+      
+      tls: true
+      
+    python-mysql-ddev-web-5000-https:
+      entrypoints:
+        - http-5001
+      rule: HostRegexp(`^python-mysql-ddev\.ddev\.site$`)
+      
+      service: "python-mysql-ddev-web-5000"
+      ruleSyntax: v3
+      
+      tls: true
+      
+    
+
+  middlewares:
+    python-mysql-ddev-redirectHttps:
+      redirectScheme:
+        scheme: https
+        permanent: true
+
+  services:
+    python-mysql-ddev-xhgui-80:
+      loadbalancer:
+        servers:
+          - url: http://ddev-python-mysql-ddev-xhgui:80
+        
+    
+    python-mysql-ddev-phpmyadmin-80:
+      loadbalancer:
+        servers:
+          - url: http://ddev-python-mysql-ddev-phpmyadmin:80
+        
+    
+    python-mysql-ddev-web-80:
+      loadbalancer:
+        servers:
+          - url: http://ddev-python-mysql-ddev-web:80
+        
+    python-mysql-ddev-web-8025:
+      loadbalancer:
+        servers:
+          - url: http://ddev-python-mysql-ddev-web:8025
+        
+    python-mysql-ddev-web-5000:
+      loadbalancer:
+        servers:
+          - url: http://ddev-python-mysql-ddev-web:5000
+        
+    
+    
+    
+    
+
+tls:
+  certificates:
+    - certFile: /mnt/ddev-global-cache/traefik/certs/python-mysql-ddev.crt
+      keyFile: /mnt/ddev-global-cache/traefik/certs/python-mysql-ddev.key

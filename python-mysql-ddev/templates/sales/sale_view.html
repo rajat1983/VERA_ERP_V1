@@ -1,0 +1,259 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<style>
+.invoice-box{
+    background:#fff;
+    padding:25px;
+    border-radius:8px;
+    box-shadow:0 0 10px rgba(0,0,0,.1);
+}
+
+.summary-table td,
+.summary-table th{
+    padding:8px;
+}
+
+@media print{
+
+.btn{
+    display:none;
+}
+
+body{
+    margin:0;
+    background:#fff;
+}
+
+.invoice-box{
+    box-shadow:none;
+    border:none;
+}
+
+}
+</style>
+
+<div class="invoice-box">
+
+<div class="row">
+
+<div class="col-md-6">
+
+<h2 class="text-primary fw-bold">
+Inventory Management System
+</h2>
+
+<h4>SALES INVOICE</h4>
+
+</div>
+
+<div class="col-md-6 text-end">
+
+<h5><strong>Invoice No</strong></h5>
+
+<h4>{{ sale.invoice_no }}</h4>
+
+<p>
+<b>Date :</b>
+{{ sale.sale_date }}
+</p>
+
+</div>
+
+</div>
+
+<hr>
+
+<div class="row">
+
+<div class="col-md-6">
+
+<div class="card">
+
+<div class="card-header bg-light">
+
+<strong>Customer Details</strong>
+
+</div>
+
+<div class="card-body">
+
+<p>
+<b>Name :</b>
+{{ sale.customer_name }}
+</p>
+
+<p>
+<b>Remarks :</b>
+{{ sale.remarks }}
+</p>
+
+</div>
+
+</div>
+
+</div>
+
+</div>
+
+<br>
+
+<table class="table table-bordered">
+
+<thead class="table-dark">
+
+<tr>
+
+<th width="5%">#</th>
+
+<th>Product</th>
+
+<th class="text-center">Qty</th>
+
+<th class="text-end">Rate</th>
+
+<th class="text-end">Amount</th>
+
+</tr>
+
+</thead>
+
+<tbody>
+
+{% set ns = namespace(total=0) %}
+
+{% for i in items %}
+
+{% set ns.total = ns.total + i.line_total %}
+
+<tr>
+
+<td>{{ loop.index }}</td>
+
+<td>{{ i.product_name }}</td>
+
+<td class="text-center">{{ i.qty }}</td>
+
+<td class="text-end">
+₹ {{ "{:,.2f}".format(i.price) }}
+</td>
+
+<td class="text-end">
+₹ {{ "{:,.2f}".format(i.line_total) }}
+</td>
+
+</tr>
+
+{% endfor %}
+
+{% set discount_amount = ns.total * sale.discount / 100 %}
+
+</tbody>
+
+<tfoot>
+
+<tr>
+
+<th colspan="4" class="text-end">
+
+Sub Total
+
+</th>
+
+<th class="text-end">
+
+₹ {{ "{:,.2f}".format(ns.total) }}
+
+</th>
+
+</tr>
+
+<tr>
+
+<th colspan="4" class="text-end">
+
+Discount ({{ "%.0f"|format(sale.discount) }}%)
+
+</th>
+
+<th class="text-end text-danger">
+
+- ₹ {{ "{:,.2f}".format(discount_amount) }}
+
+</th>
+
+</tr>
+
+<tr class="table-success">
+
+<th colspan="4" class="text-end">
+
+Grand Total
+
+</th>
+
+<th class="text-end">
+
+₹ {{ "{:,.2f}".format(sale.total_amount) }}
+
+</th>
+
+</tr>
+
+</tfoot>
+
+</table>
+
+<div class="alert alert-light">
+
+<b>Amount in Words</b>
+
+<br>
+
+{{ sale.amount_in_words }}
+
+</div>
+
+<div class="row mt-5">
+
+<div class="col-md-6">
+
+Customer Signature
+
+<hr>
+
+</div>
+
+<div class="col-md-6 text-end">
+
+Authorized Signature
+
+<hr>
+
+</div>
+
+</div>
+
+<div class="mt-4">
+
+<button
+onclick="window.print()"
+class="btn btn-success">
+
+🖨 Print Invoice
+
+</button>
+
+<a href="/sales"
+class="btn btn-secondary">
+
+Back
+
+</a>
+
+</div>
+
+</div>
+
+{% endblock %}

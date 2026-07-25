@@ -1,0 +1,104 @@
+{% extends "base.html" %}
+{% block content %}
+
+<h3>Customers</h3>
+
+<a href="/customer/add" class="btn btn-primary mb-3">Add Customer</a>
+<form method="get" class="mb-3">
+  <div class="input-group">
+    <input type="text" id="customerSearch" class="form-control " placeholder="Search by name or email..."
+  onkeyup="searchCustomer()"/>    
+        <button class="btn btn-outline-success my-2 my-sm-0">Search</button>
+    <a href="/customers" class="btn btn-outline-dark">Reset</a>
+  </div>
+</form>
+
+
+
+<table class="table table-bordered">
+  <thead>
+  <tr>
+    <th>ID</th>
+    <th>Name</th>
+    <th>Email</th>
+    <th>Phone</th>
+    <th>Address</th>
+    <th>Status</th>
+    <th>Action</th>
+  </tr>
+  </thead>
+  <tbody id="custTable">
+    {% for c in customers %}
+    <tr>
+      <td>{{ c.id }}</td>
+      <td>{{ c.name }}</td>
+      <td>{{ c.email }}</td>
+      <td>{{ c.phone }}</td>
+      <td>{{ c.address }}</td>
+      <td>{{ c.status }}</td>
+      <td>
+        <a href="/customer/edit/{{ c.id }}" class="btn btn-warning btn-sm">Edit</a>
+        <a href="/customer/delete/{{ c.id }}" class="btn btn-danger btn-sm">Delete</a>
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% if customers|length == 0 %}
+<tr>
+  <td colspan="4" class="text-center text-muted">
+    No customers found
+  </td>
+</tr>
+{% endif %}
+<nav>
+  <ul class="pagination">
+
+    <!-- Prev -->
+    <li class="page-item {% if page == 1 %}disabled{% endif %}">
+      <a class="page-link" href="?page={{ page-1 }}">Previous</a>
+    </li>
+
+    <!-- Page Numbers -->
+    {% for p in range(1, total_pages + 1) %}
+    <li class="page-item {% if p == page %}active{% endif %}">
+      <a class="page-link" href="?page={{ p }}">{{ p }}</a>
+    </li>
+    {% endfor %}
+
+    <!-- Next -->
+    <li class="page-item {% if page == total_pages %}disabled{% endif %}">
+      <a class="page-link" href="?page={{ page+1 }}">Next</a>
+    </li>
+
+  </ul>
+</nav>
+
+<script>
+function searchCustomer(){
+  const q = document.getElementById("customerSearch").value;
+  fetch(`/customer/auto-search?q=${encodeURIComponent(q)}`)
+    .then(res=>res.json())
+    .then(rows=>{
+      let html=``;
+      rows.forEach(r=>{
+        html += `
+        <tr>
+          <td>${r.id}</td>
+          <td>${r.name}</td>
+          <td>${r.email}</td>
+          <td>${r.phone}</td>
+          <td>${r.address}</td>
+          <td>${r.status}</td>
+          <td>
+            <a href="/customers/edit/${r.id}" class="btn btn-warning btn-sm">Edit</a>
+            <a href="/customers/delete/${r.id}" class="btn btn-danger btn-sm">Delete</a>
+          </td>
+        </tr>`;
+      });
+      document.getElementById("custTable").innerHTML = html;
+    });
+}
+</script>
+
+{% endblock %}

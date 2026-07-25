@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% block content %}
+
+<h4>Add Production</h4>
+
+<form method="POST">
+
+<div class="row mb-3">
+
+<div class="col-md-4">
+<label>Product</label>
+<select name="product_id" class="form-control" required>
+<option value="">Select Product</option>
+
+{% for p in products %}
+<option value="{{ p.id }}">{{ p.name }}</option>
+{% endfor %}
+
+</select>
+</div>
+
+<div class="col-md-3">
+<label>Quantity Produced</label>
+<input type="number" name="quantity" class="form-control" required>
+</div>
+
+<div class="col-md-3">
+<label>Wastage</label>
+<input type="number" name="wastage" class="form-control" value="0">
+</div>
+
+<div class="col-md-2">
+<label>Batch Date</label>
+<input type="date" name="batch_date" class="form-control" required>
+</div>
+
+</div>
+
+<button class="btn btn-primary">Create Production</button>
+
+<a href="/production" class="btn btn-secondary">Cancel</a>
+
+</form>
+
+{% endblock %}

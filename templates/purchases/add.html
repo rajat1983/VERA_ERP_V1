@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+{% block content %}
+
+<h4>Add Purchase</h4>
+
+<form method="POST">
+
+<div class="row mb-3">
+  <div class="col-md-4">
+    <label>Vendor</label>
+    <select name="vendor_id" class="form-control" required>
+      <option value="">Select Vendor</option>
+      {% for v in vendors %}
+      <option value="{{ v.id }}">{{ v.name }}</option>
+      {% endfor %}
+    </select>
+  </div>
+
+  <div class="col-md-4">
+    <label>Invoice No</label>
+    <input type="text" name="invoice_no" class="form-control" required>
+  </div>
+
+  <div class="col-md-4">
+    <label>Date</label>
+    <input type="date" name="purchase_date" class="form-control" required>
+  </div>
+</div>
+
+<hr>
+
+<table class="table table-bordered">
+  <thead>
+    <tr>
+      <th>Product</th>
+      <th width="120">Qty</th>
+      <th width="150">Price</th>
+      <th width="100">Remove</th>
+    </tr>
+  </thead>
+  <tbody id="items_table">
+    <tr>
+      <td>
+        <select name="product_id[]" class="form-control">
+          <option value="">Select Product</option>
+          {% for p in products %}
+          <option value="{{ p.id }}">{{ p.name }}</option>
+          {% endfor %}
+        </select>
+      </td>
+      <td>
+        <input type="number" name="qty[]" class="form-control">
+      </td>
+      <td>
+        <input type="number" step="0.01" name="price[]" class="form-control">
+      </td>
+      <td>
+        <button type="button" class="btn btn-danger btn-sm remove-row">X</button>
+      </td>
+    </tr>
+  </tbody>
+</table>
+
+<button type="button" class="btn btn-secondary" onclick="addRow()">+ Add Row</button>
+
+<hr>
+
+<button type="submit" class="btn btn-primary">Save Purchase</button>
+<a href="{{ url_for('purchase.list_purchases') }}" class="btn btn-secondary">Cancel</a>
+
+</form>
+
+<script>
+function addRow(){
+  const table = document.getElementById("items_table");
+  const newRow = table.rows[0].cloneNode(true);
+
+  newRow.querySelectorAll("input").forEach(input => input.value = "");
+  newRow.querySelectorAll("select").forEach(select => select.selectedIndex = 0);
+
+  table.appendChild(newRow);
+}
+
+document.addEventListener("click", function(e){
+  if(e.target.classList.contains("remove-row")){
+    const rows = document.querySelectorAll("#items_table tr");
+    if(rows.length > 1){
+      e.target.closest("tr").remove();
+    }
+  }
+});
+</script>
+
+{% endblock %}

@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+{% block content %}
+
+
+<h2>📊 Business Dashboard</h2>
+
+<div class="row mt-3">
+
+  <div class="col-md-6">
+    <canvas id="salesChart"></canvas>
+  </div>
+
+  <div class="col-md-6">
+    <canvas id="productChart"></canvas>
+  </div>
+
+</div>
+
+<div class="row mt-4">
+
+  <div class="col-md-6">
+    <canvas id="customerChart"></canvas>
+  </div>
+
+  <div class="col-md-6">
+    <canvas id="stockChart"></canvas>
+  </div>
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script>
+
+// ---------- Sales by Date ----------
+new Chart(document.getElementById("salesChart"), {
+  type: "bar",
+  data: {
+    labels: {{ sales_by_date | map(attribute='date') | list | safe }},
+    datasets: [{
+      label: "Sales",
+      data: {{ sales_by_date | map(attribute='total') | list | safe }}
+    }]
+  }
+});
+
+
+// ---------- Top Products ----------
+new Chart(document.getElementById("productChart"), {
+  type: "pie",
+  data: {
+    labels: {{ top_products | map(attribute='name') | list | safe }},
+    datasets: [{
+      data: {{ top_products | map(attribute='total_qty') | list | safe }}
+    }]
+  }
+});
+
+
+// ---------- Top Customers ----------
+new Chart(document.getElementById("customerChart"), {
+  type: "bar",
+  data: {
+    labels: {{ top_customers | map(attribute='name') | list | safe }},
+    datasets: [{
+      label: "Total Spent",
+      data: {{ top_customers | map(attribute='total_spent') | list | safe }}
+    }]
+  }
+});
+
+
+// ---------- Stock Levels ----------
+new Chart(document.getElementById("stockChart"), {
+  type: "bar",
+  data: {
+    labels: {{ stock_levels | map(attribute='name') | list | safe }},
+    datasets: [{
+      label: "Stock Qty",
+      data: {{ stock_levels | map(attribute='stock_qty') | list | safe }}
+    }]
+  }
+});
+
+</script>
+
+{% endblock %}
+  
+  

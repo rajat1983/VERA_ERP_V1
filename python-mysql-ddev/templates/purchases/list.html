@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="d-flex justify-content-between mb-3">
+  <h4>Purchase List</h4>
+  <a href="{{ url_for('purchase.add_purchase') }}" class="btn btn-primary">
+    + Add Purchase
+  </a>
+</div>
+
+<table class="table table-bordered table-striped">
+  <thead class="table-dark">
+    <tr>
+      <th>ID</th>
+      <th>Vendor</th>
+      <th>Invoice</th>
+      <th>Date</th>
+      <th>Subtotal</th>
+      <th>Status</th>
+      <th>Created</th>
+      <th>Action</th>
+    </tr>
+  </thead>
+  <tbody>
+
+    {% for p in purchases %}
+    <tr>
+      <td>{{ p.id }}</td>
+      <td>{{ p.vendor_name }}</td>
+      <td>{{ p.invoice_no }}</td>
+      <td>{{ p.purchase_date }}</td>
+      <td>₹ {{ "%.2f"|format(p.total_amount) }}</td>
+      <td>
+        {% if p.status == 'confirmed' %}
+          <span class="badge bg-success">Confirmed</span>
+        {% else %}
+          <span class="badge bg-warning">Draft</span>
+        {% endif %}
+      </td>
+      <td>{{ p.created_at }}</td>
+      <td>
+        <a href="{{ url_for('purchase.view_purchase', id=p.id) }}" 
+   class="btn btn-sm btn-info">
+   View
+</a> | <a href="{{ url_for('purchase.delete_purchase', id=p.id) }}"
+   class="btn btn-sm btn-danger"
+   onclick="return confirm('Are you sure? This will reverse stock!')">
+   Delete
+</a>
+      </td>
+    </tr>
+    {% endfor %}
+
+    {% if not purchases %}
+    <tr>
+      <td colspan="8" class="text-center">No purchases found</td>
+    </tr>
+    {% endif %}
+
+  </tbody>
+</table>
+
+{% endblock %}
