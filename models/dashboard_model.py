@@ -58,13 +58,27 @@ def get_dashboard_kpi():
         FROM products
     """)
     inventory_value = float(cur.fetchone()["total"])
+        # Today's Gross Profit
+    cur.execute("""
+        SELECT
+            IFNULL(SUM((si.price - p.cost_price) * si.qty), 0) AS profit
+        FROM sale_items si
+        INNER JOIN sales s
+            ON s.id = si.sale_id
+        INNER JOIN products p
+            ON p.id = si.product_id
+        WHERE DATE(s.sale_date) = CURDATE()
+    """)
+
+    today_profit = float(cur.fetchone()["profit"])
+    #"today_profit": today_profit,
 
     conn.close()
 
     return {
         "today_sales": today_sales,
         "today_purchase": today_purchase,
-        "today_profit": today_sales - today_purchase,
+        "today_profit": today_profit,
         "products": total_products,
         "customers": total_customers,
         "vendors": total_vendors,
@@ -191,3 +205,102 @@ def get_stock_levels():
         }
         for r in rows
     ]
+def get_business_insights():
+
+    conn = get_db_connection()
+    cur = conn.cursor()
+
+    # Top Product
+    cur.execute("""
+        SELECT p.name,
+               SUM(si.qty) qty
+        FROM sale_items si
+        JOIN products p
+          ON p.id=si.product_id
+        GROUP BY p.id
+        ORDER BY qty DESC
+        LIMIT 1
+    """)
+
+    top_product = cur.fetchone()
+
+    # Top Customer
+    cur.execute("""
+        SELECT c.name,
+               SUM(s.total_amount) amount
+        FROM sales s
+        JOIN customers c
+          ON c.id=s.customer_id
+        GROUP BY c.id
+        ORDER BY amount DESC
+        LIMIT 1
+    """)
+
+    top_customer = cur.fetchone()
+
+    # Top Vendor
+    cur.execute("""
+        SELECT v.name,
+               COUNT(*) total_purchase
+        FROM purchases p
+        JOIN vendors v
+          ON v.id=p.vendor_id
+        GROUP BY v.id
+        ORDER BY total_purchase DESC
+        LIMIT 1
+    """)
+
+    top_vendor = cur.fetchone()
+
+    conn.close()
+
+    return {
+        "top_product": top_product,
+        "top_customer": top_customer,
+        "top_vendor": top_vendor
+    }
+def get_recent_transactions():
+
+    conn = get_db_connection()
+    cur = conn.cursor()
+
+    cur.execute("""
+
+        SELECT
+            invoice_no number,
+            sale_date trans_date,
+            total_amount,
+            'Sale' module
+        FROM sales
+
+        ORDER BY sale_date DESC
+
+        LIMIT 5
+
+    """)
+
+    rows = cur.fetchall()
+
+    conn.close()
+
+    return rows
+
+def get_low_stock_products():
+
+    conn = get_db_connection()
+    cur = conn.cursor()
+
+    cur.execute("""
+        SELECT
+            name,
+            stock_qty,
+            low_stock_threshold
+        FROM products
+        WHERE stock_qty <= low_stock_threshold
+        ORDER BY stock_qty ASC
+    """)
+
+    rows = cur.fetchall()
+    conn.close()
+
+    return rows
