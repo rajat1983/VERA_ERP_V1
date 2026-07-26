@@ -6,13 +6,20 @@ dashboard_bp = Blueprint("dashboard", __name__)
 @dashboard_bp.route("/dashboard")
 def dashboard():
 
+    # Dashboard KPIs
+    kpi = dashboard_model.get_dashboard_kpi()
+
+    # Existing Data
     sales_by_date = dashboard_model.get_sales_by_date()
     top_products = dashboard_model.get_top_products()
     top_customers = dashboard_model.get_top_customers()
     stock_levels = dashboard_model.get_stock_levels()
 
     return render_template(
-        "/dashboard.html",
+        "dashboard.html",
+
+        kpi=kpi,
+
         sales_by_date=sales_by_date,
         top_products=top_products,
         top_customers=top_customers,

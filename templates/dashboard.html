@@ -2,8 +2,85 @@
 {% block content %}
 
 
-<h2>📊 Business Dashboard</h2>
 
+<h2 class="mb-4">   📊 Executive Dashboard</h2>
+
+<div class="row mb-4">
+
+    <div class="col-md-3">
+        <div class="card shadow border-0 bg-primary text-white">
+            <div class="card-body">
+                <h6>Today's Sales</h6>
+                <h3>₹ {{ "{:,.2f}".format(kpi.today_sales) }}</h3>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-3">
+        <div class="card shadow border-0 bg-success text-white">
+            <div class="card-body">
+                <h6>Today's Purchase</h6>
+                <h3>₹ {{ "{:,.2f}".format(kpi.today_purchase) }}</h3>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-3">
+        <div class="card shadow border-0 bg-warning text-dark">
+            <div class="card-body">
+                <h6>Today's Profit</h6>
+                <h3>₹ {{ "{:,.2f}".format(kpi.today_profit) }}</h3>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-3">
+        <div class="card shadow border-0 bg-danger text-white">
+            <div class="card-body">
+                <h6>Low Stock</h6>
+                <h3>{{ kpi.low_stock }}</h3>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<div class="row mb-4">
+
+    <div class="col-md-4">
+        <div class="card shadow-sm">
+            <div class="card-body text-center">
+                <h5>Products</h5>
+                <h2>{{ kpi.products }}</h2>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card shadow-sm">
+            <div class="card-body text-center">
+                <h5>Customers</h5>
+                <h2>{{ kpi.customers }}</h2>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card shadow-sm">
+            <div class="card-body text-center">
+                <h5>Suppliers</h5>
+                <h2>{{ kpi.suppliers }}</h2>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<div class="alert alert-info shadow-sm">
+    <strong>Total Inventory Value :</strong>
+
+    ₹ {{ "{:,.2f}".format(kpi.inventory_value) }}
+</div>
 <div class="row mt-3">
 
   <div class="col-md-6">

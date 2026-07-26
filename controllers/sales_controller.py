@@ -101,7 +101,6 @@ def add_sale():
         products=products
     )
 
-#@sales_bp.route("/sales/view/<int:sale_id>", methods=["GET", "POST"])
 @sales_bp.route("/sales/view/<int:sale_id>", methods=["GET"])
 def sale_view(sale_id):
 
