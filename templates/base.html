@@ -92,34 +92,34 @@ function autoSearch() {
     .catch(err => console.error(err));
 }
 //  Auto Product Search
-function autoSearchProd() {
-  const q = document.getElementById("productSearch").value;
+// function autoSearchProd() {
+//   const q = document.getElementById("productSearch").value;
 
-   fetch(`/product-search?q=${encodeURIComponent(q)}`)
-    .then(res => res.json())
-    .then(data => {
-      let rows = "";
+//    fetch(`/product-search?q=${encodeURIComponent(q)}`)
+//     .then(res => res.json())
+//     .then(data => {
+//       let rows = "";
 
-      data.forEach(pr => {
-        rows += `
-          <tr>
-            <td>${pr.id}</td>
-            <td>${pr.name}</td>
-            <td>${pr.sku}</td>
-            <td>${pr.price}</td>
-            <td>${pr.stock}</td>           
-            <td>
-              <a href="/products/edit/${pr.id}" class="btn btn-sm btn-warning">Edit</a>
-              <a href="products/delete/${pr.id}" class="btn btn-sm btn-danger">Delete</a>
-            </td>
-          </tr>
-        `;
-      });
+//       data.forEach(pr => {
+//         rows += `
+//           <tr>
+//             <td>${pr.id}</td>
+//             <td>${pr.name}</td>
+//             <td>${pr.sku}</td>
+//             <td>${pr.price}</td>
+//             <td>${pr.stock}</td>           
+//             <td>
+//               <a href="/products/edit/${pr.id}" class="btn btn-sm btn-warning">Edit</a>
+//               <a href="products/delete/${pr.id}" class="btn btn-sm btn-danger">Delete</a>
+//             </td>
+//           </tr>
+//         `;
+//       });
 
-      document.getElementById("productTable").innerHTML = rows;
-    })
-    .catch(err => console.error(err));
-}
+//       document.getElementById("productTable").innerHTML = rows;
+//     })
+//     .catch(err => console.error(err));
+// }
 // Vendor Search
 
 </script>

@@ -20,20 +20,59 @@ def get_vendors():
     return vendors
 
 def get_all_products(search, limit, offset):
+
     conn = get_db_connection()
     cur = conn.cursor()
+
     like = f"%{search}%"
 
     cur.execute("""
-        SELECT p.*,v.name as vendor_name FROM products p
-        LEFT JOIN vendors v ON p.vendor_id = v.id        
-        ORDER BY id DESC
-        LIMIT %s OFFSET %s
-    """, (limit, offset))
+SELECT
+
+    p.id,
+    p.vendor_id,
+    p.name,
+    p.sku,
+    p.cost_price,
+    p.selling_price,
+    p.stock_qty,
+    p.reorder_level,
+    p.status,
+
+    v.name AS vendor_name
+
+FROM products p
+
+LEFT JOIN vendors v
+ON p.vendor_id = v.id
+
+WHERE
+
+    p.name LIKE %s
+
+    OR p.sku LIKE %s
+
+    OR v.name LIKE %s
+
+ORDER BY p.id DESC
+
+LIMIT %s OFFSET %s
+
+""",
+
+(
+    like,
+    like,
+    like,
+    limit,
+    offset
+))
 
     data = cur.fetchall()
+
     cur.close()
     conn.close()
+
     return data
 
 def get_product_count(search):
