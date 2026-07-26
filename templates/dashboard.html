@@ -373,7 +373,79 @@
     =============================== -->
 
     <div class="col-lg-4">
+      <div class="card shadow-sm border-0 mb-4">
 
+    <div class="card-header bg-white">
+
+        <h5 class="mb-0">
+            💚 Business Health
+        </h5>
+
+    </div>
+
+    <div class="card-body">
+
+        <div class="text-center">
+
+            <h1 class="display-4 fw-bold">
+
+                {{ health.score }}%
+
+            </h1>
+
+            <span class="badge bg-{{ health.color }} fs-6">
+
+                {{ health.status }}
+
+            </span>
+
+        </div>
+
+        <div class="progress mt-4" style="height:14px;">
+
+            <div class="progress-bar bg-{{ health.color }}"
+
+                 style="width:{{ health.score }}%;">
+
+            </div>
+
+        </div>
+
+        <hr>
+
+        {% if health.reasons %}
+
+            {% for item in health.reasons %}
+
+                <div class="mb-2">
+
+                    <strong>{{ item.title }}</strong>
+
+                    <br>
+
+                    <small class="text-muted">
+
+                        {{ item.message }}
+
+                    </small>
+
+                </div>
+
+            {% endfor %}
+
+        {% else %}
+
+            <div class="alert alert-success mb-0">
+
+                Business is operating normally.
+
+            </div>
+
+        {% endif %}
+
+    </div>
+
+</div>
         <!-- Business Insights -->
 
         <div class="card shadow-sm border-0 mb-4">
@@ -494,28 +566,28 @@
                     <a href="/purchases/add"
                        class="btn btn-primary">
 
-                        📦 Purchase
+                        📦 New Purchase
 
                     </a>
 
                     <a href="/customer/add"
                        class="btn btn-warning">
 
-                        👤 Customer
+                        👤 New Customer
 
                     </a>
 
                     <a href="/products/add"
                        class="btn btn-info">
 
-                        📦 Product
+                        📦 New Product
 
                     </a>
 
                     <a href="/production/add"
                        class="btn btn-dark">
 
-                        🏭 Production
+                        🏭 New Production
 
                     </a>
 
@@ -540,7 +612,7 @@
             📑 Recent Transactions
         </h5>
 
-        <a href="/reports/sales" class="btn btn-sm btn-outline-primary">
+        <a href="/sales" class="btn btn-sm btn-outline-primary">
 
             View All
 

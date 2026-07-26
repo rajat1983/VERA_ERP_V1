@@ -3,7 +3,7 @@ from models import sales_model, product_model, customer_model
 from models.sales_model import get_next_invoice_number
 import traceback
 from num2words import num2words
- 
+from models import company_model
 sales_bp = Blueprint("sales", __name__)
 @sales_bp.route("/sales")
 def list_sales():
@@ -103,27 +103,42 @@ def add_sale():
 
 @sales_bp.route("/sales/view/<int:sale_id>", methods=["GET"])
 def sale_view(sale_id):
-
+    company = company_model.get_company()
     sale, items = sales_model.get_sale_by_id(sale_id)
 
     sale["amount_in_words"] = (
-        num2words(
-            sale["total_amount"],
-            to="currency",
-            lang="en_IN"
-        ).title()
-    )
+    num2words(
+        sale["total_amount"],
+        lang="en_IN"
+    ).title()
+    + " Only"
+)
 
     return render_template(
         "sales/sale_view.html",
         sale=sale,
-        items=items
+        items=items,
+        company=company
     )
 
-@sales_bp.route("/sales/delete/<int:sale_id>")
-def delete_sale(sale_id):
-    sales_model.delete_sale(sale_id)
-    flash("Sale deleted successfully", "success")
+# @sales_bp.route("/sales/delete/<int:sale_id>")
+# def delete_sale(sale_id):
+#     sales_model.delete_sale(sale_id)
+#     flash("Sale deleted successfully", "success")
+#     return redirect(url_for("sales.list_sales"))
+@sales_bp.route("/sales/cancel/<int:sale_id>")
+def cancel_sale(sale_id):
+
+    try:
+        sales_model.cancel_sale(sale_id)
+        flash("Sale cancelled successfully.", "warning")
+
+    except ValueError as ex:
+        flash(str(ex), "warning")
+
+    except Exception as ex:
+        flash("Something went wrong.", "danger")
+
     return redirect(url_for("sales.list_sales"))
 
 @sales_bp.route("/sale-search")
@@ -153,6 +168,8 @@ def sale_update(id):
 
     customer_id = request.form["customer_id"]
     discount = float(request.form.get("discount", 0))
+    discount_amount = (total * discount) / 100
+    grand_total = total - discount_amount
 
     product_ids = request.form.getlist("product_id[]")
     qtys = request.form.getlist("qty[]")

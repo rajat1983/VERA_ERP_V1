@@ -35,67 +35,110 @@ body{
 </style>
 
 <div class="invoice-box">
+<div class="text-center mt-4">
 
+    <h4 class="fw-bold">INV No :<span"class="text-primary">{{ sale.invoice_no }}</span> </h4>   
+    <p><strong>Date :</strong>{{ sale.sale_date.strftime('%d-%b-%Y') if sale.sale_date else "-" }}</p>
+
+</div>
 <div class="row">
 
-<div class="col-md-6">
+    <!-- Company Card -->
+    <div class="col-md-6">
 
-<h2 class="text-primary fw-bold">
-Inventory Management System
-</h2>
+        <div class="card border-primary shadow-sm h-100">
 
-<h4>SALES INVOICE</h4>
+            <div class="card-header bg-primary text-white">
+                <strong>Company Details</strong>
+            </div>
 
-</div>
+            <div class="card-body">
 
-<div class="col-md-6 text-end">
+                <h3 class="fw-bold text-primary mb-3">
+                    {{ company.company_name }}
+                </h3>
 
-<h5><strong>Invoice No</strong></h5>
+                {% if company.legal_name %}
+                <div>{{ company.legal_name }}</div>
+                {% endif %}
 
-<h4>{{ sale.invoice_no }}</h4>
+                <div>
+                    {{ company.address1 }}
+                    {% if company.address2 %}
+                        , {{ company.address2 }}
+                    {% endif %}
+                </div>
 
-<p>
-<b>Date :</b>
-{{ sale.sale_date }}
-</p>
+                <div>
+                    {{ company.city }},
+                    {{ company.state }}
+                    - {{ company.pincode }}
+                </div>
 
-</div>
+                <div class="mt-2">
+                    <b>Phone :</b>
+                    {{ company.phone }}
+                </div>
+
+                <div>
+                    <b>Email :</b>
+                    {{ company.email }}
+                </div>
+
+                <div>
+                    <b>GSTIN :</b>
+                    {{ company.gstin }}
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+    <!-- Customer Card -->
+    <div class="col-md-6">
+
+        <div class="card border-success shadow-sm h-100">
+
+            <div class="card-header bg-success text-white">
+                <strong>Customer Details</strong>
+            </div>
+
+            <div class="card-body">
+
+                <h4 class="fw-bold">
+                    {{ sale.customer_name }}
+                </h4>
+
+                <div>
+                    <b>Address :</b><br>
+                    {{ sale.address if sale.address else "-" }}
+                </div>
+
+                <div class="mt-2">
+                    <b>Phone :</b>
+                    {{ sale.phone if sale.phone else "-" }}
+                </div>
+
+                <div>
+                    <b>Email :</b>
+                    {{ sale.email if sale.email else "-" }}
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
 
 </div>
 
 <hr>
 
-<div class="row">
 
-<div class="col-md-6">
 
-<div class="card">
 
-<div class="card-header bg-light">
-
-<strong>Customer Details</strong>
-
-</div>
-
-<div class="card-body">
-
-<p>
-<b>Name :</b>
-{{ sale.customer_name }}
-</p>
-
-<p>
-<b>Remarks :</b>
-{{ sale.remarks }}
-</p>
-
-</div>
-
-</div>
-
-</div>
-
-</div>
 
 <br>
 

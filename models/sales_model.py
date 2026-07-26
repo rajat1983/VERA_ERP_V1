@@ -42,6 +42,7 @@ def get_all_sales(search, limit, offset):
     cur.execute("""
         SELECT s.id,
                 s.invoice_no,
+                s.sale_status,
                s.sale_date,
                 s.total_amount,
                 s.discount,
@@ -143,22 +144,41 @@ def get_product(id):
 
 
 def get_sale_by_id(sale_id):
+
     conn = get_db_connection()
     cur = conn.cursor()
 
-    cur.execute("""
-        SELECT s.*, c.name AS customer_name
-        FROM sales s
-        JOIN customers c ON s.customer_id=c.id
-        WHERE s.id=%s
-    """, (sale_id,))
-    sale = cur.fetchone()
+    # ============================
+    # Sale Header
+    # ============================
 
     cur.execute("""
-        SELECT si.*, p.name AS product_name
+        SELECT
+            s.*,
+            c.name AS customer_name,
+            c.address,
+            c.phone,
+            c.email
+        FROM sales s
+        JOIN customers c
+            ON s.customer_id = c.id
+        WHERE s.id = %s
+    """, (sale_id,))
+
+    sale = cur.fetchone()
+
+    # ============================
+    # Sale Items
+    # ============================
+
+    cur.execute("""
+        SELECT
+            si.*,
+            p.name AS product_name
         FROM sale_items si
-        JOIN products p ON si.product_id=p.id
-        WHERE sale_id=%s
+        JOIN products p
+            ON si.product_id = p.id
+        WHERE si.sale_id = %s
     """, (sale_id,))
 
     items = cur.fetchall()
@@ -238,35 +258,95 @@ def update_sale(sale_id, customer_id, discount, total_amount, items):
     conn.commit()
     cur.close()
     conn.close()
+    
+def cancel_sale(sale_id):
 
-def delete_sale(sale_id):
     conn = get_db_connection()
     cur = conn.cursor()
 
-    # 1️⃣ Get items before deleting
-    cur.execute("SELECT product_id, qty FROM sale_items WHERE sale_id=%s", (sale_id,))
-    items = cur.fetchall()
+    try:
 
-    # 2️⃣ Restore Stock
-    for item in items:
-        increase_stock(item["product_id"], item["qty"])
+        # ==========================================
+        # Validate Sale
+        # ==========================================
 
-    # 3️⃣ Delete records
-    cur.execute("DELETE FROM sale_items WHERE sale_id=%s", (sale_id,))
-    cur.execute("DELETE FROM sales WHERE id=%s", (sale_id,))
+        cur.execute("""
+            SELECT sale_status
+            FROM sales
+            WHERE id = %s
+        """, (sale_id,))
 
-    conn.commit()
-    cur.close()
-    conn.close()
+        sale = cur.fetchone()
 
+        if not sale:
+            raise Exception("Sale not found.")
+
+        if sale["sale_status"] == "Cancelled":
+            raise ValueError("Sale is already cancelled.")
+
+        # ==========================================
+        # Fetch Sale Items
+        # ==========================================
+
+        cur.execute("""
+            SELECT product_id, qty
+            FROM sale_items
+            WHERE sale_id = %s
+        """, (sale_id,))
+
+        items = cur.fetchall()
+
+        # ==========================================
+        # Restore Stock
+        # ==========================================
+
+        for item in items:
+
+            increase_stock(
+                item["product_id"],
+                item["qty"]
+            )
+
+        # ==========================================
+        # Update Sale Status
+        # ==========================================
+
+        cur.execute("""
+            UPDATE sales
+            SET sale_status = 'Cancelled'
+            WHERE id = %s
+        """, (sale_id,))
+
+        conn.commit()
+
+    except Exception:
+        conn.rollback()
+        raise
+
+    finally:
+        cur.close()
+        conn.close()
 # def delete_sale(sale_id):
 #     conn = get_db_connection()
 #     cur = conn.cursor()
+
+#     # 1️⃣ Get items before deleting
+#     cur.execute("SELECT product_id, qty FROM sale_items WHERE sale_id=%s", (sale_id,))
+#     items = cur.fetchall()
+
+#     # 2️⃣ Restore Stock
+#     for item in items:
+#         increase_stock(item["product_id"], item["qty"])
+
+#     # 3️⃣ Delete records
 #     cur.execute("DELETE FROM sale_items WHERE sale_id=%s", (sale_id,))
 #     cur.execute("DELETE FROM sales WHERE id=%s", (sale_id,))
+
 #     conn.commit()
 #     cur.close()
 #     conn.close()
+
+
 
 def get_sale_count(search):
     conn = get_db_connection()
