@@ -265,22 +265,33 @@ def get_recent_transactions():
     cur = conn.cursor()
 
     cur.execute("""
+        (
+            SELECT
+                sale_date      AS trans_date,
+                invoice_no     AS number,
+                customer_id,
+                total_amount   AS amount,
+                'Sale'         AS module
+            FROM sales
+        )
 
-        SELECT
-            invoice_no number,
-            sale_date trans_date,
-            total_amount,
-            'Sale' module
-        FROM sales
+        UNION ALL
 
-        ORDER BY sale_date DESC
+        (
+            SELECT
+                purchase_date,
+                invoice_no,
+                vendor_id,
+                total_amount,
+                'Purchase'
+            FROM purchases
+        )
 
-        LIMIT 5
-
+        ORDER BY trans_date DESC
+        LIMIT 10
     """)
 
     rows = cur.fetchall()
-
     conn.close()
 
     return rows
@@ -304,3 +315,45 @@ def get_low_stock_products():
     conn.close()
 
     return rows
+def get_dashboard_alerts():
+
+    conn = get_db_connection()
+    cur = conn.cursor()
+
+    alerts = []
+
+    # Low Stock
+    cur.execute("""
+        SELECT COUNT(*) total
+        FROM products
+        WHERE stock_qty <= low_stock_threshold
+    """)
+
+    low_stock = cur.fetchone()["total"]
+
+    if low_stock > 0:
+        alerts.append({
+            "type": "danger",
+            "icon": "⚠",
+            "message": f"{low_stock} Products below reorder level"
+        })
+
+    # Pending Customer Payments
+    cur.execute("""
+        SELECT COUNT(*) total
+        FROM sales
+        WHERE payment_status='Pending'
+    """)
+
+    pending = cur.fetchone()["total"]
+
+    if pending > 0:
+        alerts.append({
+            "type": "warning",
+            "icon": "💰",
+            "message": f"{pending} Pending customer payments"
+        })
+
+    conn.close()
+
+    return alerts

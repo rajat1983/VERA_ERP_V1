@@ -1,338 +1,707 @@
+<!-- ===========================
+     Executive Dashboard Header
+============================ -->
 {% extends "base.html" %}
 {% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
 
+    <div>
+        <h2 class="dashboard-title mb-0">
+            Executive Dashboard
+        </h2>
 
-
-<h2 class="mb-4">   📊 Executive Dashboard</h2>
-
-<div class="row mb-4">
-
-    <div class="col-md-3">
-        <div class="card shadow border-0 bg-primary text-white">
-            <div class="card-body">
-                <h6>Today's Sales</h6>
-                <h3>₹ {{ "{:,.2f}".format(kpi.today_sales) }}</h3>
-            </div>
+        <div class="dashboard-subtitle">
+            Welcome back, Rajat 👋
         </div>
     </div>
 
-    <div class="col-md-3">
-        <div class="card shadow border-0 bg-success text-white">
-            <div class="card-body">
-                <h6>Today's Purchase</h6>
-                <h3>₹ {{ "{:,.2f}".format(kpi.today_purchase) }}</h3>
-            </div>
-        </div>
-    </div>
+    <div class="text-end">
 
-    <div class="col-md-3">
-        <div class="card shadow border-0 bg-warning text-dark">
-            <div class="card-body">
-                <h6>Today's Profit</h6>
-                <h3>₹ {{ "{:,.2f}".format(kpi.today_profit) }}</h3>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-3">
-        <div class="card shadow border-0 bg-danger text-white" data-bs-toggle="tooltip"
-    data-bs-html="true"
-    title="
-    {% for p in low_stock_products %}
-    {{ p.name }} ({{ p.stock_qty }}/{{ p.low_stock_threshold }})<br>
-    {% endfor %}
-    ">
-            <div class="card-body">
-                <h6>Low Stock</h6>
-                <h3>{{ kpi.low_stock }}</h3> 
-            </div>
-        </div>
-    </div>
-   
-    <div class="row mt-4">
+        <span class="badge bg-success p-2">
 
+            System Online
 
+        </span>
+
+        <br>
+
+        <small class="text-muted">
+
+            {{ moment if moment else '' }}
+
+        </small>
+
+    </div>
 
 </div>
 
-<div class="row mb-4">
 
-    <div class="col-md-4">
-        <div class="card shadow-sm">
+<!-- ===========================
+      KPI ROW - 1
+============================ -->
+
+<div class="row g-4 mb-4">
+
+    <div class="col-lg-3 col-md-6">
+
+        <div class="card kpi-card">
+
+            <div class="card-body">
+
+                <div class="kpi-icon">
+                    💰
+                </div>
+
+                <div class="kpi-title">
+                    Revenue Today
+                </div>
+
+                <div class="kpi-value">
+
+                    ₹ {{ "{:,.2f}".format(kpi.today_sales) }}
+
+                </div>
+
+                <div class="kpi-footer">
+
+                    Sales Generated Today
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <div class="col-lg-3 col-md-6">
+
+        <div class="card kpi-card">
+
+            <div class="card-body">
+
+                <div class="kpi-icon">
+                    🛒
+                </div>
+
+                <div class="kpi-title">
+                    Purchase Today
+                </div>
+
+                <div class="kpi-value">
+
+                    ₹ {{ "{:,.2f}".format(kpi.today_purchase) }}
+
+                </div>
+
+                <div class="kpi-footer">
+
+                    Today's Purchase Value
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <div class="col-lg-3 col-md-6">
+
+        <div class="card kpi-card">
+
+            <div class="card-body">
+
+                <div class="kpi-icon">
+                    📈
+                </div>
+
+                <div class="kpi-title">
+
+                    Gross Profit
+
+                </div>
+
+                <div class="kpi-value">
+
+                    ₹ {{ "{:,.2f}".format(kpi.today_profit) }}
+
+                </div>
+
+                <div class="kpi-footer">
+
+                    Today's Estimated Profit
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <div class="col-lg-3 col-md-6">
+
+        <div
+            class="card kpi-card"
+
+            data-bs-toggle="tooltip"
+
+            data-bs-html="true"
+
+            title="
+
+            {% for p in low_stock_products %}
+
+            {{ p.name }}
+
+            ({{ p.stock_qty }}/{{ p.low_stock_threshold }})
+
+            <br>
+
+            {% endfor %}
+
+            "
+
+        >
+
+            <div class="card-body">
+
+                <div class="kpi-icon">
+                    ⚠
+                </div>
+
+                <div class="kpi-title">
+
+                    Low Stock
+
+                </div>
+
+                <div class="kpi-value">
+
+                    {{ kpi.low_stock }}
+
+                </div>
+
+                <div class="kpi-footer">
+
+                    Hover to view products
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+
+<!-- ===========================
+      KPI ROW - 2
+============================ -->
+
+<div class="row g-4 mb-5">
+
+    <div class="col-lg-3 col-md-6">
+
+        <div class="card kpi-card">
+
             <div class="card-body text-center">
-                <h5>Products</h5>
-                <h2>{{ kpi.products }}</h2>
+
+                <div class="kpi-icon">
+                    📦
+                </div>
+
+                <div class="kpi-value">
+
+                    {{ kpi.products }}
+
+                </div>
+
+                <div class="kpi-title">
+
+                    Products
+
+                </div>
+
             </div>
+
         </div>
+
     </div>
 
-    <div class="col-md-4">
-        <div class="card shadow-sm">
+
+    <div class="col-lg-3 col-md-6">
+
+        <div class="card kpi-card">
+
             <div class="card-body text-center">
-                <h5>Customers</h5>
-                <h2>{{ kpi.customers }}</h2>
+
+                <div class="kpi-icon">
+                    👥
+                </div>
+
+                <div class="kpi-value">
+
+                    {{ kpi.customers }}
+
+                </div>
+
+                <div class="kpi-title">
+
+                    Customers
+
+                </div>
+
             </div>
+
         </div>
+
     </div>
 
-    <div class="col-md-4">
-        <div class="card shadow-sm">
+
+
+    <div class="col-lg-3 col-md-6">
+
+        <div class="card kpi-card">
+
             <div class="card-body text-center">
-                <h5>Suppliers</h5>
-                <h2>{{ kpi.vendors }}</h2>
+
+                <div class="kpi-icon">
+                    🏢
+                </div>
+
+                <div class="kpi-value">
+
+                    {{ kpi.vendors }}
+
+                </div>
+
+                <div class="kpi-title">
+
+                    Vendors
+
+                </div>
+
             </div>
+
         </div>
+
+    </div>
+
+
+
+    <div class="col-lg-3 col-md-6">
+
+        <div class="card kpi-card">
+
+            <div class="card-body text-center">
+
+                <div class="kpi-icon">
+                    💎
+                </div>
+
+                <div class="kpi-value">
+
+                    ₹ {{ "{:,.0f}".format(kpi.inventory_value) }}
+
+                </div>
+
+                <div class="kpi-title">
+
+                    Inventory Value
+
+                </div>
+
+            </div>
+
+        </div>
+
     </div>
 
 </div>
-<div class="col-lg-6">
+<!-- ======================================
+     DASHBOARD MAIN SECTION
+======================================= -->
 
-<div class="card shadow">
+<div class="row">
 
-<div class="card-header bg-dark text-white">
+    <!-- ==============================
+         LEFT SIDE
+    =============================== -->
 
-Business Insights
+    <div class="col-lg-8">
+
+        <!-- Sales Chart -->
+
+        <div class="card shadow-sm border-0 mb-4">
+
+            <div class="card-header bg-white">
+
+                <h5 class="mb-0">
+
+                    📈 Monthly Sales Overview
+
+                </h5>
+
+            </div>
+
+            <div class="card-body">
+
+                <div style="height:380px;">
+
+                    <canvas id="salesChart"></canvas>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+
+    <!-- ==============================
+         RIGHT SIDE
+    =============================== -->
+
+    <div class="col-lg-4">
+
+        <!-- Business Insights -->
+
+        <div class="card shadow-sm border-0 mb-4">
+
+            <div class="card-header bg-white">
+
+                <h5 class="mb-0">
+
+                    📊 Business Insights
+
+                </h5>
+
+            </div>
+
+            <div class="card-body">
+
+                <div class="d-flex justify-content-between mb-3">
+
+                    <span>🏆 Top Product</span>
+
+                    <strong>{{ insights.top_product.name }}</strong>
+
+                </div>
+
+                <div class="d-flex justify-content-between mb-3">
+
+                    <span>👤 Top Customer</span>
+
+                    <strong>{{ insights.top_customer.name }}</strong>
+
+                </div>
+
+                <div class="d-flex justify-content-between">
+
+                    <span>🏢 Top Vendor</span>
+
+                    <strong>{{ insights.top_vendor.name }}</strong>
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+
+        <!-- Smart Alerts -->
+
+        <div class="card shadow-sm border-0 mb-4">
+
+            <div class="card-header bg-white">
+
+                <h5 class="mb-0">
+
+                    🚨 Smart Alerts
+
+                </h5>
+
+            </div>
+
+            <div class="card-body">
+
+                {% if alerts %}
+
+                    {% for alert in alerts %}
+
+                        <div class="alert alert-{{ alert.type }} py-2 mb-2">
+
+                            {{ alert.icon }}
+
+                            {{ alert.message }}
+
+                        </div>
+
+                    {% endfor %}
+
+                {% else %}
+
+                    <div class="alert alert-success mb-0">
+
+                        ✅ Everything looks good.
+
+                    </div>
+
+                {% endif %}
+
+            </div>
+
+        </div>
+
+
+
+        <!-- Quick Actions -->
+
+        <div class="card shadow-sm border-0">
+
+            <div class="card-header bg-white">
+
+                <h5 class="mb-0">
+
+                    ⚡ Quick Actions
+
+                </h5>
+
+            </div>
+
+            <div class="card-body">
+
+                <div class="d-grid gap-2">
+
+                    <a href="/sales/add"
+                       class="btn btn-success">
+
+                        ➕ New Sale
+
+                    </a>
+
+                    <a href="/purchases/add"
+                       class="btn btn-primary">
+
+                        📦 Purchase
+
+                    </a>
+
+                    <a href="/customer/add"
+                       class="btn btn-warning">
+
+                        👤 Customer
+
+                    </a>
+
+                    <a href="/products/add"
+                       class="btn btn-info">
+
+                        📦 Product
+
+                    </a>
+
+                    <a href="/production/add"
+                       class="btn btn-dark">
+
+                        🏭 Production
+
+                    </a>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
 
 </div>
+<!-- ======================================
+        RECENT TRANSACTIONS
+======================================= -->
 
-<div class="card-body">
+<div class="card shadow-sm border-0 mt-4">
 
-<p>
+    <div class="card-header bg-white d-flex justify-content-between align-items-center">
 
-🏆
+        <h5 class="mb-0">
+            📑 Recent Transactions
+        </h5>
 
-Top Product
+        <a href="/reports/sales" class="btn btn-sm btn-outline-primary">
 
-<b>{{ insights.top_product.name }}</b>
+            View All
 
-</p>
+        </a>
 
-<p>
+    </div>
 
-👤
+    <div class="card-body p-0">
 
-Top Customer
+        <div class="table-responsive">
 
-<b>{{ insights.top_customer.name }}</b>
+            <table class="table table-hover table-striped align-middle mb-0">
 
-</p>
+                <thead class="table-light">
 
-<p>
+                    <tr>
 
-🏭
+                        <th width="18%">Date</th>
 
-Top Vendor
+                        <th width="15%">Module</th>
 
-<b>{{ insights.top_vendor.name }}</b>
+                        <th width="25%">Reference</th>
 
-</p>
+                        <th class="text-end" width="20%">Amount</th>
+
+                    </tr>
+
+                </thead>
+
+                <tbody>
+
+                {% if recent_transactions %}
+
+                    {% for r in recent_transactions %}
+
+                    <tr>
+
+                        <td>
+
+                            {{ r.trans_date.strftime('%d-%b-%Y') if r.trans_date else '' }}
+
+                        </td>
+
+                        <td>
+
+                            {% if r.module=="Sale" %}
+
+                                <span class="badge bg-success">
+
+                                    Sale
+
+                                </span>
+
+                            {% elif r.module=="Purchase" %}
+
+                                <span class="badge bg-primary">
+
+                                    Purchase
+
+                                </span>
+
+                            {% else %}
+
+                                <span class="badge bg-secondary">
+
+                                    {{ r.module }}
+
+                                </span>
+
+                            {% endif %}
+
+                        </td>
+
+                        <td>
+
+                            <strong>
+
+                                {{ r.number }}
+
+                            </strong>
+
+                        </td>
+
+                        <td class="text-end">
+
+                            <strong>
+
+                                ₹ {{ "{:,.2f}".format(r.amount) }}
+
+                            </strong>
+
+                        </td>
+
+                    </tr>
+
+                    {% endfor %}
+
+                {% else %}
+
+                    <tr>
+
+                        <td colspan="4" class="text-center text-muted p-4">
+
+                            No transactions available.
+
+                        </td>
+
+                    </tr>
+
+                {% endif %}
+
+                </tbody>
+
+            </table>
+
+        </div>
+
+    </div>
 
 </div>
-
-</div>
-
-</div>
-<div class="col-lg-6">
-
-<div class="card shadow">
-
-<div class="card-header bg-primary text-white">
-
-Quick Actions
-
-</div>
-
-<div class="card-body d-grid gap-2">
-
-<a href="/sales/add" class="btn btn-success">
-
-➕ New Sale
-
-</a>
-
-<a href="/purchases/add" class="btn btn-primary">
-
-📦 New Purchase
-
-</a>
-
-<a href="/customer/add" class="btn btn-warning">
-
-👤 New Customer
-
-</a>
-
-<a href="/products/add" class="btn btn-info">
-
-📦 New Product
-
-</a>
-
-<a href="/production/add" class="btn btn-dark">
-
-🏭 Production
-
-</a>
-
-</div>
-
-</div>
-
-</div>
-
-</div>
-
-<div class="alert alert-info shadow-sm">
-    <strong>Total Inventory Value :</strong>
-
-    ₹ {{ "{:,.2f}".format(kpi.inventory_value) }}
-</div>
-<div class="row mt-3">
-
-  <div class="col-md-6">
-    <canvas id="salesChart"></canvas>
-  </div>
-
-  <div class="col-md-6">
-    <canvas id="productChart"></canvas>
-  </div>
-
-</div>
-
-<div class="row mt-4">
-
-  <div class="col-md-6">
-    <canvas id="customerChart"></canvas>
-  </div>
-
-  <div class="col-md-6">
-    <canvas id="stockChart"></canvas>
-  </div>
-
-</div>
-<div class="card mt-4 shadow">
-
-<div class="card-header">
-
-Recent Transactions
-
-</div>
-
-<table class="table table-hover">
-
-<thead>
-
-<tr>
-
-<th>Date</th>
-
-<th>Invoice</th>
-
-<th>Module</th>
-
-<th class="text-end">
-
-Amount
-
-</th>
-
-</tr>
-
-</thead>
-
-<tbody>
-
-{% for r in recent_transactions %}
-
-<tr>
-
-<td>{{ r.trans_date }}</td>
-
-<td>{{ r.number }}</td>
-
-<td>{{ r.module }}</td>
-
-<td class="text-end">
-
-₹ {{ "%.2f"|format(r.total_amount) }}
-
-</td>
-
-</tr>
-
-{% endfor %}
-
-</tbody>
-
-</table>
-
-</div>
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
 <script>
+  new Chart(document.getElementById("salesChart"), {
 
-// ---------- Sales by Date ----------
-new Chart(document.getElementById("salesChart"), {
-  type: "bar",
-  data: {
-    labels: {{ sales_by_date | map(attribute='date') | list | safe }},
-    datasets: [{
-      label: "Sales",
-      data: {{ sales_by_date | map(attribute='total') | list | safe }}
-    }]
-  }
+    type: "bar",
+
+    data: {
+
+        labels: {{ sales_by_date | map(attribute='date') | list | safe }},
+
+        datasets: [{
+
+            label: "Sales",
+
+            data: {{ sales_by_date | map(attribute='total') | list | safe }},
+
+            backgroundColor: "#2563eb",
+
+            borderRadius: 8
+
+        }]
+
+    },
+
+    options: {
+
+        responsive: true,
+
+        maintainAspectRatio: false,
+
+        plugins: {
+
+            legend: {
+
+                display: false
+
+            }
+
+        }
+
+    }
+
 });
-
-
-// ---------- Top Products ----------
-new Chart(document.getElementById("productChart"), {
-  type: "pie",
-  data: {
-    labels: {{ top_products | map(attribute='name') | list | safe }},
-    datasets: [{
-      data: {{ top_products | map(attribute='total_qty') | list | safe }}
-    }]
-  }
-});
-
-
-// ---------- Top Customers ----------
-new Chart(document.getElementById("customerChart"), {
-  type: "bar",
-  data: {
-    labels: {{ top_customers | map(attribute='name') | list | safe }},
-    datasets: [{
-      label: "Total Spent",
-      data: {{ top_customers | map(attribute='total_spent') | list | safe }}
-    }]
-  }
-});
-
-
-// ---------- Stock Levels ----------
-new Chart(document.getElementById("stockChart"), {
-  type: "bar",
-  data: {
-    labels: {{ stock_levels | map(attribute='name') | list | safe }},
-    datasets: [{
-      label: "Stock Qty",
-      data: {{ stock_levels | map(attribute='stock_qty') | list | safe }}
-    }]
-  }
-});
-
-
-document.addEventListener("DOMContentLoaded", function () {
-    const tooltipTriggerList = [].slice.call(
-        document.querySelectorAll('[data-bs-toggle="tooltip"]')
-    );
-
-    tooltipTriggerList.map(function (tooltipTriggerEl) {
-        return new bootstrap.Tooltip(tooltipTriggerEl);
-    });
-});
-
 </script>
-
 {% endblock %}
-  
-  

@@ -17,6 +17,7 @@ def dashboard():
     insights = dashboard_model.get_business_insights()
     recent_transactions = dashboard_model.get_recent_transactions()
     low_stock_products = dashboard_model.get_low_stock_products()
+    alerts = dashboard_model.get_dashboard_alerts()
 
     return render_template(
         "dashboard.html",
@@ -28,5 +29,6 @@ def dashboard():
         top_products=top_products,
         top_customers=top_customers,
         stock_levels=stock_levels,
-        low_stock_products=low_stock_products
+        low_stock_products=low_stock_products,
+        alerts=alerts
     )
