@@ -1,0 +1,192 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="container mt-4">
+
+    <div class="card shadow">
+
+        <div class="card-header bg-primary text-white">
+
+            <h4 class="mb-0">
+                Product Details
+            </h4>
+
+        </div>
+
+        <div class="card-body">
+
+            <div class="row">
+
+                <div class="col-md-6">
+
+                    <table class="table table-borderless">
+                        <div class="text-center mb-4">
+
+{% if product.image %}
+
+<img
+src="{{ url_for('static', filename='uploads/products/' + product.image) }}"
+class="img-thumbnail"
+style="max-height:220px;">
+
+{% else %}
+
+ <div class="product-placeholder-large">
+
+        <i class="bi bi-box-seam"></i>
+
+        <div class="mt-2 text-muted">
+
+            No Product Image
+
+        </div>
+
+    </div>
+
+{% endif %}
+
+</div>
+                        <tr>
+                            <th width="40%">Vendor</th>
+                            <td>{{ product.vendor_name }}</td>
+                        </tr>
+
+                        <tr>
+                            <th>Product Name</th>
+                            <td>{{ product.name }}</td>
+                        </tr>
+
+                        <tr>
+                            <th>SKU</th>
+                            <td>{{ product.sku }}</td>
+                        </tr>
+
+                        <tr>
+                            <th>Status</th>
+
+                            <td>
+
+                                {% if product.status == "active" %}
+
+                                    <span class="badge bg-success">
+
+                                        Active
+
+                                    </span>
+
+                                {% else %}
+
+                                    <span class="badge bg-danger">
+
+                                        Inactive
+
+                                    </span>
+
+                                {% endif %}
+
+                            </td>
+
+                        </tr>
+
+                    </table>
+
+                </div>
+
+                <div class="col-md-6">
+
+                    <table class="table table-borderless">
+
+                        <tr>
+                            <th width="40%">Purchase Price</th>
+                            <td>₹ {{ "%.2f"|format(product.cost_price) }}</td>
+                        </tr>
+
+                        <tr>
+                            <th>Selling Price</th>
+                            <td>₹ {{ "%.2f"|format(product.selling_price) }}</td>
+                        </tr>
+
+                        <tr>
+                            <th>Current Stock</th>
+
+                            <td>
+
+                                {% if product.stock_qty <= product.reorder_level %}
+
+                                    <span class="badge bg-danger">
+
+                                        {{ product.stock_qty }}
+
+                                    </span>
+
+                                {% else %}
+
+                                    <span class="badge bg-success">
+
+                                        {{ product.stock_qty }}
+
+                                    </span>
+
+                                {% endif %}
+
+                            </td>
+
+                        </tr>
+
+                        <tr>
+                            <th>Reorder Level</th>
+                            <td>{{ product.reorder_level }}</td>
+                        </tr>
+
+                    </table>
+
+                </div>
+
+            </div>
+
+            <hr>
+
+            <div class="alert alert-info">
+
+                <strong>Coming Soon</strong>
+
+                <ul class="mb-0 mt-2">
+
+                    <li>Purchase History</li>
+
+                    <li>Sales History</li>
+
+                    <li>Stock Movement</li>
+
+                    <li>Price History</li>
+
+                </ul>
+
+            </div>
+
+            <div class="text-end">
+
+                <a href="/products/edit/{{ product.id }}"
+                class="btn btn-warning">
+
+                    Edit
+
+                </a>
+
+                <a href="/products"
+                class="btn btn-secondary">
+
+                    Back
+
+                </a>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+{% endblock %}

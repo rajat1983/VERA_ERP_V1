@@ -1,73 +1,546 @@
 {% extends "base.html" %}
-{% block content %}
-<div class="container mt-5">
-    <div class="row justify-content-center">
-        <div class="col-md-6">
 
-            <div class="card shadow">
-                <div class="card-header bg-primary text-white">
-                    <h5 class="mb-0">Update Product</h5>
+{% block content %}
+
+<div class="container-fluid mt-4">
+
+    <form method="POST"
+          enctype="multipart/form-data"
+          class="needs-validation"
+          novalidate>
+
+        <div class="card shadow">
+
+            <div class="card-header bg-primary text-white">
+
+                <div class="d-flex justify-content-between align-items-center">
+
+                    <h4 class="mb-0">
+
+                        <i class="bi bi-pencil-square"></i>
+                        Edit Product
+
+                    </h4>
+
+                    <span class="badge bg-light text-dark">
+
+                        Product ID :
+                        {{ product.id }}
+
+                    </span>
+
                 </div>
 
-                <div class="card-body">
-<form method="POST">
-      <div class="mb-3">
-        <label>Vendor</label>        
-      <select name="vendor_id" class="form-control" required>
-  <option value="">Select Vendor</option>
+            </div>
 
-  {% for v in vendors %}
-    <option value="{{ v.id }}"
-      {% if v.id == product.vendor_id %} selected {% endif %}>
-      {{ v.name }}
-    </option>
-  {% endfor %}
-</select>
-        <label class="form-label">Name</label>
-          <input type="text" name="name" class="form-control" value="{{ product.name }}" required minlength="3">
-      </div>
-      <div class="mb-3">
-        <label class="form-label">SKU</label>
-          <input class="form-control mb-2" name="sku" value="{{ product.sku }}" required>
-      </div>
-      <div class="mb-3">
-        <label class="form-label">Purchase Price</label>
-          <input class="form-control mb-2" name="cost_price" value="{{ product.cost_price }}" required>
-      </div>
-      <div class="mb-3">
-        <label class="form-label">Saleing Price</label>
-          <input class="form-control mb-2" name="selling_price" value="{{ product.selling_price }}" required>
-      </div>
-      
-      <div class="mb-3">
-        <label class="form-label">Stock</label>
-          <input class="form-control mb-2" name="stock_qty" value="{{ product.stock_qty }}" required>
-      </div>
-      <div class="mb-3">
-        <label class="form-label">Reorder Level</label>
-          <input class="form-control mb-2" name="reorder_level" value="{{ product.reorder_level }}" >
-      </div>
-      <div class="mb-3">
-        <label class="form-label">Status</label>
-        <select name="status" class="form-control">
-          <option value="active">Active</option>
-          <option value="inactive">Inactive</option>
-</select>
-          
-      </div>
+            <div class="card-body">
 
-      <div class="d-flex justify-content-between">
-                           <a href="/products" class="btn btn-secondary" >Cancel</a>
-                           <button type="submit" class="btn btn-success">Update</button>
+                <div class="row">
+
+                    <!-- LEFT PANEL -->
+
+                    <div class="col-lg-4">
+
+                        <div class="card border">
+
+                            <div class="card-header bg-light">
+
+                                <strong>
+
+                                    <i class="bi bi-image"></i>
+
+                                    Product Image
+
+                                </strong>
+
+                            </div>
+
+                            <div class="card-body text-center">
+
+                                {% if product.image %}
+
+                                <img
+                                    id="previewImage"
+                                    src="{{ url_for('static', filename='uploads/products/' + product.image) }}"
+                                    class="img-thumbnail mb-3"
+                                    style="width:180px;height:180px;object-fit:cover;">
+
+                                {% else %}
+
+                                <div
+                                    id="previewImage"
+                                    class="product-placeholder-large mb-3">
+
+                                    <i class="bi bi-box-seam"></i>
+
+                                    <div class="mt-2">
+
+                                        No Product Image
+
+                                    </div>
+
+                                </div>
+
+                                {% endif %}
+
+                                <input
+                                    type="file"
+                                    name="image"
+                                    class="form-control"
+                                    accept=".jpg,.jpeg,.png,.webp"
+                                    onchange="previewProductImage(this)">
+
+                                <small class="text-muted">
+
+                                    JPG / PNG / WEBP
+
+                                </small>
+
+                            </div>
+
                         </div>
 
+                    </div>
 
+                    <!-- RIGHT PANEL -->
 
-</form>
-</div>
+                    <div class="col-lg-8">
+
+                        <div class="card border">
+
+                            <div class="card-header bg-light">
+
+                                <strong>
+
+                                    <i class="bi bi-info-circle"></i>
+
+                                    Basic Information
+
+                                </strong>
+
+                            </div>
+
+                            <div class="card-body">
+
+                                <div class="row">
+
+                                    <!-- Vendor -->
+
+                                    <div class="col-md-6 mb-3">
+
+                                        <label class="form-label">
+
+                                            Vendor
+
+                                        </label>
+
+                                        <select
+                                            name="vendor_id"
+                                            class="form-select"
+                                            required>
+
+                                            <option value="">
+
+                                                Select Vendor
+
+                                            </option>
+
+                                            {% for v in vendors %}
+
+                                            <option
+                                                value="{{ v.id }}"
+                                                {% if v.id==product.vendor_id %}selected{% endif %}>
+
+                                                {{ v.name }}
+
+                                            </option>
+
+                                            {% endfor %}
+
+                                        </select>
+
+                                    </div>
+
+                                    <!-- Status -->
+
+                                    <div class="col-md-6 mb-3">
+
+                                        <label class="form-label">
+
+                                            Status
+
+                                        </label>
+
+                                        <select
+                                            name="status"
+                                            class="form-select">
+
+                                            <option
+                                                value="active"
+                                                {% if product.status=="active" %}selected{% endif %}>
+
+                                                Active
+
+                                            </option>
+
+                                            <option
+                                                value="inactive"
+                                                {% if product.status=="inactive" %}selected{% endif %}>
+
+                                                Inactive
+
+                                            </option>
+
+                                        </select>
+
+                                    </div>
+
+                                    <!-- Product Name -->
+
+                                    <div class="col-md-12 mb-3">
+
+                                        <label class="form-label">
+
+                                            Product Name
+
+                                        </label>
+
+                                        <input
+                                            type="text"
+                                            name="name"
+                                            class="form-control"
+                                            value="{{ product.name }}"
+                                            required>
+
+                                    </div>
+
+                                    <!-- Product Code -->
+
+                                    <div class="col-md-6 mb-3">
+
+                                        <label class="form-label">
+
+                                            Product Code
+
+                                        </label>
+
+                                        <input
+                                            type="text"
+                                            name="sku"
+                                            class="form-control"
+                                            value="{{ product.sku }}"
+                                            readonly>
+
+                                    </div>
+									                                    <!-- Pricing Section -->
+
+                                    <div class="col-12">
+
+                                        <hr>
+
+                                        <h5 class="text-primary mb-3">
+
+                                            <i class="bi bi-cash-stack"></i>
+
+                                            Pricing Information
+
+                                        </h5>
+
+                                    </div>
+
+                                    <!-- Purchase Price -->
+
+                                    <div class="col-md-4 mb-3">
+
+                                        <label class="form-label">
+
+                                            Purchase Price
+
+                                        </label>
+
+                                        <div class="input-group">
+
+                                            <span class="input-group-text">₹</span>
+
+                                            <input
+                                                type="number"
+                                                step="0.01"
+                                                min="0"
+                                                name="cost_price"
+                                                id="cost_price"
+                                                class="form-control"
+                                                value="{{ product.cost_price }}"
+                                                onkeyup="calculateMargin()"
+                                                required>
+
+                                        </div>
+
+                                    </div>
+
+                                    <!-- Selling Price -->
+
+                                    <div class="col-md-4 mb-3">
+
+                                        <label class="form-label">
+
+                                            Selling Price
+
+                                        </label>
+
+                                        <div class="input-group">
+
+                                            <span class="input-group-text">₹</span>
+
+                                            <input
+                                                type="number"
+                                                step="0.01"
+                                                min="0"
+                                                name="selling_price"
+                                                id="selling_price"
+                                                class="form-control"
+                                                value="{{ product.selling_price }}"
+                                                onkeyup="calculateMargin()"
+                                                required>
+
+                                        </div>
+
+                                    </div>
+
+                                    <!-- Profit Margin -->
+
+                                    <div class="col-md-4 mb-3">
+
+                                        <label class="form-label">
+
+                                            Profit Margin
+
+                                        </label>
+
+                                        <input
+                                            type="text"
+                                            id="profit_margin"
+                                            class="form-control bg-light"
+                                            readonly>
+
+                                    </div>
+
+                                    <!-- Inventory Section -->
+
+                                    <div class="col-12">
+
+                                        <hr>
+
+                                        <h5 class="text-primary mb-3">
+
+                                            <i class="bi bi-boxes"></i>
+
+                                            Inventory
+
+                                        </h5>
+
+                                    </div>
+
+                                    <!-- Stock -->
+
+                                    <div class="col-md-6 mb-3">
+
+                                        <label class="form-label">
+
+                                            Current Stock
+
+                                        </label>
+
+                                        <input
+                                            type="number"
+                                            min="0"
+                                            name="stock_qty"
+                                            class="form-control"
+                                            value="{{ product.stock_qty }}"
+                                            required>
+
+                                    </div>
+
+                                    <!-- Reorder -->
+
+                                    <div class="col-md-6 mb-3">
+
+                                        <label class="form-label">
+
+                                            Reorder Level
+
+                                        </label>
+
+                                        <input
+                                            type="number"
+                                            min="0"
+                                            name="reorder_level"
+                                            class="form-control"
+                                            value="{{ product.reorder_level }}">
+
+                                    </div>
+
+                                </div>
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+            <div class="card-footer">
+
+                <div class="d-flex justify-content-between">
+
+                    <a href="/products"
+                       class="btn btn-outline-secondary">
+
+                        <i class="bi bi-arrow-left"></i>
+
+                        Back
+
+                    </a>
+
+                    <button
+                        type="submit"
+                        class="btn btn-success">
+
+                        <i class="bi bi-floppy"></i>
+
+                        Update Product
+
+                    </button>
+
+                </div>
+
             </div>
 
         </div>
-    </div>
+
+    </form>
+
 </div>
+<script>
+
+document.addEventListener("DOMContentLoaded", function () {
+
+    calculateMargin();
+
+});
+
+/* ------------------------------------------
+   Product Image Preview
+------------------------------------------- */
+
+function previewProductImage(input){
+
+    if(input.files && input.files[0]){
+
+        const reader = new FileReader();
+
+        reader.onload = function(e){
+
+            const preview = document.getElementById("previewImage");
+
+            if(preview.tagName === "IMG"){
+
+                preview.src = e.target.result;
+
+            }else{
+
+                preview.outerHTML = `
+                    <img
+                        id="previewImage"
+                        src="${e.target.result}"
+                        class="img-thumbnail mb-3"
+                        style="
+                            width:180px;
+                            height:180px;
+                            object-fit:cover;
+                        ">
+                `;
+
+            }
+
+        };
+
+        reader.readAsDataURL(input.files[0]);
+
+    }
+
+}
+
+/* ------------------------------------------
+   Profit Margin Calculator
+------------------------------------------- */
+
+function calculateMargin(){
+
+    let cost = parseFloat(document.getElementById("cost_price").value);
+
+    let selling = parseFloat(document.getElementById("selling_price").value);
+
+    if(isNaN(cost)) cost = 0;
+
+    if(isNaN(selling)) selling = 0;
+
+    let profit = selling - cost;
+
+    let percentage = 0;
+
+    if(cost > 0){
+
+        percentage = (profit / cost) * 100;
+
+    }
+
+    document.getElementById("profit_margin").value =
+        "₹ " +
+        profit.toFixed(2) +
+        " (" +
+        percentage.toFixed(2) +
+        "%)";
+
+    /* Colour Coding */
+
+    const field = document.getElementById("profit_margin");
+
+    field.classList.remove(
+        "bg-success",
+        "bg-warning",
+        "bg-danger",
+        "text-white"
+    );
+
+    if(profit < 0){
+
+        field.classList.add(
+            "bg-danger",
+            "text-white"
+        );
+
+    }
+    else if(profit == 0){
+
+        field.classList.add(
+            "bg-warning"
+        );
+
+    }
+    else{
+
+        field.classList.add(
+            "bg-success",
+            "text-white"
+        );
+
+    }
+
+}
+
+</script>
+
 {% endblock %}

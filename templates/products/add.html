@@ -9,40 +9,34 @@
   width:70%;
 }
 </style>
-<form method="post">
+<form method="post" enctype="multipart/form-data">
   <label>Vendor</label>
 <input type="text" id="vendor_input" class="form-control" autocomplete="off">
 <input type="hidden" name="vendor_id" id="vendor_id">
 
 <div id="vendor_suggestions" class="list-group mt-1"></div>
- <!-- <label>Vendor</label>
-      <select name="vendor_id" class="form-control" required>
-        <option value="">-- Select Vendor --</option>
+ 
+Name:<input name="name" class="form-control" required>
 
-        {% for v in vendors %}
-          <option value="{{ v.id }}">{{ v.name }}</option>
-        {% endfor %}
-      </select> -->
-Name:
-<input name="name" class="form-control" required>
+<label>Product Code(SKU)</label>
 
-SKU:
-<input name="sku" class="form-control">
+<input type="text"  name="sku" class="form-control"  value="{{ product_code }}"  readonly>
+<div class="mb-3">
 
-Cost Price:
-<input name="cost_price" class="form-control" required>
+    <label class="form-label">       Product Image    </label>
+    <input  type="file"   name="image"  class="form-control"  accept=".jpg,.jpeg,.png,.webp"   >
+    <small class="text-muted"> Supported: JPG, PNG, WEBP (Max 2 MB)   </small>
+</div>
 
-Selling Price:
-<input name="selling_price" class="form-control" required>
+Cost Price:<input name="cost_price" class="form-control" required>
 
-Quantity:
-<input name="stock_qty" class="form-control" required>
+Selling Price:<input name="selling_price" class="form-control" required>
 
-Reorder Level:
-<input name="reorder_level" class="form-control" value="0">
+Quantity:<input name="stock_qty" class="form-control" required>
 
-Status:
-<select name="status" class="form-control">
+Reorder Level:<input name="reorder_level" class="form-control" value="0">
+
+Status:<select name="status" class="form-control">
   <option value="active">Active</option>
   <option value="inactive">Inactive</option>
 </select>

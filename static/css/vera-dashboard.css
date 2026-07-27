@@ -128,3 +128,35 @@ body{
     border-radius:20px;
 
 }
+.product-placeholder{
+    width:50px;
+    height:50px;
+    border:1px solid #dee2e6;
+    border-radius:8px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    background:#f8f9fa;
+}
+
+.product-placeholder i{
+    font-size:24px;
+    color:#6c757d;
+}
+.product-placeholder-large{
+    width:220px;
+    height:220px;
+    border:2px dashed #ced4da;
+    border-radius:10px;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    background:#f8f9fa;
+    margin:auto;
+}
+
+.product-placeholder-large i{
+    font-size:70px;
+    color:#adb5bd;
+}

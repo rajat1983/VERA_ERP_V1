@@ -26,12 +26,11 @@ def get_all_products(search, limit, offset):
 
     like = f"%{search}%"
 
-    cur.execute("""
-SELECT
-
+    cur.execute(""" SELECT 
     p.id,
     p.vendor_id,
     p.name,
+    p.image,
     p.sku,
     p.cost_price,
     p.selling_price,
@@ -46,9 +45,7 @@ FROM products p
 LEFT JOIN vendors v
 ON p.vendor_id = v.id
 
-WHERE
-
-    p.name LIKE %s
+WHERE     p.name LIKE %s
 
     OR p.sku LIKE %s
 
@@ -91,23 +88,50 @@ def get_product_count(search):
     conn.close()
     return total
 
-def add_product(data):    
+def add_product(data):
+
     conn = get_db_connection()
     cur = conn.cursor()
+
     cur.execute("""
         INSERT INTO products
-        (vendor_id,name, sku, cost_price, selling_price, stock_qty, reorder_level, status)
-        VALUES (%s,%s,%s,%s,%s,%s,%s,%s)
+        (
+            vendor_id,
+            name,
+            sku,
+            image,
+            cost_price,
+            selling_price,
+            stock_qty,
+            reorder_level,
+            status
+        )
+        VALUES
+        (
+            %s,
+            %s,
+            %s,
+            %s,
+            %s,
+            %s,
+            %s,
+            %s,
+            %s
+        )
     """, (
+
         data["vendor_id"],
         data["name"],
         data["sku"],
+        data["image"],
         data["cost_price"],
         data["selling_price"],
         data["stock_qty"],
         data["reorder_level"],
         data["status"]
+
     ))
+
     conn.commit()
     cur.close()
     conn.close()
@@ -148,6 +172,7 @@ def update_product(id, data):
             vendor_id=%s,
             name=%s,
             sku=%s,
+            image=%s,
             cost_price=%s,
             selling_price=%s,
             stock_qty=%s,
@@ -158,6 +183,7 @@ def update_product(id, data):
         data["vendor_id"],
         data["name"],
         data["sku"],
+        data["image"],
         data["cost_price"],
         data["selling_price"],
         data["stock_qty"],
@@ -244,3 +270,34 @@ def get_products_by_type(product_type):
     conn.close()
 
     return products
+
+def generate_product_code():
+
+    conn = get_db_connection()
+    cur = conn.cursor()
+
+    # Get Product Prefix
+    cur.execute("""
+        SELECT product_prefix
+        FROM company
+        LIMIT 1
+    """)
+
+    company = cur.fetchone()
+
+    prefix = company["product_prefix"] if company else "PRD"
+
+    # Get Last Product ID
+    cur.execute("""
+        SELECT IFNULL(MAX(id),0) + 1 AS next_id
+        FROM products
+    """)
+
+    next_id = cur.fetchone()["next_id"]
+
+    product_code = f"{prefix}{next_id:06d}"
+
+    cur.close()
+    conn.close()
+
+    return product_code
