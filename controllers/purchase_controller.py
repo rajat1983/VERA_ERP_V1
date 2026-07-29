@@ -15,13 +15,16 @@ def list_purchases():
         purchases=purchases
     )
 
-@purchase_bp.route("/purchases/add", methods=["GET","POST"])
+@purchase_bp.route("/purchases/add", methods=["GET", "POST"])
 def add_purchase():
 
     if request.method == "POST":
 
+        # Generate Purchase Number
+        purchase_no = purchase_model.generate_purchase_number()
+
         vendor_id = request.form.get("vendor_id")
-        invoice_no = request.form.get("invoice_no")
+        vendor_invoice_no = request.form.get("vendor_invoice_no")
         purchase_date = request.form.get("purchase_date")
 
         products = request.form.getlist("product_id[]")
@@ -31,6 +34,7 @@ def add_purchase():
         items = []
 
         for i in range(len(products)):
+
             if not products[i]:
                 continue
 
@@ -41,33 +45,49 @@ def add_purchase():
                 continue
 
             items.append({
-                "product_id": products[i],
+                "product_id": int(products[i]),
                 "qty": int(qty),
                 "price": float(price)
             })
 
         if not items:
-            flash("Please add at least one product", "danger")
+            flash("Please add at least one product.", "danger")
             return redirect(url_for("purchase.add_purchase"))
 
-        purchase_model.create_purchase(
-            vendor_id,
-            invoice_no,
-            purchase_date,
-            items
-        )
+        try:
 
-        flash("Purchase added & stock updated successfully", "success")
-        return redirect(url_for("purchase.list_purchases"))
+            purchase_model.create_purchase(
+                purchase_no,
+                vendor_id,
+                vendor_invoice_no,
+                purchase_date,
+                items
+            )
 
-    #vendors = vendor_model.get_all_vendors(search, limit, offset)
+            flash("Purchase added & stock updated successfully.", "success")
+
+            return redirect(url_for("purchase.list_purchases"))
+
+        except Exception as e:
+
+            flash(f"Error: {str(e)}", "danger")
+
+            return redirect(url_for("purchase.add_purchase"))
+
+    # -------------------------
+    # GET Request
+    # -------------------------
+
     vendors = product_model.get_vendors()
     products = product_model.get_products()
+
+    purchase_no = purchase_model.generate_purchase_number()
 
     return render_template(
         "purchases/add.html",
         vendors=vendors,
-        products=products
+        products=products,
+        purchase_no=purchase_no
     )
 @purchase_bp.route("/purchases/view/<int:id>")
 def view_purchase(id):

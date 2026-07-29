@@ -1,29 +1,68 @@
 from db import get_db_connection
 
-def create_purchase(vendor_id, invoice_no, purchase_date, items):
+def create_purchase(
+    purchase_no,
+    vendor_id,
+    vendor_invoice_no,
+    purchase_date,
+    items
+):
 
     conn = get_db_connection()
     cur = conn.cursor()
 
     try:
+
         subtotal = 0
 
-        # Insert purchase (draft first)
+        # Purchase Header
         cur.execute("""
-            INSERT INTO purchases(vendor_id, invoice_no, purchase_date)
-            VALUES (%s,%s,%s)
-        """, (vendor_id, invoice_no, purchase_date))
+            INSERT INTO purchases
+            (
+                purchase_no,
+                vendor_id,
+                vendor_invoice_no,
+                purchase_date
+            )
+            VALUES
+            (
+                %s,
+                %s,
+                %s,
+                %s
+            )
+        """, (
+            purchase_no,
+            vendor_id,
+            vendor_invoice_no,
+            purchase_date
+        ))
 
         purchase_id = cur.lastrowid
 
+        # Purchase Items
         for item in items:
+
             line_total = item["qty"] * item["price"]
             subtotal += line_total
 
             cur.execute("""
                 INSERT INTO purchase_items
-                (purchase_id, product_id, quantity, price, line_total)
-                VALUES (%s,%s,%s,%s,%s)
+                (
+                    purchase_id,
+                    product_id,
+                    quantity,
+                    price,
+                    line_total
+                )
+                VALUES
+                (
+                    %s,
+                    %s,
+                    %s,
+                    %s,
+                    %s
+                )
             """, (
                 purchase_id,
                 item["product_id"],
@@ -32,34 +71,66 @@ def create_purchase(vendor_id, invoice_no, purchase_date, items):
                 line_total
             ))
 
+        # Update Purchase Total
         cur.execute("""
             UPDATE purchases
-            SET subtotal=%s, total_amount=%s, status='confirmed'
+            SET
+                subtotal=%s,
+                total_amount=%s,
+                status='confirmed'
             WHERE id=%s
-        """, (subtotal, subtotal, purchase_id))
+        """, (
+            subtotal,
+            subtotal,
+            purchase_id
+        ))
 
-        # 🔥 STOCK UPDATE
+        # Update Stock
         for item in items:
+
             cur.execute("""
                 UPDATE products
                 SET stock_qty = stock_qty + %s
                 WHERE id=%s
-            """, (item["qty"], item["product_id"]))
+            """, (
+                item["qty"],
+                item["product_id"]
+            ))
 
             cur.execute("""
                 INSERT INTO stock_movements
-                (product_id, movement_type, quantity, reference_id, reference_type)
-                VALUES (%s,'purchase',%s,%s,'purchase')
-            """, (item["product_id"], item["qty"], purchase_id))
+                (
+                    product_id,
+                    movement_type,
+                    quantity,
+                    reference_id,
+                    reference_type
+                )
+                VALUES
+                (
+                    %s,
+                    'purchase',
+                    %s,
+                    %s,
+                    'purchase'
+                )
+            """, (
+                item["product_id"],
+                item["qty"],
+                purchase_id
+            ))
 
         conn.commit()
+
         return purchase_id
 
     except Exception as e:
+
         conn.rollback()
         raise e
 
     finally:
+
         cur.close()
         conn.close()
 
@@ -160,3 +231,26 @@ def delete_purchase(purchase_id):
     finally:
         cur.close()
         conn.close()
+def generate_purchase_number():
+
+    conn = get_db_connection()
+    cur = conn.cursor()
+
+    cur.execute("""
+        SELECT MAX(id) AS last_id
+        FROM purchases
+    """)
+
+    row = cur.fetchone()
+
+    next_id = 1
+
+    if row and row["last_id"]:
+        next_id = row["last_id"] + 1
+
+    purchase_no = f"PUR{next_id:06d}"
+
+    cur.close()
+    conn.close()
+
+    return purchase_no

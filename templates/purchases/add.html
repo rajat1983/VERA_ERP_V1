@@ -16,15 +16,33 @@
     </select>
   </div>
 
-  <div class="col-md-4">
-    <label>Invoice No</label>
-    <input type="text" name="invoice_no" class="form-control" required>
-  </div>
+  <div class="col-md-3">
+        <label>Purchase No</label>
+        <input
+            type="text"
+            name="purchase_no"
+            class="form-control"
+            value="{{ purchase_no }}"
+            readonly>
+    </div>
+
+    <div class="col-md-5">
+        <label>Vendor Invoice No</label>
+        <input
+            type="text"
+            name="vendor_invoice_no"
+            class="form-control"
+            required>
+    </div>
 
   <div class="col-md-4">
-    <label>Date</label>
-    <input type="date" name="purchase_date" class="form-control" required>
-  </div>
+        <label>Purchase Date</label>
+        <input
+            type="date"
+            name="purchase_date"
+            class="form-control"
+            required>
+    </div>
 </div>
 
 <hr>
