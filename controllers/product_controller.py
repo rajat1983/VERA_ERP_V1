@@ -19,12 +19,13 @@ def index():
 
 
     return render_template(
-        "products/list.html",
-        products=products,        
-        page=page,
-        total_pages=total_pages,
-        q=search
-    )
+    "products/list.html",
+    products=products,
+    page=page,
+    total_pages=total_pages,
+    total=total,
+    q=search
+)
 
 
 @product_bp.route("/products/add", methods=["GET", "POST"])
@@ -35,41 +36,80 @@ def add_product():
 
     if request.method == "POST":
 
-        image_name = None
+        try:
 
-        image = request.files.get("image")
+            # -----------------------------
+            # Upload Image
+            # -----------------------------
+            image_name = None
+            image = request.files.get("image")
 
-        if image and image.filename:
+            if image and image.filename:
 
-            image_name = secure_filename(image.filename)
+                image_name = secure_filename(image.filename)
 
-            image.save(
-                os.path.join(
-                    "static/uploads/products",
-                    image_name
+                upload_path = os.path.join(
+                    current_app.static_folder,
+                    "uploads",
+                    "products"
                 )
+
+                os.makedirs(upload_path, exist_ok=True)
+
+                image.save(
+                    os.path.join(upload_path, image_name)
+                )
+
+            # -----------------------------
+            # Prepare Data
+            # -----------------------------
+            data = {
+                "vendor_id": request.form.get("vendor_id"),
+                "name": request.form.get("name"),
+                "sku": request.form.get("sku"),
+                "image": image_name,
+                "cost_price": request.form.get("cost_price"),
+                "selling_price": request.form.get("selling_price"),
+                "stock_qty": request.form.get("stock_qty"),
+                "reorder_level": request.form.get("reorder_level"),
+                "status": request.form.get("status")
+            }
+
+            # -----------------------------
+            # Duplicate Validation
+            # -----------------------------
+            if product_model.product_name_exists(data["name"]):
+
+                flash("Product name already exists.", "danger")
+
+                return render_template(
+                    "products/add.html",
+                    vendors=vendors,
+                    product_code=product_code
+                )
+
+            # -----------------------------
+            # Save Product
+            # -----------------------------
+            product_model.add_product(data)
+
+            flash("Product Added Successfully.", "success")
+
+            return redirect(url_for("product.index"))
+
+        except Exception as e:
+
+            print("Product Add Error :", e)
+
+            flash(f"Error : {e}", "danger")
+
+            return render_template(
+                "products/add.html",
+                vendors=vendors,
+                product_code=product_code
             )
 
-        data = {
-
-            "vendor_id": request.form["vendor_id"],
-            "name": request.form["name"],
-           "sku": request.form["sku"],
-            "image": image_name,
-            "cost_price": request.form["cost_price"],
-            "selling_price": request.form["selling_price"],
-            "stock_qty": request.form["stock_qty"],
-            "reorder_level": request.form["reorder_level"],
-            "status": request.form["status"]
-
-        }
-
-        product_model.add_product(data)
-
-        flash("Product Added", "success")
-
-        return redirect(url_for("product.index"))
-
+    # GET Request
     return render_template(
         "products/add.html",
         vendors=vendors,
@@ -84,10 +124,9 @@ def edit_product(id):
 
     if request.method == "POST":
 
-        # Keep existing image by default
+        # Keep existing image
         image_name = product["image"]
 
-        # Check if a new image is uploaded
         image = request.files.get("image")
 
         if image and image.filename:
@@ -100,7 +139,6 @@ def edit_product(id):
                 "products"
             )
 
-            # Create folder if it doesn't exist
             os.makedirs(upload_path, exist_ok=True)
 
             image.save(
@@ -111,13 +149,8 @@ def edit_product(id):
 
             "vendor_id": request.form["vendor_id"],
             "name": request.form["name"],
-
-            # Keep existing Product Code
             "sku": request.form["sku"],
-
-            # Updated Image
             "image": image_name,
-
             "cost_price": request.form["cost_price"],
             "selling_price": request.form["selling_price"],
             "stock_qty": request.form["stock_qty"],
@@ -125,6 +158,17 @@ def edit_product(id):
             "status": request.form["status"]
 
         }
+
+        # Duplicate Product Name Validation
+        if product_model.product_name_exists(data["name"], id):
+
+            flash("Product name already exists.", "danger")
+
+            return render_template(
+                "products/edit.html",
+                product=product,
+                vendors=vendors
+            )
 
         product_model.update_product(id, data)
 

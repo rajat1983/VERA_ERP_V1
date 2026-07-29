@@ -160,3 +160,80 @@ body{
     font-size:70px;
     color:#adb5bd;
 }
+/* ==========================
+   Product List
+========================== */
+
+.table tbody tr{
+
+    transition:all .25s ease;
+
+}
+
+.table tbody tr:hover{
+
+    background:#f8fbff;
+
+    transform:scale(1.003);
+
+}
+
+.table td{
+
+    vertical-align:middle;
+
+}
+
+.product-placeholder{
+
+    width:60px;
+
+    height:60px;
+
+    border-radius:10px;
+
+    border:1px solid #dee2e6;
+
+    background:#f8f9fa;
+
+    display:flex;
+
+    justify-content:center;
+
+    align-items:center;
+
+}
+
+.product-placeholder i{
+
+    font-size:24px;
+
+    color:#6c757d;
+
+}
+
+.card{
+
+    border-radius:12px;
+
+}
+
+.card-header{
+
+    border-bottom:none;
+
+}
+
+.table thead th{
+
+    font-weight:600;
+
+    white-space:nowrap;
+
+}
+
+.btn-group .btn{
+
+    border-radius:6px !important;
+
+}

@@ -93,48 +93,63 @@ def add_product(data):
     conn = get_db_connection()
     cur = conn.cursor()
 
-    cur.execute("""
-        INSERT INTO products
-        (
-            vendor_id,
-            name,
-            sku,
-            image,
-            cost_price,
-            selling_price,
-            stock_qty,
-            reorder_level,
-            status
-        )
-        VALUES
-        (
-            %s,
-            %s,
-            %s,
-            %s,
-            %s,
-            %s,
-            %s,
-            %s,
-            %s
-        )
-    """, (
+    try:
 
-        data["vendor_id"],
-        data["name"],
-        data["sku"],
-        data["image"],
-        data["cost_price"],
-        data["selling_price"],
-        data["stock_qty"],
-        data["reorder_level"],
-        data["status"]
+        cur.execute("""
+            INSERT INTO products
+            (
+                vendor_id,
+                name,
+                sku,
+                image,
+                cost_price,
+                selling_price,
+                stock_qty,
+                reorder_level,
+                status
+            )
+            VALUES
+            (
+                %s,
+                %s,
+                %s,
+                %s,
+                %s,
+                %s,
+                %s,
+                %s,
+                %s
+            )
+        """, (
 
-    ))
+            data["vendor_id"],
+            data["name"],
+            data["sku"],
+            data["image"],
+            data["cost_price"],
+            data["selling_price"],
+            data["stock_qty"],
+            data["reorder_level"],
+            data["status"]
 
-    conn.commit()
-    cur.close()
-    conn.close()
+        ))
+
+        conn.commit()
+
+        return True
+
+    except Exception as e:
+
+        conn.rollback()
+
+        print("Database Error :", e)
+
+        raise e
+
+    finally:
+
+        cur.close()
+        conn.close()
 
 
 def get_product(id):
@@ -161,9 +176,6 @@ def get_product_by_id(id):
     cur.close()
     conn.close()
     return row
-
-
-
 def update_product(id, data):
     conn = get_db_connection()
     cur = conn.cursor()
@@ -301,3 +313,31 @@ def generate_product_code():
     conn.close()
 
     return product_code
+def product_name_exists(name, exclude_id=None):
+
+    conn = get_db_connection()
+    cur = conn.cursor()
+
+    if exclude_id:
+
+        cur.execute("""
+            SELECT id
+            FROM products
+            WHERE LOWER(name)=LOWER(%s)
+            AND id<>%s
+        """, (name, exclude_id))
+
+    else:
+
+        cur.execute("""
+            SELECT id
+            FROM products
+            WHERE LOWER(name)=LOWER(%s)
+        """, (name,))
+
+    product = cur.fetchone()
+
+    cur.close()
+    conn.close()
+
+    return product is not None
