@@ -50,34 +50,60 @@
 <table class="table table-bordered">
   <thead>
     <tr>
-      <th>Product</th>
-      <th width="120">Qty</th>
-      <th width="150">Price</th>
-      <th width="100">Remove</th>
-    </tr>
+    <th width="40%">Product</th>
+    <th width="15%">Quanty</th>
+    <th width="20%">Purchase Price</th>
+    <th width="20%">Line Total</th>
+    <th width="5%">Remove</th>
+</tr>
   </thead>
   <tbody id="items_table">
     <tr>
       <td>
-        <select name="product_id[]" class="form-control">
+        <select  name="product_id[]" class="form-control product" >
           <option value="">Select Product</option>
           {% for p in products %}
-          <option value="{{ p.id }}">{{ p.name }}</option>
+          <option value="{{ p.id }}" data-price="{{ p.cost_price }}">  {{ p.name }}</option>
           {% endfor %}
         </select>
       </td>
       <td>
-        <input type="number" name="qty[]" class="form-control">
+       <input  type="number" name="qty[]" class="form-control qty"  min="1" required>
       </td>
       <td>
-        <input type="number" step="0.01" name="price[]" class="form-control">
-      </td>
+    <input type="number" step="0.01" name="price[]" class="form-control price">
+</td>
+
+<td>
+    <input type="text" class="form-control line-total" value="0.00" readonly>
+</td>
       <td>
         <button type="button" class="btn btn-danger btn-sm remove-row">X</button>
       </td>
     </tr>
   </tbody>
 </table>
+<div class="row justify-content-end mt-3">
+
+    <div class="col-md-3">
+
+        <table class="table table-bordered">
+
+            <tr>
+                <th>Grand Total</th>
+                <th>
+                    ₹
+                    <span id="grandTotal">
+                        0.00
+                    </span>
+                </th>
+            </tr>
+
+        </table>
+
+    </div>
+
+</div>
 
 <button type="button" class="btn btn-secondary" onclick="addRow()">+ Add Row</button>
 
@@ -88,25 +114,6 @@
 
 </form>
 
-<script>
-function addRow(){
-  const table = document.getElementById("items_table");
-  const newRow = table.rows[0].cloneNode(true);
-
-  newRow.querySelectorAll("input").forEach(input => input.value = "");
-  newRow.querySelectorAll("select").forEach(select => select.selectedIndex = 0);
-
-  table.appendChild(newRow);
-}
-
-document.addEventListener("click", function(e){
-  if(e.target.classList.contains("remove-row")){
-    const rows = document.querySelectorAll("#items_table tr");
-    if(rows.length > 1){
-      e.target.closest("tr").remove();
-    }
-  }
-});
-</script>
+<script src="{{ url_for('static', filename='js/purchase.js') }}"></script>
 
 {% endblock %}

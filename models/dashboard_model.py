@@ -280,7 +280,7 @@ def get_recent_transactions():
         (
             SELECT
                 purchase_date,
-                invoice_no,
+                vendor_invoice_no,
                 vendor_id,
                 total_amount,
                 'Purchase'

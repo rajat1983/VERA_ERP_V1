@@ -4,7 +4,7 @@ from db import get_db_connection
 def get_products():
     conn = get_db_connection()
     cur = conn.cursor()  
-    cur.execute(""" SELECT id,name FROM products  ORDER BY id DESC """)
+    cur.execute(""" SELECT id,name,cost_price FROM products  ORDER BY id DESC """)
     data = cur.fetchall()
     cur.close()
     conn.close()
