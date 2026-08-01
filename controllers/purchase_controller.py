@@ -3,6 +3,7 @@ from models import purchase_model
 from models import vendor_model
 from models import product_model
 
+
 purchase_bp = Blueprint("purchase", __name__)
 
 @purchase_bp.route("/purchases")
@@ -18,24 +19,50 @@ def list_purchases():
 @purchase_bp.route("/purchases/add", methods=["GET", "POST"])
 def add_purchase():
 
-    if request.method == "POST":
+    vendors = product_model.get_vendors()
+    products = product_model.get_products()
 
-        # Generate Purchase Number
-        purchase_no = purchase_model.generate_purchase_number()
+    purchase_no = purchase_model.generate_purchase_number()
+
+    from datetime import date
+    today = date.today().isoformat()
+    if request.method == "POST":
 
         vendor_id = request.form.get("vendor_id")
         vendor_invoice_no = request.form.get("vendor_invoice_no")
         purchase_date = request.form.get("purchase_date")
 
-        products = request.form.getlist("product_id[]")
+        # -----------------------------------------
+        # Duplicate Vendor Invoice Validation
+        # -----------------------------------------
+
+        if purchase_model.purchase_invoice_exists(
+            vendor_id,
+            vendor_invoice_no
+        ):
+
+            flash(
+                "This Vendor Invoice Number already exists.",
+                "danger"
+            )
+
+            return render_template(
+                "purchases/add.html",
+                vendors=vendors,
+                products=products,
+                purchase_no=purchase_no
+                
+            )
+
+        products_list = request.form.getlist("product_id[]")
         qtys = request.form.getlist("qty[]")
         prices = request.form.getlist("price[]")
 
         items = []
 
-        for i in range(len(products)):
+        for i in range(len(products_list)):
 
-            if not products[i]:
+            if not products_list[i]:
                 continue
 
             qty = qtys[i].strip()
@@ -45,14 +72,28 @@ def add_purchase():
                 continue
 
             items.append({
-                "product_id": int(products[i]),
+                "product_id": int(products_list[i]),
                 "qty": int(qty),
                 "price": float(price)
             })
 
+        # -----------------------------------------
+        # At Least One Product
+        # -----------------------------------------
+
         if not items:
-            flash("Please add at least one product.", "danger")
-            return redirect(url_for("purchase.add_purchase"))
+
+            flash(
+                "Please add at least one product.",
+                "danger"
+            )
+
+            return render_template(
+                "purchases/add.html",
+                vendors=vendors,
+                products=products,
+                purchase_no=purchase_no
+            )
 
         try:
 
@@ -64,30 +105,35 @@ def add_purchase():
                 items
             )
 
-            flash("Purchase added & stock updated successfully.", "success")
+            flash(
+                "Purchase added & stock updated successfully.",
+                "success"
+            )
 
-            return redirect(url_for("purchase.list_purchases"))
+            return redirect(
+                url_for("purchase.list_purchases")
+            )
 
         except Exception as e:
 
-            flash(f"Error: {str(e)}", "danger")
+            flash(
+                f"Error : {str(e)}",
+                "danger"
+            )
 
-            return redirect(url_for("purchase.add_purchase"))
-
-    # -------------------------
-    # GET Request
-    # -------------------------
-
-    vendors = product_model.get_vendors()
-    products = product_model.get_products()
-
-    purchase_no = purchase_model.generate_purchase_number()
+            return render_template(
+                "purchases/add.html",
+                vendors=vendors,
+                products=products,
+                purchase_no=purchase_no
+            )
 
     return render_template(
         "purchases/add.html",
         vendors=vendors,
         products=products,
-        purchase_no=purchase_no
+        purchase_no=purchase_no,
+        today=today
     )
 @purchase_bp.route("/purchases/view/<int:id>")
 def view_purchase(id):
@@ -106,3 +152,133 @@ def delete_purchase(id):
 
     flash("Purchase deleted and stock reversed successfully", "success")
     return redirect(url_for("purchase.list_purchases"))
+
+@purchase_bp.route("/purchases/edit/<int:id>", methods=["GET", "POST"])
+@purchase_bp.route("/purchases/edit/<int:id>", methods=["GET", "POST"])
+def edit_purchase(id):
+
+    vendors = product_model.get_vendors()
+    products = product_model.get_products()
+
+    purchase, purchase_items = purchase_model.get_purchase_by_id(id)
+
+    if request.method == "POST":
+
+        vendor_id = request.form.get("vendor_id")
+        vendor_invoice_no = request.form.get("vendor_invoice_no")
+        purchase_date = request.form.get("purchase_date")
+
+        # -----------------------------------------
+        # Duplicate Vendor Invoice Validation
+        # -----------------------------------------
+
+        if purchase_model.purchase_invoice_exists(
+            vendor_id,
+            vendor_invoice_no,
+            exclude_purchase_id=id
+        ):
+
+            flash(
+                "This Vendor Invoice Number already exists.",
+                "danger"
+            )
+
+            return render_template(
+                "purchases/edit.html",
+                purchase=purchase,
+                items=purchase_items,
+                vendors=vendors,
+                products=products
+            )
+
+        # -----------------------------------------
+        # Read Purchase Items
+        # -----------------------------------------
+
+        products_list = request.form.getlist("product_id[]")
+        qtys = request.form.getlist("qty[]")
+        prices = request.form.getlist("price[]")
+
+        items = []
+
+        for i in range(len(products_list)):
+
+            if not products_list[i]:
+                continue
+
+            qty = qtys[i].strip()
+            price = prices[i].strip()
+
+            if not qty or not price:
+                continue
+
+            items.append({
+
+                "product_id": int(products_list[i]),
+                "qty": int(qty),
+                "price": float(price)
+
+            })
+
+        # -----------------------------------------
+        # Validation
+        # -----------------------------------------
+
+        if not items:
+
+            flash(
+                "Please add at least one product.",
+                "danger"
+            )
+
+            return render_template(
+                "purchases/edit.html",
+                purchase=purchase,
+                items=purchase_items,
+                vendors=vendors,
+                products=products
+            )
+
+        try:
+
+            purchase_model.update_purchase(
+
+                purchase_id=id,
+                vendor_id=vendor_id,
+                vendor_invoice_no=vendor_invoice_no,
+                purchase_date=purchase_date,
+                items=items
+
+            )
+
+            flash(
+                "Purchase updated successfully.",
+                "success"
+            )
+
+            return redirect(
+                url_for("purchase.list_purchases")
+            )
+
+        except Exception as e:
+
+            flash(
+                f"Error : {str(e)}",
+                "danger"
+            )
+
+            return render_template(
+                "purchases/edit.html",
+                purchase=purchase,
+                items=purchase_items,
+                vendors=vendors,
+                products=products
+            )
+
+    return render_template(
+        "purchases/edit.html",
+        purchase=purchase,
+        items=purchase_items,
+        vendors=vendors,
+        products=products
+    )

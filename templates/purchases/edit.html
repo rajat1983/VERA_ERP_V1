@@ -1,0 +1,195 @@
+{% extends "base.html" %}
+{% block content %}
+
+<h4>Edit Purchase</h4>
+<form method="POST" id="purchaseForm" onsubmit="confirmPurchaseSubmit(event)">
+<div class="row mb-3">
+  <div class="col-md-4">
+    <label>Vendor</label>
+    <select name="vendor_id" class="form-control" required>
+
+    <option value="">Select Vendor</option>
+
+    {% for v in vendors %}
+
+    <option  value="{{ v.id }}"  {% if purchase.vendor_id == v.id %}   selected  {% endif %}>
+    {{ v.name }}
+    {% endfor %}
+</select>
+  </div>
+
+  <div class="col-md-3">
+        <label>Purchase No</label>
+        <input
+            type="text"
+            name="purchase_no"
+            class="form-control"
+            value="{{ purchase.purchase_no }}"
+            readonly>
+    </div>
+
+    <div class="col-md-5">
+        <label>Vendor Invoice No</label>
+        <input
+    type="text"
+    name="vendor_invoice_no"
+    class="form-control"
+    value="{{ purchase.vendor_invoice_no }}"
+    required>
+       </div>
+
+  <div class="col-md-4">
+        <label>Purchase Date</label>
+        <input
+    type="date"
+    name="purchase_date"
+    class="form-control"
+    value="{{ purchase.purchase_date.strftime('%Y-%m-%d') if purchase.purchase_date else '' }}"
+    required>
+        </div>
+</div>
+
+<hr>
+
+<table class="table table-bordered">
+  <thead>
+    <tr>
+    <th width="40%">Product</th>
+    <th width="15%">Quanty</th>
+    <th width="20%">Purchase Price</th>
+    <th width="20%">Line Total</th>
+    <th width="5%">Remove</th>
+</tr>
+  </thead>
+  <tbody id="items_table">
+
+{% for item in items %}
+
+<tr>
+
+    <!-- Product -->
+
+    <td>
+
+        <select
+            name="product_id[]"
+            class="form-control product"
+            required>
+
+            <option value="">
+                Select Product
+            </option>
+
+            {% for p in products %}
+
+            <option
+                value="{{ p.id }}"
+                data-price="{{ p.cost_price }}"
+                {% if p.id == item.product_id %}
+                    selected
+                {% endif %}
+            >
+
+                {{ p.name }}
+
+            </option>
+
+            {% endfor %}
+
+        </select>
+
+    </td>
+
+    <!-- Quantity -->
+
+    <td>
+
+        <input
+            type="number"
+            name="qty[]"
+            class="form-control qty"
+            min="1"
+            value="{{ item.quantity }}"
+            required>
+
+    </td>
+
+    <!-- Purchase Price -->
+
+    <td>
+
+        <input
+            type="number"
+            step="0.01"
+            name="price[]"
+            class="form-control price"
+            value="{{ item.price }}"
+            required>
+
+    </td>
+
+    <!-- Line Total -->
+
+    <td>
+
+        <input
+            type="text"
+            class="form-control line-total"
+            value="{{ item.line_total }}"
+            readonly>
+
+    </td>
+
+    <!-- Remove -->
+
+    <td>
+
+        <button
+            type="button"
+            class="btn btn-danger btn-sm remove-row">
+
+            <i class="bi bi-trash"></i>
+
+        </button>
+
+    </td>
+
+</tr>
+
+{% endfor %}
+
+</tbody>
+</table>
+<div class="row justify-content-end mt-3">
+
+    <div class="col-md-3">
+
+        <table class="table table-bordered">
+
+            <tr>
+                <th>Grand Total</th>
+                <th>
+                    ₹
+                    <span id="grandTotal">
+                        0.00
+                    </span>
+                </th>
+            </tr>
+
+        </table>
+
+    </div>
+
+</div>
+
+<button type="button" class="btn btn-secondary" onclick="addRow()">+ Add Row</button>
+
+<hr>
+
+<button type="submit" class="btn btn-primary">Update Purchase</button>
+<button type="button"  class="btn btn-secondary"  onclick="confirmPurchaseCancel('{{ url_for('purchase.list_purchases') }}')">   Cancel</button>
+
+</form>
+
+
+{% endblock %}

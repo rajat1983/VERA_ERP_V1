@@ -1,34 +1,284 @@
 {% extends "base.html" %}
+
 {% block content %}
-<div class="container mt-5">
-    <div class="row justify-content-center">
-        <div class="col-md-6">
 
-            <div class="card shadow">
-                <div class="card-header bg-primary text-white">
-                    <h5 class="mb-0">Update Customer</h5>
-                </div>
+<div class="container-fluid mt-4">
 
-                <div class="card-body">
-<form method="post">
-  Name : <input class="form-control mb-2" name="name" value="{{ customer.name }}" required>
-  Email : <input class="form-control mb-2" name="email" value="{{ customer.email }}">
-  Phone : <input class="form-control mb-2" name="phone" value="{{ customer.phone }}">
-  Address : </Address><input class="form-control mb-2" name="address" value="{{ customer.address }}">
-   Status:
-<select name="status" class="form-control">
-  <option value="active">Active</option>
-  <option value="inactive">Inactive</option>
-</select>
-    <div class="d-flex justify-content-between">
-        <a href="{{ url_for('customer.index') }}" class="btn btn-secondary"> Cancel</a>
-        <button type="submit" class="btn btn-success"> Update</button>
-    </div>
-</form>
-</div>
-            </div>
+    <div class="card shadow">
+
+        <div class="card-header bg-primary text-white">
+
+            <h4 class="mb-0">
+                <i class="bi bi-pencil-square"></i>
+                Update Customer
+            </h4>
 
         </div>
+
+        <div class="card-body">
+
+            <div class="card shadow">                
+
+                <div class="card-body">
+
+                    <form
+                        method="POST"
+                        id="customerForm"
+                        data-mode="edit"
+                        novalidate
+                        onsubmit="confirmCustomerSubmit(event)">
+
+                        <div class="row">
+
+                            <!-- Customer Code -->
+
+                            <div class="col-md-4 mb-3">
+
+                                <label class="form-label fw-bold">
+
+                                    Customer Code
+
+                                </label>
+
+                                <input
+                                    type="text"
+                                    class="form-control"
+                                    value="{{ customer.customer_code }}"
+                                    readonly>
+
+                            </div>
+
+                            <!-- Customer Name -->
+
+                            <div class="col-md-8 mb-3">
+
+                                <label class="form-label fw-bold">
+
+                                    Customer Name
+                                    <span class="text-danger">*</span>
+
+                                </label>
+
+                                <input
+                                    type="text"
+                                    name="name"
+                                    class="form-control"
+                                    value="{{ request.form.get('name', customer.name) }}"
+                                    required>
+
+                            </div>
+
+                        </div>
+
+                        <div class="row">
+                                <!-- Mobile Number -->
+
+    <div class="col-md-4 mb-3">
+
+        <label class="form-label fw-bold">
+
+            Mobile Number
+            <span class="text-danger">*</span>
+
+        </label>
+
+        <input
+            type="text"
+            name="phone"
+            maxlength="10"
+            class="form-control"
+            value="{{ request.form.get('phone', customer.phone) }}"
+            required>
+
     </div>
+
+    <!-- Email -->
+
+    <div class="col-md-4 mb-3">
+
+        <label class="form-label fw-bold">
+
+            Email
+
+        </label>
+
+        <input
+            type="email"
+            name="email"
+            class="form-control"
+            value="{{ request.form.get('email', customer.email) }}">
+
+    </div>
+
+    <!-- GST Number -->
+
+    <div class="col-md-4 mb-3">
+
+        <label class="form-label fw-bold">
+
+            GST Number
+
+        </label>
+
+        <input
+            type="text"
+            name="gst_no"
+            class="form-control text-uppercase"
+            value="{{ request.form.get('gst_no', customer.gst_no) }}">
+
+    </div>
+
 </div>
+
+<div class="row">
+        <!-- City -->
+
+    <div class="col-md-4 mb-3">
+
+        <label class="form-label fw-bold">
+
+            City
+
+        </label>
+
+        <input
+            type="text"
+            name="city"
+            class="form-control"
+            value="{{ request.form.get('city', customer.city) }}">
+
+    </div>
+
+    <!-- State -->
+
+    <div class="col-md-4 mb-3">
+
+        <label class="form-label fw-bold">
+
+            State
+
+        </label>
+
+        <input
+            type="text"
+            name="state"
+            class="form-control"
+            value="{{ request.form.get('state', customer.state) }}">
+
+    </div>
+
+    <!-- PIN Code -->
+
+    <div class="col-md-4 mb-3">
+
+        <label class="form-label fw-bold">
+
+            PIN Code
+
+        </label>
+
+        <input
+            type="text"
+            name="pincode"
+            maxlength="6"
+            class="form-control"
+            value="{{ request.form.get('pincode', customer.pincode) }}">
+
+    </div>
+
+</div>
+
+<!-- Address -->
+
+<div class="mb-3">
+
+    <label class="form-label fw-bold">
+
+        Address
+
+    </label>
+
+    <textarea
+        name="address"
+        rows="4"
+        class="form-control">{{ request.form.get('address', customer.address) }}</textarea>
+
+</div>
+
+<div class="row">
+
+    <!-- Status -->
+
+    <div class="col-md-4 mb-3">
+
+        <label class="form-label fw-bold">
+
+            Status
+
+        </label>
+
+        <select
+            name="status"
+            class="form-select">
+
+            <option
+                value="Active"
+                {% if request.form.get('status', customer.status)|lower == 'active' %}
+                    selected
+                {% endif %}>
+                Active
+            </option>
+
+            <option
+                value="Inactive"
+                {% if request.form.get('status', customer.status)|lower == 'inactive' %}
+                    selected
+                {% endif %}>
+                Inactive
+            </option>
+
+        </select>
+
+    </div>
+
+</div>
+
+<hr>
+<div class="d-flex justify-content-between">
+
+    <!-- Cancel -->
+
+    <button
+        type="button"
+        class="btn btn-secondary"
+        onclick="confirmCustomerCancel('{{ url_for('customer.index') }}')">
+
+        <i class="bi bi-arrow-left-circle"></i>
+
+        Cancel
+
+    </button>
+
+    <!-- Update -->
+
+    <button
+        type="submit"
+        class="btn btn-success">
+
+        <i class="bi bi-check-circle"></i>
+
+        Update Customer
+
+    </button>
+
+</div>
+
+                    </form>
+
+        </div>
+
+    </div>
+
+</div>
+
 {% endblock %}

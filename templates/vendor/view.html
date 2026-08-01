@@ -1,0 +1,310 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="container mt-4">
+
+    <div class="card shadow">
+
+        <div class="card-header bg-primary text-white">
+
+            <h4 class="mb-0">
+
+                <i class="bi bi-truck"></i>
+
+                Vendor Details
+
+            </h4>
+
+        </div>
+
+        <div class="card-body">
+
+            <div class="row">
+
+                <!-- Vendor Code -->
+
+                <div class="col-md-4 mb-3">
+
+                    <label class="fw-bold">
+
+                        Vendor Code
+
+                    </label>
+
+                    <div class="form-control bg-light">
+
+                        {{ vendor.vendor_code }}
+
+                    </div>
+
+                </div>
+
+                <!-- Vendor Name -->
+
+                <div class="col-md-8 mb-3">
+
+                    <label class="fw-bold">
+
+                        Vendor Name
+
+                    </label>
+
+                    <div class="form-control bg-light">
+
+                        {{ vendor.name }}
+
+                    </div>
+
+                </div>
+
+            </div>
+
+            <div class="row">
+                                <!-- Mobile Number -->
+
+                <div class="col-md-4 mb-3">
+
+                    <label class="fw-bold">
+
+                        Mobile Number
+
+                    </label>
+
+                    <div class="form-control bg-light">
+
+                        {{ vendor.phone or "-" }}
+
+                    </div>
+
+                </div>
+
+                <!-- Email -->
+
+                <div class="col-md-4 mb-3">
+
+                    <label class="fw-bold">
+
+                        Email
+
+                    </label>
+
+                    <div class="form-control bg-light">
+
+                        {{ vendor.email or "-" }}
+
+                    </div>
+
+                </div>
+
+                <!-- GST Number -->
+
+                <div class="col-md-4 mb-3">
+
+                    <label class="fw-bold">
+
+                        GST Number
+
+                    </label>
+
+                    <div class="form-control bg-light">
+
+                        {{ vendor.gst_number or "-" }}
+
+                    </div>
+
+                </div>
+
+            </div>
+
+            <div class="row">
+                                <!-- City -->
+
+                <div class="col-md-4 mb-3">
+
+                    <label class="fw-bold">
+
+                        City
+
+                    </label>
+
+                    <div class="form-control bg-light">
+
+                        {{ vendor.city or "-" }}
+
+                    </div>
+
+                </div>
+
+                <!-- State -->
+
+                <div class="col-md-4 mb-3">
+
+                    <label class="fw-bold">
+
+                        State
+
+                    </label>
+
+                    <div class="form-control bg-light">
+
+                        {{ vendor.state or "-" }}
+
+                    </div>
+
+                </div>
+
+                <!-- PIN Code -->
+
+                <div class="col-md-4 mb-3">
+
+                    <label class="fw-bold">
+
+                        PIN Code
+
+                    </label>
+
+                    <div class="form-control bg-light">
+
+                        {{ vendor.pincode or "-" }}
+
+                    </div>
+
+                </div>
+
+            </div>
+
+            <!-- Address -->
+
+            <div class="mb-3">
+
+                <label class="fw-bold">
+
+                    Address
+
+                </label>
+
+                <div
+                    class="form-control bg-light"
+                    style="min-height:100px;">
+
+                    {{ vendor.address or "-" }}
+
+                </div>
+
+            </div>
+
+            <div class="row">
+
+                <!-- Status -->
+
+                <div class="col-md-4 mb-3">
+
+                    <label class="fw-bold">
+
+                        Status
+
+                    </label>
+
+                    <div>
+
+                        {% if vendor.status|lower == "active" %}
+
+                            <span class="badge bg-success fs-6">
+
+                                Active
+
+                            </span>
+
+                        {% else %}
+
+                            <span class="badge bg-danger fs-6">
+
+                                Inactive
+
+                            </span>
+
+                        {% endif %}
+
+                    </div>
+
+                </div>
+
+            </div>
+
+            <hr>
+                        <!-- Audit Information -->
+
+            <div class="row">
+
+                <div class="col-md-6 mb-3">
+
+                    <label class="fw-bold">
+
+                        Created On
+
+                    </label>
+
+                    <div class="form-control bg-light">
+
+                        {{ vendor.created_at.strftime('%d-%m-%Y %I:%M %p') if vendor.created_at else "-" }}
+
+                    </div>
+
+                </div>
+
+                <div class="col-md-6 mb-3">
+
+                    <label class="fw-bold">
+
+                        Last Updated
+
+                    </label>
+
+                    <div class="form-control bg-light">
+
+                        {{ vendor.updated_at.strftime('%d-%m-%Y %I:%M %p') if vendor.updated_at else "-" }}
+
+                    </div>
+
+                </div>
+
+            </div>
+
+            <hr>
+
+            <div class="d-flex justify-content-between">
+
+                <!-- Back -->
+
+                <a
+                    href="{{ url_for('vendor.list_vendors') }}"
+                    class="btn btn-secondary">
+
+                    <i class="bi bi-arrow-left-circle"></i>
+
+                    Back to List
+
+                </a>
+
+                <!-- Edit -->
+
+                <a
+                    href="{{ url_for('vendor.edit_vendor', id=vendor.id) }}"
+                    class="btn btn-warning">
+
+                    <i class="bi bi-pencil-square"></i>
+
+                    Edit Vendor
+
+                </a>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+{% endblock %}

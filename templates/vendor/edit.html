@@ -1,0 +1,289 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="container-fluid mt-4">
+
+    <div class="card shadow">
+
+        <div class="card-header bg-primary text-white">
+
+            <h4 class="mb-0">
+
+                <i class="bi bi-pencil-square"></i>
+
+                Update Vendor
+
+            </h4>
+
+        </div>
+
+        <div class="card-body">
+
+            <form
+                method="POST"
+                id="vendorForm"
+                data-mode="edit"                
+                onsubmit="confirmVendorSubmit(event)">
+
+                <div class="row">
+
+                    <!-- Vendor Code -->
+
+                    <div class="col-md-4 mb-3">
+
+                        <label class="form-label fw-bold">
+
+                            Vendor Code
+
+                        </label>
+
+                        <input
+                            type="text"
+                            class="form-control"
+                            value="{{ vendor.vendor_code }}"
+                            readonly>
+
+                    </div>
+
+                    <!-- Vendor Name -->
+
+                    <div class="col-md-8 mb-3">
+
+                        <label class="form-label fw-bold">
+
+                            Vendor Name
+                            <span class="text-danger">*</span>
+
+                        </label>
+
+                        <input
+                            type="text"
+                            name="name"
+                            class="form-control"
+                            value="{{ request.form.get('name', vendor.name) }}"
+                            required>
+
+                    </div>
+
+                </div>
+
+                <div class="row">
+                                        <!-- Mobile Number -->
+
+                    <div class="col-md-4 mb-3">
+
+                        <label class="form-label fw-bold">
+
+                            Mobile Number
+                            <span class="text-danger">*</span>
+
+                        </label>
+
+                        <input
+                            type="text"
+                            name="phone"
+                            maxlength="10"
+                            class="form-control"
+                            value="{{ request.form.get('phone', vendor.phone) }}"
+                            required>
+
+                    </div>
+
+                    <!-- Email -->
+
+                    <div class="col-md-4 mb-3">
+
+                        <label class="form-label fw-bold">
+
+                            Email
+
+                        </label>
+
+                        <input
+                            type="text"
+                            name="email"
+                            class="form-control"
+                            maxlength="100"
+                            placeholder="Enter Email Address"
+                            value="{{ request.form.get('email','') }}">
+
+                    </div>
+
+                    <!-- GST Number -->
+
+                    <div class="col-md-4 mb-3">
+
+                        <label class="form-label fw-bold">
+
+                            GST Number
+
+                        </label>
+
+                        <input
+                            type="text"
+                            name="gst_number"
+                            maxlength="15"
+                            class="form-control text-uppercase"
+                            value="{{ request.form.get('gst_number', vendor.gst_number) }}">
+
+                    </div>
+
+                </div>
+
+                <div class="row">
+                                        <!-- City -->
+
+                    <div class="col-md-4 mb-3">
+
+                        <label class="form-label fw-bold">
+
+                            City
+
+                        </label>
+
+                        <input
+                            type="text"
+                            name="city"
+                            class="form-control"
+                            value="{{ request.form.get('city', vendor.city) }}">
+
+                    </div>
+
+                    <!-- State -->
+
+                    <div class="col-md-4 mb-3">
+
+                        <label class="form-label fw-bold">
+
+                            State
+
+                        </label>
+
+                        <input
+                            type="text"
+                            name="state"
+                            class="form-control"
+                            value="{{ request.form.get('state', vendor.state) }}">
+
+                    </div>
+
+                    <!-- PIN Code -->
+
+                    <div class="col-md-4 mb-3">
+
+                        <label class="form-label fw-bold">
+
+                            PIN Code
+
+                        </label>
+
+                        <input
+                            type="text"
+                            name="pincode"
+                            maxlength="6"
+                            class="form-control"
+                            value="{{ request.form.get('pincode', vendor.pincode) }}">
+
+                    </div>
+
+                </div>
+
+                <!-- Address -->
+
+                <div class="mb-3">
+
+                    <label class="form-label fw-bold">
+
+                        Address
+
+                    </label>
+
+                    <textarea
+                        name="address"
+                        rows="4"
+                        class="form-control">{{ request.form.get('address', vendor.address) }}</textarea>
+
+                </div>
+
+                <div class="row">
+
+                    <!-- Status -->
+
+                    <div class="col-md-4 mb-3">
+
+                        <label class="form-label fw-bold">
+
+                            Status
+
+                        </label>
+
+                        <select
+                            name="status"
+                            class="form-select">
+
+                            <option
+                                value="active"
+                                {% if request.form.get('status', vendor.status)|lower == 'active' %}
+                                selected
+                                {% endif %}>
+
+                                Active
+
+                            </option>
+
+                            <option
+                                value="inactive"
+                                {% if request.form.get('status', vendor.status)|lower == 'inactive' %}
+                                selected
+                                {% endif %}>
+
+                                Inactive
+
+                            </option>
+
+                        </select>
+
+                    </div>
+
+                </div>
+
+                <hr>
+                                <div class="d-flex justify-content-between">
+
+                    <!-- Cancel -->
+
+                    <button
+                        type="button"
+                        class="btn btn-secondary"
+                        onclick="confirmVendorCancel('{{ url_for('vendor.list_vendors') }}')">
+
+                        <i class="bi bi-arrow-left-circle"></i>
+
+                        Cancel
+
+                    </button>
+
+                    <!-- Update -->
+
+                    <button
+                        type="submit"
+                        class="btn btn-warning">
+
+                        <i class="bi bi-check-circle"></i>
+
+                        Update Vendor
+
+                    </button>
+
+                </div>
+
+            </form>
+
+        </div>
+
+    </div>
+
+</div>
+
+{% endblock %}

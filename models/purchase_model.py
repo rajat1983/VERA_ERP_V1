@@ -254,3 +254,224 @@ def generate_purchase_number():
     conn.close()
 
     return purchase_no
+# ==========================================
+# Check Duplicate Vendor Invoice
+# ==========================================
+
+def purchase_invoice_exists(
+    vendor_id,
+    vendor_invoice_no,
+    exclude_purchase_id=None
+):
+
+    conn = get_db_connection()
+    cur = conn.cursor()
+
+    try:
+
+        query = """
+            SELECT id
+            FROM purchases
+            WHERE vendor_id = %s
+              AND vendor_invoice_no = %s
+        """
+
+        params = [
+            vendor_id,
+            vendor_invoice_no
+        ]
+
+        # Ignore current purchase while editing
+        if exclude_purchase_id is not None:
+
+            query += " AND id <> %s"
+
+            params.append(exclude_purchase_id)
+
+        query += " LIMIT 1"
+
+        cur.execute(
+            query,
+            tuple(params)
+        )
+
+        purchase = cur.fetchone()
+
+        return purchase is not None
+
+    finally:
+
+        cur.close()
+        conn.close()
+        
+def update_purchase(
+    purchase_id,
+    vendor_id,
+    vendor_invoice_no,
+    purchase_date,
+    items
+):
+
+    conn = get_db_connection()
+    cur = conn.cursor()
+
+    try:
+
+        subtotal = 0
+
+        # -----------------------------------------
+        # Reverse Previous Stock
+        # -----------------------------------------
+
+        cur.execute("""
+            SELECT
+                product_id,
+                quantity
+            FROM purchase_items
+            WHERE purchase_id = %s
+        """, (purchase_id,))
+
+        old_items = cur.fetchall()
+
+        for item in old_items:
+
+            cur.execute("""
+                UPDATE products
+                SET stock_qty = stock_qty - %s
+                WHERE id = %s
+            """, (
+                item["quantity"],
+                item["product_id"]
+            ))
+
+        # -----------------------------------------
+        # Delete Old Purchase Items
+        # -----------------------------------------
+
+        cur.execute("""
+            DELETE
+            FROM purchase_items
+            WHERE purchase_id = %s
+        """, (purchase_id,))
+                # -----------------------------------------
+        # Update Purchase Header
+        # -----------------------------------------
+
+        cur.execute("""
+            UPDATE purchases
+            SET
+                vendor_id = %s,
+                vendor_invoice_no = %s,
+                purchase_date = %s
+            WHERE id = %s
+        """, (
+            vendor_id,
+            vendor_invoice_no,
+            purchase_date,
+            purchase_id
+        ))
+
+        # -----------------------------------------
+        # Insert Updated Purchase Items
+        # -----------------------------------------
+
+        for item in items:
+
+            line_total = item["qty"] * item["price"]
+
+            subtotal += line_total
+
+            cur.execute("""
+                INSERT INTO purchase_items
+                (
+                    purchase_id,
+                    product_id,
+                    quantity,
+                    price,
+                    line_total
+                )
+                VALUES
+                (
+                    %s,
+                    %s,
+                    %s,
+                    %s,
+                    %s
+                )
+            """, (
+                purchase_id,
+                item["product_id"],
+                item["qty"],
+                item["price"],
+                line_total
+            ))
+
+            # -----------------------------------------
+            # Increase Stock Again
+            # -----------------------------------------
+
+            cur.execute("""
+                UPDATE products
+                SET stock_qty = stock_qty + %s
+                WHERE id = %s
+            """, (
+                item["qty"],
+                item["product_id"]
+            ))
+
+            # -----------------------------------------
+            # Stock Movement
+            # -----------------------------------------
+
+            cur.execute("""
+                INSERT INTO stock_movements
+                (
+                    product_id,
+                    movement_type,
+                    quantity,
+                    reference_id,
+                    reference_type
+                )
+                VALUES
+                (
+                    %s,
+                    'purchase_edit',
+                    %s,
+                    %s,
+                    'purchase'
+                )
+            """, (
+                item["product_id"],
+                item["qty"],
+                purchase_id
+            ))
+
+        # -----------------------------------------
+        # Update Purchase Total
+        # -----------------------------------------
+
+        cur.execute("""
+            UPDATE purchases
+            SET
+                subtotal = %s,
+                total_amount = %s
+            WHERE id = %s
+        """, (
+            subtotal,
+            subtotal,
+            purchase_id
+        ))
+
+        conn.commit()
+
+        return True
+
+    except Exception as e:
+
+        conn.rollback()
+        raise e
+
+    finally:
+
+        cur.close()
+        conn.close()

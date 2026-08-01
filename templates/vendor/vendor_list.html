@@ -67,36 +67,6 @@
   </ul>
 </nav>
 <script>
-  function autoSearchVendor() {
-  const q = document.getElementById("vendorSearch").value;
-
-   fetch(`/vendor-search?q=${encodeURIComponent(q)}`)
-    .then(res => res.json())
-    .then(data => {
-      let rows = "";
-
-      data.forEach(vr => {
-        rows += `
-          <tr>
-            <td>${vr.id}</td>
-            <td>${vr.name}</td>
-            <td>${vr.email}</td>
-            <td>${vr.phone}</td>
-            <td>${vr.address }</td>
-            <td>${vr.gst_number }</td>
-            <td>${vr.status }</td>
-                     
-            <td>
-              <a href="/products/edit/${vr.id}" class="btn btn-sm btn-warning">Edit</a>
-              <a href="products/delete/${vr.id}" class="btn btn-sm btn-danger">Delete</a>
-            </td>
-          </tr>
-        `;
-      });
-
-      document.getElementById("vendorTable").innerHTML = rows;
-    })
-    .catch(err => console.error(err));
-}
+  
 </script>
 {% endblock %}

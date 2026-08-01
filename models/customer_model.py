@@ -15,11 +15,30 @@ def get_all_customers(search, limit, offset):
     like = f"%{search}%"
 
     cur.execute("""
-        SELECT * FROM customers
-        WHERE name LIKE %s OR email LIKE %s
-        ORDER BY id DESC
-        LIMIT %s OFFSET %s
-    """, (like, like, limit, offset))
+    SELECT
+        id,
+        customer_code,
+        name,
+        phone,
+        email,
+        city,
+        status,
+        created_at
+    FROM customers
+    WHERE name LIKE %s
+       OR email LIKE %s
+       OR phone LIKE %s
+       OR customer_code LIKE %s
+    ORDER BY id DESC
+    LIMIT %s OFFSET %s
+""", (
+    like,
+    like,
+    like,
+    like,
+    limit,
+    offset
+))
     data = cur.fetchall()
     cur.close()
     conn.close()
@@ -42,14 +61,99 @@ def get_customer_count(search):
     conn.close()
     return total
     
+# ==========================================
+# Generate Customer Code
+# ==========================================
 
-def add_customer(name, email, phone, address, status):
+def generate_customer_code():
+
+    conn = get_db_connection()
+    cur = conn.cursor()
+
+    cur.execute("""
+        SELECT customer_code
+        FROM customers
+        ORDER BY id DESC
+        LIMIT 1
+    """)
+
+    row = cur.fetchone()
+
+    cur.close()
+    conn.close()
+
+    if row and row["customer_code"]:
+
+        last_no = int(row["customer_code"].replace("CUS", ""))
+
+        return f"CUS{last_no + 1:06d}"
+
+    return "CUS000001"
+# ==========================================
+# Check Duplicate Customer
+# ==========================================
+
+# ==========================================
+# Check Duplicate Customer
+# ==========================================
+
+def check_duplicate_customer(
+    email,
+    phone,
+    exclude_id=None
+):
+
+    conn = get_db_connection()
+    cur = conn.cursor()
+
+    query = """
+        SELECT
+            email,
+            phone
+        FROM customers
+        WHERE
+            (email=%s OR phone=%s)
+    """
+
+    params = [email, phone]
+
+    if exclude_id is not None:
+
+        query += " AND id<>%s"
+
+        params.append(exclude_id)
+
+    cur.execute(query, tuple(params))
+
+    rows = cur.fetchall()
+
+    cur.close()
+    conn.close()
+
+    email_exists = False
+    phone_exists = False
+
+    for row in rows:
+
+        if row["email"] == email:
+            email_exists = True
+
+        if row["phone"] == phone:
+            phone_exists = True
+
+    return email_exists, phone_exists
+
+def add_customer(customer_code, name, email, phone, gst_no, address, city,state, pincode,  status):
     conn = get_db_connection()
     cur = conn.cursor()
     cur.execute("""
-        INSERT INTO customers (name, email, phone, address, status)
-        VALUES (%s, %s, %s, %s, %s)
-    """, (name, email, phone,address,status))
+
+INSERT INTO customers
+(customer_code,name,email,phone,gst_no,address,city,state,pincode,status)
+
+VALUES(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+
+""", (customer_code,name,email,phone,gst_no,address,city,state,pincode,status))
     conn.commit()
     cur.close()
     conn.close()
@@ -65,15 +169,54 @@ def get_customer_by_id(cid):
     return data
 
 
-def update_customer(cid, name, email, phone, address, status):
+# ==========================================
+# Update Customer
+# ==========================================
+
+def update_customer(
+    cid,
+    name,
+    email,
+    phone,
+    gst_no,
+    address,
+    city,
+    state,
+    pincode,
+    status
+):
+
     conn = get_db_connection()
     cur = conn.cursor()
+
     cur.execute("""
         UPDATE customers
-        SET name=%s, email=%s, phone=%s, address=%s, status=%s
-        WHERE id=%s
-    """, (name, email, phone, address, status, cid))
+        SET
+            name = %s,
+            email = %s,
+            phone = %s,
+            gst_no = %s,
+            address = %s,
+            city = %s,
+            state = %s,
+            pincode = %s,
+            status = %s
+        WHERE id = %s
+    """, (
+        name,
+        email,
+        phone,
+        gst_no,
+        address,
+        city,
+        state,
+        pincode,
+        status,
+        cid
+    ))
+
     conn.commit()
+
     cur.close()
     conn.close()
 

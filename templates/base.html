@@ -5,7 +5,11 @@
 
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/vera-dashboard.css') }}">
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script src="{{ url_for('static', filename='js/purchase.js') }}"></script>
 <script src="{{ url_for('static', filename='js/product.js') }}"></script>
+<script src="{{ url_for('static', filename='js/customer.js') }}"></script>
+<script src="{{ url_for('static', filename='js/vendor.js') }}"></script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
@@ -92,36 +96,7 @@ function autoSearch() {
     })
     .catch(err => console.error(err));
 }
-//  Auto Product Search
-// function autoSearchProd() {
-//   const q = document.getElementById("productSearch").value;
 
-//    fetch(`/product-search?q=${encodeURIComponent(q)}`)
-//     .then(res => res.json())
-//     .then(data => {
-//       let rows = "";
-
-//       data.forEach(pr => {
-//         rows += `
-//           <tr>
-//             <td>${pr.id}</td>
-//             <td>${pr.name}</td>
-//             <td>${pr.sku}</td>
-//             <td>${pr.price}</td>
-//             <td>${pr.stock}</td>           
-//             <td>
-//               <a href="/products/edit/${pr.id}" class="btn btn-sm btn-warning">Edit</a>
-//               <a href="products/delete/${pr.id}" class="btn btn-sm btn-danger">Delete</a>
-//             </td>
-//           </tr>
-//         `;
-//       });
-
-//       document.getElementById("productTable").innerHTML = rows;
-//     })
-//     .catch(err => console.error(err));
-// }
-// Vendor Search
 
 </script>
 

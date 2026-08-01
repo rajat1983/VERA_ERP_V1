@@ -1,0 +1,40 @@
+<a
+href="{{ url_for('admin.clear_transactions') }}"
+class="btn btn-warning">
+
+Clear Transactions
+
+</a>
+
+<a
+href="{{ url_for('admin.reset_database') }}"
+class="btn btn-danger">
+
+Reset Database
+
+</a>
+<script>
+    Swal.fire({
+
+    title: "Reset Database?",
+
+    text: "All records will be permanently deleted.",
+
+    icon: "warning",
+
+    showCancelButton: true,
+
+    confirmButtonColor: "#dc3545",
+
+    confirmButtonText: "Yes, Reset"
+
+}).then((result)=>{
+
+    if(result.isConfirmed){
+
+        window.location.href="/admin/reset-database";
+
+    }
+
+});
+</script>

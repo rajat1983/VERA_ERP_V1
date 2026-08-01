@@ -1,0 +1,273 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="container mt-4">
+
+<div class="card shadow">
+
+<div class="card-header bg-primary text-white">
+
+<h4>
+
+<i class="bi bi-person-vcard"></i>
+
+Customer Details
+
+</h4>
+
+</div>
+
+<div class="card-body">
+    <div class="row">
+
+<div class="col-md-6 mb-3">
+
+<label class="fw-bold">
+
+Customer Code
+
+</label>
+
+<div>
+
+{{ customer.customer_code }}
+
+</div>
+
+</div>
+
+<div class="col-md-6 mb-3">
+
+<label class="fw-bold">
+
+Customer Name
+
+</label>
+
+<div>
+
+{{ customer.name }}
+
+</div>
+
+</div>
+
+<div class="col-md-6 mb-3">
+
+<label class="fw-bold">
+
+Mobile
+
+</label>
+
+<div>
+
+{{ customer.phone }}
+
+</div>
+
+</div>
+
+<div class="col-md-6 mb-3">
+
+<label class="fw-bold">
+
+Email
+
+</label>
+
+<div>
+
+{{ customer.email }}
+
+</div>
+
+</div>
+
+<div class="col-md-6 mb-3">
+
+<label class="fw-bold">
+
+GST Number
+
+</label>
+
+<div>
+
+{{ customer.gst_no }}
+
+</div>
+
+</div>
+
+<div class="col-md-6 mb-3">
+
+<label class="fw-bold">
+
+Status
+
+</label>
+
+<div>
+
+{% if customer.status=="Active" %}
+
+<span class="badge bg-success">
+
+Active
+
+</span>
+
+{% else %}
+
+<span class="badge bg-danger">
+
+Inactive
+
+</span>
+
+{% endif %}
+
+</div>
+
+</div>
+
+</div>
+<div class="row">
+
+<div class="col-md-4">
+
+<label class="fw-bold">
+
+City
+
+</label>
+
+<div>
+
+{{ customer.city }}
+
+</div>
+
+</div>
+
+<div class="col-md-4">
+
+<label class="fw-bold">
+
+State
+
+</label>
+
+<div>
+
+{{ customer.state }}
+
+</div>
+
+</div>
+
+<div class="col-md-4">
+
+<label class="fw-bold">
+
+PIN Code
+
+</label>
+
+<div>
+
+{{ customer.pincode }}
+
+</div>
+
+</div>
+
+</div>
+
+<hr>
+
+<label class="fw-bold">
+
+Address
+
+</label>
+
+<div class="border rounded p-3 bg-light">
+
+{{ customer.address }}
+
+</div>
+
+<hr>
+
+<div class="row">
+
+<div class="col-md-6">
+
+<label class="fw-bold">
+
+Created On
+
+</label>
+
+<div>
+
+{{ customer.created_at }}
+
+</div>
+
+</div>
+
+<div class="col-md-6">
+
+<label class="fw-bold">
+
+Updated On
+
+</label>
+
+<div>
+
+{{ customer.updated_at }}
+
+</div>
+
+</div>
+
+</div>
+
+<hr>
+
+<div class="text-end">
+
+<a
+href="{{ url_for('customer.index') }}"
+class="btn btn-secondary">
+
+<i class="bi bi-arrow-left"></i>
+
+Back
+
+</a>
+
+<a
+href="{{ url_for('customer.edit', id=customer.id) }}"
+class="btn btn-warning">
+
+<i class="bi bi-pencil"></i>
+
+Edit Customer
+
+</a>
+
+</div>
+
+</div>
+
+</div>
+
+</div>
+
+{% endblock %}

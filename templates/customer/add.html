@@ -1,21 +1,248 @@
 {% extends "base.html" %}
 {% block content %}
 
-<h3>Add Customer</h3>
+<div class="container mt-4">
 
-<form method="post">
-  Name:  <input class="form-control mb-2" name="name"  required>
-  Email:  <input class="form-control mb-2" name="email" >
-  Phone :<input class="form-control mb-2" name="phone" >
-  Address :<input class="form-control mb-2" name="address" >
-   Status:
-<select name="status" class="form-control">
-  <option value="active">Active</option>
-  <option value="inactive">Inactive</option>
+<div class="card shadow">
+
+<div class="card-header bg-primary text-white">
+
+<h4 class="mb-0">
+
+<i class="bi bi-people-fill"></i>
+
+Add Customer
+
+</h4>
+
+</div>
+
+<div class="card-body">
+
+<form
+    method="POST"
+    id="customerForm"
+    data-mode="add"
+    onsubmit="confirmCustomerSubmit(event)">
+
+<div class="row">
+
+<!-- Customer Code -->
+
+<div class="col-md-4 mb-3">
+
+<label class="form-label">
+
+Customer Code
+
+</label>
+
+<input
+type="text"
+class="form-control"
+value="{{ customer_code }}"
+readonly>
+
+</div>
+
+<!-- Customer Name -->
+
+<div class="col-md-8 mb-3">
+
+<label class="form-label">
+
+Customer Name <span class="text-danger">*</span>
+
+</label>
+
+<input
+type="text"
+name="name"
+class="form-control"
+value="{{ request.form.get('name','') }}"
+required>
+
+</div>
+
+</div>
+<div class="row">
+
+<div class="col-md-4 mb-3">
+
+<label class="form-label">
+
+Mobile Number <span class="text-danger">*</span>
+
+</label>
+
+<input
+type="text"
+name="phone"
+maxlength="10"
+class="form-control"
+value="{{ request.form.get('phone','') }}"
+required>
+
+</div>
+
+<div class="col-md-4 mb-3">
+
+<label class="form-label">
+
+Email
+
+</label>
+
+<input
+type="email"
+name="email"
+class="form-control"
+value="{{ request.form.get('email','') }}">
+
+</div>
+
+<div class="col-md-4 mb-3">
+
+<label class="form-label">
+
+GST Number
+
+</label>
+
+<input
+type="text"
+name="gst_no"
+class="form-control"
+style="text-transform:uppercase"
+value="{{ request.form.get('gst_no','') }}">
+
+</div>
+
+</div>
+<div class="row">
+
+<div class="col-md-4 mb-3">
+
+<label class="form-label">
+
+City
+
+</label>
+
+<input
+type="text"
+name="city"
+class="form-control"
+value="{{ request.form.get('city','') }}">
+
+</div>
+
+<div class="col-md-4 mb-3">
+
+<label class="form-label">
+
+State
+
+</label>
+
+<input
+type="text"
+name="state"
+class="form-control"
+value="{{ request.form.get('state','') }}">
+
+</div>
+
+<div class="col-md-4 mb-3">
+
+<label class="form-label">
+
+PIN Code
+
+</label>
+
+<input
+type="text"
+name="pincode"
+maxlength="6"
+class="form-control"
+value="{{ request.form.get('pincode','') }}">
+
+</div>
+
+</div>
+
+<div class="mb-3">
+
+<label class="form-label">
+
+Address
+
+</label>
+
+<textarea
+name="address"
+rows="3"
+class="form-control">{{ request.form.get('address','') }}</textarea>
+
+</div>
+
+<div class="row">
+
+<div class="col-md-4">
+
+<label class="form-label">
+
+Status
+
+</label>
+
+<select
+name="status"
+class="form-control">
+
+<option value="Active">Active</option>
+
+<option value="Inactive">Inactive</option>
+
 </select>
-  <button class="btn btn-success">Save</button>
-   <a href="/customers" class="btn btn-secondary">Cancel</a>
-</form> &nbsp;
+
+</div>
+
+</div>
+
+<hr>
+
+<div class="text-end">
+
+<button
+type="button"
+class="btn btn-secondary"
+onclick="confirmCustomerCancel('{{ url_for('customer.index') }}')">
+
+Cancel
+
+</button>
+
+<button
+type="submit"
+class="btn btn-success">
+
+<i class="bi bi-check-circle"></i>
+
+Save Customer
+
+</button>
+
+</div>
+
+</form>
+
+</div>
+
+</div>
+
+</div>
 
 {% endblock %}
 

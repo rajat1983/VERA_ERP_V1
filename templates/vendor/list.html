@@ -1,0 +1,325 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="container-fluid mt-4">
+
+    <!-- Header -->
+
+    <div class="d-flex justify-content-between align-items-center mb-3">
+
+        <h3 class="mb-0">
+
+            <i class="bi bi-truck text-primary"></i>
+
+            Vendor Management
+
+        </h3>
+
+        <a
+            href="{{ url_for('vendor.add_vendor') }}"
+            class="btn btn-success">
+
+            <i class="bi bi-plus-circle"></i>
+
+            Add Vendor
+
+        </a>
+
+    </div>
+
+    <!-- Search -->
+
+    <div class="card shadow-sm mb-3">
+
+        <div class="card-body">
+
+            <div class="row">
+
+                <div class="col-md-10">
+             <input  type="text" id="vendorSearch"  class="form-control"
+            placeholder="Search by Vendor Code, Name, Mobile, Email, GST or City"
+            onkeyup="autoSearchVendor()">
+                    
+
+                </div>
+
+                <div class="col-md-2 d-grid">
+
+                    <a href="{{ url_for('vendor.list_vendors') }}"
+                        class="btn btn-secondary"> <i class="bi bi-arrow-clockwise"></i> Reset </a>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+    <!-- Vendor List -->
+
+    <div class="card shadow">
+
+        <div class="card-header bg-primary text-white">
+
+            <h5 class="mb-0">
+
+                Vendor List
+
+            </h5>
+
+        </div>
+
+        <div class="card-body">
+
+            <div class="table-responsive-md">
+                <table class="table table-hover table-bordered align-middle">
+
+    <thead class="table-light">
+
+        <tr>
+
+            <th width="60">#</th>
+
+            <th width="140">Vendor Code</th>
+
+            <th>Vendor Name</th>
+
+            <th width="130">Mobile</th>
+
+            <th>Email</th>
+
+            <th width="170">GST Number</th>
+
+            <th width="140">City</th>
+
+            <th width="110" class="text-center">Status</th>
+
+            <th width="180" class="text-center">Action</th>
+
+        </tr>
+
+    </thead>
+
+    <tbody id="vendorTable">
+
+    {% if vendors %}
+
+        {% for v in vendors %}
+
+        <tr>
+
+            <!-- Serial Number -->
+
+            <td>              {{ loop.index + ((page-1) * 10) }}            </td>
+
+            <!-- Vendor Code -->
+
+            <td> <strong>            {{ v.vendor_code }}            </strong>            </td>
+
+            <!-- Vendor Name -->
+
+            <td>               {{ v.name }}            </td>
+
+            <!-- Mobile -->
+
+            <td>                {{ v.phone }}            </td>
+
+            <!-- Email -->
+
+            <td>                {{ v.email or "-" }}            </td>
+
+            <!-- GST -->
+
+            <td>                {{ v.gst_number or "-" }}            </td>
+
+            <!-- City -->
+
+            <td>                {{ v.city or "-" }}            </td>
+
+            <!-- Status -->
+
+            <td class="text-center">
+
+                {% if v.status|lower == "active" %}
+
+                    <span class="badge bg-success">
+
+                        Active
+
+                    </span>
+
+                {% else %}
+
+                    <span class="badge bg-danger">
+
+                        Inactive
+
+                    </span>
+
+                {% endif %}
+
+            </td>
+
+            <!-- Actions -->
+
+            <td class="text-center">
+
+                <!-- View -->
+
+                <a href="{{ url_for('vendor.view_vendor', id=v.id) }}" class="btn btn-info btn-sm"
+                title="View"> <i class="bi bi-eye"></i></a>
+                <!-- Edit -->
+                <a href="{{ url_for('vendor.edit_vendor', id=v.id) }}" class="btn btn-warning btn-sm"
+                    title="Edit"><i class="bi bi-pencil-square"></i>  </a>
+
+                <!-- Delete -->
+
+                <button type="button" class="btn btn-danger btn-sm" title="Delete"
+                    onclick="confirmVendorDelete({{ v.id }})"> <i class="bi bi-trash"></i>  </button>
+
+            </td>
+
+        </tr>
+
+        {% endfor %}
+
+    {% else %}
+
+        <tr>
+
+    <td colspan="9" class="text-center py-5">
+
+        <i class="bi bi-search fs-1 text-secondary"></i>
+
+        <br><br>
+
+        <h5 class="text-secondary">
+
+            No Vendor Found
+
+        </h5>
+
+        <small class="text-muted">
+
+            Try searching with another Vendor Name, Mobile, Email or GST Number.
+
+        </small>
+
+    </td>
+
+</tr>
+
+    {% endif %}
+
+    </tbody>
+
+</table>
+<!-- Pagination Summary -->
+
+<div class="row align-items-center mt-3">
+
+    <div class="col-md-6">
+
+        <p class="text-muted mb-0">
+
+            Showing
+
+            <strong>
+
+                {{ ((page-1) * per_page) + 1 if vendors else 0 }}
+
+            </strong>
+
+            to
+
+            <strong>
+
+                {{ ((page-1) * per_page) + vendors|length }}
+
+            </strong>
+
+            of
+
+            <strong>
+
+                {{ total_records }}
+
+            </strong>
+
+            Vendors
+
+        </p>
+
+    </div>
+
+    <div class="col-md-6">
+
+        <nav class="float-end">
+
+            <ul class="pagination pagination-sm mb-0">
+
+                <!-- Previous -->
+
+                <li class="page-item {% if page == 1 %}disabled{% endif %}">
+
+                    <a
+                        class="page-link"
+                        href="{{ url_for('vendor.list_vendors', page=page-1) }}">
+
+                        <i class="bi bi-chevron-left"></i>
+
+                    </a>
+
+                </li>
+
+                <!-- Page Numbers -->
+
+                {% for p in range(1, total_pages + 1) %}
+
+                <li class="page-item {% if p == page %}active{% endif %}">
+
+                    <a
+                        class="page-link"
+                        href="{{ url_for('vendor.list_vendors', page=p) }}">
+
+                        {{ p }}
+
+                    </a>
+
+                </li>
+
+                {% endfor %}
+
+                <!-- Next -->
+
+                <li class="page-item {% if page == total_pages %}disabled{% endif %}">
+
+                    <a
+                        class="page-link"
+                        href="{{ url_for('vendor.list_vendors', page=page+1) }}">
+
+                        <i class="bi bi-chevron-right"></i>
+
+                    </a>
+
+                </li>
+
+            </ul>
+
+        </nav>
+
+    </div>
+
+</div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+{% endblock %}

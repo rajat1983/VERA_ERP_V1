@@ -39,14 +39,15 @@
       </td>
       <td>{{ p.created_at }}</td>
       <td>
-        <a href="{{ url_for('purchase.view_purchase', id=p.id) }}" 
-   class="btn btn-sm btn-info">
-   View
-</a> | <a href="{{ url_for('purchase.delete_purchase', id=p.id) }}"
-   class="btn btn-sm btn-danger"
-   onclick="return confirm('Are you sure? This will reverse stock!')">
-   Delete
-</a>
+        <a href="{{ url_for('purchase.view_purchase', id=p.id) }}" class="btn btn-outline-primary"
+                        title="View"> <i class="bi bi-eye"></i></a>
+        <a href="{{ url_for('purchase.edit_purchase', id=p.id) }}"class="btn btn-outline-warning " title="Edit Purchase">
+      <i class="bi bi-eye"></i></a> 
+
+      <a href="{{ url_for('purchase.delete_purchase', id=p.id) }}" class="btn btn-outline-danger"
+                        title="Delete" onclick="return confirm('Delete this Purchase?')">
+                        <i class="bi bi-trash"></i>  </a>
+        
       </td>
     </tr>
     {% endfor %}

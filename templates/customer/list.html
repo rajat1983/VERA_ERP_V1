@@ -1,104 +1,483 @@
 {% extends "base.html" %}
 {% block content %}
 
-<h3>Customers</h3>
+<div class="container-fluid mt-4">
 
-<a href="/customer/add" class="btn btn-primary mb-3">Add Customer</a>
-<form method="get" class="mb-3">
-  <div class="input-group">
-    <input type="text" id="customerSearch" class="form-control " placeholder="Search by name or email..."
-  onkeyup="searchCustomer()"/>    
-        <button class="btn btn-outline-success my-2 my-sm-0">Search</button>
-    <a href="/customers" class="btn btn-outline-dark">Reset</a>
-  </div>
-</form>
+    <!-- Page Header -->
 
+    <div class="d-flex justify-content-between align-items-center mb-3">
 
+        <h3 class="mb-0">
 
-<table class="table table-bordered">
-  <thead>
-  <tr>
-    <th>ID</th>
-    <th>Name</th>
-    <th>Email</th>
-    <th>Phone</th>
-    <th>Address</th>
-    <th>Status</th>
-    <th>Action</th>
-  </tr>
-  </thead>
-  <tbody id="custTable">
-    {% for c in customers %}
-    <tr>
-      <td>{{ c.id }}</td>
-      <td>{{ c.name }}</td>
-      <td>{{ c.email }}</td>
-      <td>{{ c.phone }}</td>
-      <td>{{ c.address }}</td>
-      <td>{{ c.status }}</td>
-      <td>
-        <a href="/customer/edit/{{ c.id }}" class="btn btn-warning btn-sm">Edit</a>
-        <a href="/customer/delete/{{ c.id }}" class="btn btn-danger btn-sm">Delete</a>
-      </td>
-    </tr>
-    {% endfor %}
-  </tbody>
-</table>
-{% if customers|length == 0 %}
-<tr>
-  <td colspan="4" class="text-center text-muted">
-    No customers found
-  </td>
-</tr>
-{% endif %}
-<nav>
-  <ul class="pagination">
+            <i class="bi bi-people-fill text-primary"></i>
 
-    <!-- Prev -->
-    <li class="page-item {% if page == 1 %}disabled{% endif %}">
-      <a class="page-link" href="?page={{ page-1 }}">Previous</a>
-    </li>
+            Customer Management
 
-    <!-- Page Numbers -->
-    {% for p in range(1, total_pages + 1) %}
-    <li class="page-item {% if p == page %}active{% endif %}">
-      <a class="page-link" href="?page={{ p }}">{{ p }}</a>
-    </li>
-    {% endfor %}
+        </h3>
 
-    <!-- Next -->
-    <li class="page-item {% if page == total_pages %}disabled{% endif %}">
-      <a class="page-link" href="?page={{ page+1 }}">Next</a>
-    </li>
+        <a
+            href="{{ url_for('customer.add') }}"
+            class="btn btn-success">
 
-  </ul>
-</nav>
+            <i class="bi bi-plus-circle"></i>
 
-<script>
-function searchCustomer(){
-  const q = document.getElementById("customerSearch").value;
-  fetch(`/customer/auto-search?q=${encodeURIComponent(q)}`)
-    .then(res=>res.json())
-    .then(rows=>{
-      let html=``;
-      rows.forEach(r=>{
-        html += `
+            Add Customer
+
+        </a>
+
+    </div>
+
+    <!-- Search Card -->
+
+    <div class="card shadow-sm mb-3">
+
+        <div class="card-body">
+
+            <div class="row">
+
+                <div class="col-md-10">
+
+                    <input
+                        type="text"
+                        id="customerSearch"
+                        class="form-control"
+                        placeholder="Search by Customer Code, Name, Mobile, Email or City..."
+                        onkeyup="searchCustomer()">
+
+                </div>
+
+                <div class="col-md-2 d-grid">
+
+                    <a
+                        href="{{ url_for('customer.index') }}"
+                        class="btn btn-secondary">
+
+                        <i class="bi bi-arrow-clockwise"></i>
+
+                        Reset
+
+                    </a>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+    <!-- Customer List -->
+
+    <div class="card shadow">
+
+        <div class="card-header bg-primary text-white">
+
+            <h5 class="mb-0">
+
+                Customer List
+
+            </h5>
+
+        </div>
+
+        <div class="card-body">
+
+            <div class="table-responsive overflow-visible">
+
+<table class="table table-hover table-bordered align-middle">
+
+    <thead class="table-light">
+
         <tr>
-          <td>${r.id}</td>
-          <td>${r.name}</td>
-          <td>${r.email}</td>
-          <td>${r.phone}</td>
-          <td>${r.address}</td>
-          <td>${r.status}</td>
-          <td>
-            <a href="/customers/edit/${r.id}" class="btn btn-warning btn-sm">Edit</a>
-            <a href="/customers/delete/${r.id}" class="btn btn-danger btn-sm">Delete</a>
-          </td>
-        </tr>`;
-      });
-      document.getElementById("custTable").innerHTML = html;
+
+            <th width="60">#</th>
+
+            <th width="140">Customer Code</th>
+
+            <th>Customer Name</th>
+
+            <th width="130">Mobile</th>
+
+            <th>Email</th>
+
+            <th width="140">City</th>
+
+            <th width="110" class="text-center">Status</th>
+
+            <th width="170" class="text-center">Action</th>
+
+        </tr>
+
+    </thead>
+
+    <tbody id="custTable">
+
+    {% if customers %}
+
+        {% for c in customers %}
+
+        <tr>
+
+            <!-- Serial Number -->
+
+            <td>
+
+                {{ loop.index + ((page-1) * 10) }}
+
+            </td>
+
+            <!-- Customer Code -->
+
+            <td>
+
+                <strong>
+
+                    {{ c.customer_code }}
+
+                </strong>
+
+            </td>
+
+            <!-- Name -->
+
+            <td>
+
+                {{ c.name }}
+
+            </td>
+
+            <!-- Mobile -->
+
+            <td>
+
+                {{ c.phone }}
+
+            </td>
+
+            <!-- Email -->
+
+            <td>
+
+                {{ c.email or "-" }}
+
+            </td>
+
+            <!-- City -->
+
+            <td>
+
+                {{ c.city or "-" }}
+
+            </td>
+
+            <!-- Status -->
+
+            <td class="text-center">
+
+                {% if c.status|lower == "active" %}
+
+                    <span class="badge bg-success">
+
+                        Active
+
+                    </span>
+
+                {% else %}
+
+                    <span class="badge bg-danger">
+
+                        Inactive
+
+                    </span>
+
+                {% endif %}
+
+            </td>
+
+            <!-- Action -->
+
+            <td class="text-center">
+
+                <a
+                    href="{{ url_for('customer.view', id=c.id) }}"
+                    class="btn btn-info btn-sm"
+                    title="View">
+
+                    <i class="bi bi-eye"></i>
+
+                </a>
+
+                <a
+                    href="{{ url_for('customer.edit', id=c.id) }}"
+                    class="btn btn-warning btn-sm"
+                    title="Edit">
+
+                    <i class="bi bi-pencil-square"></i>
+
+                </a>
+
+                <button
+                    type="button"
+                    class="btn btn-danger btn-sm"
+                    title="Delete"
+                    onclick="confirmCustomerDelete({{ c.id }})">
+
+                    <i class="bi bi-trash"></i>
+
+                </button>
+
+            </td>
+
+        </tr>
+
+        {% endfor %}
+
+    {% else %}
+
+        <tr>
+
+            <td colspan="8" class="text-center text-muted">
+
+                No customers found.
+
+            </td>
+
+        </tr>
+
+    {% endif %}
+
+    </tbody>
+
+</table>
+<!-- Pagination Summary -->
+
+<div class="row align-items-center mt-3">
+
+    <div class="col-md-6">
+
+        <p class="text-muted mb-0">
+
+            Showing
+
+            <strong>{{ ((page-1)*10)+1 }}</strong>
+
+            to
+
+            <strong>{{ ((page-1)*10)+customers|length }}</strong>
+
+            of
+
+            <strong>{{ total_records }}</strong>
+
+            Customers
+
+        </p>
+
+    </div>
+
+    <div class="col-md-6">
+
+        <nav class="float-end">
+
+            <ul class="pagination pagination-sm mb-0">
+
+                <!-- Previous -->
+
+                <li class="page-item {% if page == 1 %}disabled{% endif %}">
+
+                    <a class="page-link"
+                       href="{{ url_for('customer.index', page=page-1) }}">
+
+                        <i class="bi bi-chevron-left"></i>
+
+                    </a>
+
+                </li>
+
+                <!-- Page Numbers -->
+
+                {% for p in range(1, total_pages + 1) %}
+
+                <li class="page-item {% if p == page %}active{% endif %}">
+
+                    <a class="page-link"
+                       href="{{ url_for('customer.index', page=p) }}">
+
+                        {{ p }}
+
+                    </a>
+
+                </li>
+
+                {% endfor %}
+
+                <!-- Next -->
+
+                <li class="page-item {% if page == total_pages %}disabled{% endif %}">
+
+                    <a class="page-link"
+                       href="{{ url_for('customer.index', page=page+1) }}">
+
+                        <i class="bi bi-chevron-right"></i>
+
+                    </a>
+
+                </li>
+
+            </ul>
+
+        </nav>
+
+    </div>
+
+</div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+<script>
+
+function searchCustomer() {
+
+    const q = document.getElementById("customerSearch").value;
+
+    fetch(`/customer/auto-search?q=${encodeURIComponent(q)}`)
+
+    .then(res => res.json())
+
+    .then(rows => {
+
+        let html = "";
+
+        rows.forEach((r, index) => {
+
+            html += `
+
+            <tr>
+
+                <td>${index + 1}</td>
+
+                <td><strong>${r.customer_code ?? "-"}</strong></td>
+
+                <td>${r.name}</td>
+
+                <td>${r.phone ?? "-"}</td>
+
+                <td>${r.email ?? "-"}</td>
+
+                <td>${r.city ?? "-"}</td>
+
+                <td class="text-center">
+
+                    ${
+                        r.status.toLowerCase() === "active"
+
+                        ? '<span class="badge bg-success">Active</span>'
+
+                        : '<span class="badge bg-danger">Inactive</span>'
+                    }
+
+                </td>
+
+                <td class="text-center">
+
+                    <a
+                        href="/customer/view/${r.id}"
+                        class="btn btn-info btn-sm"
+                        title="View">
+
+                        <i class="bi bi-eye"></i>
+
+                    </a>
+
+                    <a
+                        href="/customer/edit/${r.id}"
+                        class="btn btn-warning btn-sm"
+                        title="Edit">
+
+                        <i class="bi bi-pencil-square"></i>
+
+                    </a>
+
+                    <button
+                        class="btn btn-danger btn-sm"
+                        onclick="confirmCustomerDelete(${r.id})">
+
+                        <i class="bi bi-trash"></i>
+
+                    </button>
+
+                </td>
+
+            </tr>
+
+            `;
+
+        });
+
+        if (rows.length === 0) {
+
+            html = `
+
+            <tr>
+
+                <td colspan="8" class="text-center text-muted">
+
+                    No customers found.
+
+                </td>
+
+            </tr>
+
+            `;
+
+        }
+
+        document.getElementById("custTable").innerHTML = html;
+
     });
+
 }
+
+
+// ==========================================
+// Delete Confirmation
+// ==========================================
+
+function confirmCustomerDelete(id) {
+
+    Swal.fire({
+
+        title: "Delete Customer?",
+
+        text: "This action cannot be undone.",
+
+        icon: "warning",
+
+        showCancelButton: true,
+
+        confirmButtonColor: "#dc3545",
+
+        confirmButtonText: "Delete",
+
+        cancelButtonText: "Cancel"
+
+    }).then((result) => {
+
+        if (result.isConfirmed) {
+
+            window.location.href = "/customer/delete/" + id;
+
+        }
+
+    });
+
+}
+
 </script>
 
 {% endblock %}

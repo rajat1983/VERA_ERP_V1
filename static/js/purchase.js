@@ -103,28 +103,28 @@ function bindEnterNavigation() {
 // Remove Row
 // ========================================
 
-function bindRemoveRow() {
+// function bindRemoveRow() {
 
-    document.addEventListener("click", function (e) {
+//     document.addEventListener("click", function (e) {
 
-        if (!e.target.classList.contains("remove-row"))
-            return;
+//         if (!e.target.classList.contains("remove-row"))
+//             return;
 
-        const rows = document.querySelectorAll("#items_table tr");
+//         const rows = document.querySelectorAll("#items_table tr");
 
-        if (rows.length === 1) {
+//         if (rows.length === 1) {
 
-            alert("At least one item is required.");
+//             alert("At least one item is required.");
 
-            return;
+//             return;
 
-        }
+//         }
 
-        e.target.closest("tr").remove();
+//         e.target.closest("tr").remove();
 
-    });
+//     });
 
-}
+// }
 function calculateTotals() {
 
     let grandTotal = 0;
@@ -183,7 +183,25 @@ function bindRemoveRow() {
 
         }
 
-        e.target.closest("tr").remove();
+        Swal.fire({
+    title: "Remove Item?",
+    text: "Do you want to remove this product from the purchase?",
+    icon: "warning",
+    showCancelButton: true,
+    confirmButtonText: "Yes, Remove",
+    cancelButtonText: "Cancel"
+
+    }).then((result) => {
+
+        if (result.isConfirmed) {
+
+            e.target.closest("tr").remove();
+
+            calculateTotals();
+
+        }
+
+    });
 
         // Recalculate Grand Total
         calculateTotals();
@@ -259,4 +277,62 @@ function validateDuplicateProducts(currentSelect) {
     }
 
     return true;
+}
+// ==========================================
+// Save Purchase Confirmation
+// ==========================================
+
+function confirmPurchaseSubmit(event) {
+
+    event.preventDefault();
+
+    const isEdit = window.location.pathname.includes("/edit/");
+
+    Swal.fire({
+        title: isEdit ? "Update Purchase?" : "Save Purchase?",
+        text: isEdit
+            ? "Do you want to update this purchase?"
+            : "Do you want to save this purchase?",
+        icon: "question",
+        showCancelButton: true,
+        confirmButtonText: isEdit ? "Yes, Update" : "Yes, Save",
+        cancelButtonText: "Cancel"
+
+    }).then((result) => {
+
+        if (result.isConfirmed) {
+
+            document.getElementById("purchaseForm").submit();
+
+        }
+
+    });
+
+}
+
+
+// ==========================================
+// Cancel Confirmation
+// ==========================================
+
+function confirmPurchaseCancel(url) {
+
+    Swal.fire({
+        title: "Cancel?",
+        text: "Unsaved changes will be lost.",
+        icon: "warning",
+        showCancelButton: true,
+        confirmButtonText: "Yes",
+        cancelButtonText: "Continue Editing"
+
+    }).then((result) => {
+
+        if (result.isConfirmed) {
+
+            window.location.href = url;
+
+        }
+
+    });
+
 }
