@@ -120,6 +120,18 @@ value="{{ request.form.get('gst_no','') }}">
 
 </div>
 <div class="row">
+    <div class="col-md-4 mb-3">
+
+    <label class="form-label fw-bold">
+
+        PIN Code
+
+    </label>
+
+    <input type="text" id="pincode" name="pincode"  maxlength="6"  class="form-control"  placeholder="Enter PIN Code"
+        onblur="fetchLocationByPin()"  value="{{ request.form.get('pincode','') }}">
+
+</div>
 
 <div class="col-md-4 mb-3">
 
@@ -130,10 +142,12 @@ City
 </label>
 
 <input
-type="text"
-name="city"
-class="form-control"
-value="{{ request.form.get('city','') }}">
+    type="text"
+    id="city"
+    name="city"
+    class="form-control"
+    readonly
+    value="{{ request.form.get('city','') }}">
 
 </div>
 
@@ -146,29 +160,16 @@ State
 </label>
 
 <input
-type="text"
-name="state"
-class="form-control"
-value="{{ request.form.get('state','') }}">
+    type="text"
+    id="state"
+    name="state"
+    class="form-control"
+    readonly
+    value="{{ request.form.get('state','') }}">
 
 </div>
 
-<div class="col-md-4 mb-3">
 
-<label class="form-label">
-
-PIN Code
-
-</label>
-
-<input
-type="text"
-name="pincode"
-maxlength="6"
-class="form-control"
-value="{{ request.form.get('pincode','') }}">
-
-</div>
 
 </div>
 

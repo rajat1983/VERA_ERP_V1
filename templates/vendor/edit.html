@@ -114,7 +114,7 @@
 
                     <div class="col-md-4 mb-3">
 
-                        <label class="form-label fw-bold">
+                        <label class="form-label ">
 
                             GST Number
 
@@ -132,11 +132,32 @@
                 </div>
 
                 <div class="row">
+                    <!-- PIN Code -->
+
+                    <div class="col-md-4 mb-3">
+
+                        <label class="form-label ">
+
+                            PIN Code
+
+                        </label>
+
+                        <input
+    type="text"
+    id="pincode"
+    name="pincode"
+    maxlength="6"
+    inputmode="numeric"
+    class="form-control"
+    value="{{ vendor.pincode }}"
+    oninput="this.value=this.value.replace(/[^0-9]/g,''); if(this.value.length===6) fetchLocationByPin();">
+
+                    </div>
                                         <!-- City -->
 
                     <div class="col-md-4 mb-3">
 
-                        <label class="form-label fw-bold">
+                        <label class="form-label ">
 
                             City
 
@@ -144,9 +165,11 @@
 
                         <input
                             type="text"
+                            id="city"
                             name="city"
                             class="form-control"
-                            value="{{ request.form.get('city', vendor.city) }}">
+                            readonly
+                            value="{{ vendor.city }}">
 
                     </div>
 
@@ -154,7 +177,7 @@
 
                     <div class="col-md-4 mb-3">
 
-                        <label class="form-label fw-bold">
+                        <label class="form-label ">
 
                             State
 
@@ -162,30 +185,15 @@
 
                         <input
                             type="text"
+                            id="state"
                             name="state"
                             class="form-control"
-                            value="{{ request.form.get('state', vendor.state) }}">
+                            readonly
+                            value="{{ vendor.state }}">
 
                     </div>
 
-                    <!-- PIN Code -->
-
-                    <div class="col-md-4 mb-3">
-
-                        <label class="form-label fw-bold">
-
-                            PIN Code
-
-                        </label>
-
-                        <input
-                            type="text"
-                            name="pincode"
-                            maxlength="6"
-                            class="form-control"
-                            value="{{ request.form.get('pincode', vendor.pincode) }}">
-
-                    </div>
+                    
 
                 </div>
 
