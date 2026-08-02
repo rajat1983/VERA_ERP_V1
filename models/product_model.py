@@ -2,13 +2,29 @@ from db import get_db_connection
 
 # created for Sale entry
 def get_products():
+
     conn = get_db_connection()
-    cur = conn.cursor()  
-    cur.execute(""" SELECT id,name,cost_price FROM products  ORDER BY id DESC """)
-    data = cur.fetchall()
+    cur = conn.cursor()
+
+    cur.execute("""
+        SELECT
+            id,
+            name,
+            cost_price,
+            selling_price,
+            stock_qty,
+            tax_rate
+        FROM products
+        WHERE status='active'
+        ORDER BY name
+    """)
+
+    products = cur.fetchall()
+
     cur.close()
     conn.close()
-    return data
+
+    return products
 # created for fetch all vendors
 def get_vendors():
     conn = get_db_connection()
