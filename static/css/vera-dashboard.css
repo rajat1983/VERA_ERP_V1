@@ -237,6 +237,31 @@ body{
     border-radius:6px !important;
 
 }
+#vendor_suggestions{
+
+    position:absolute;
+
+    width:100%;
+
+    z-index:1050;
+
+    background:#fff;
+
+    border:1px solid #dee2e6;
+
+    border-radius:6px;
+
+    max-height:250px;
+
+    overflow-y:auto;
+
+}
+
+#vendor_suggestions button{
+
+    text-align:left;
+
+}
 @media print {
 
     .btn,

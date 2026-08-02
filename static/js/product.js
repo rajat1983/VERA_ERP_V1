@@ -39,8 +39,8 @@ document.addEventListener("DOMContentLoaded", function () {
 
 function initializeProductModule() {
 
-    console.log("Initializing Product Module...");
-
+    //console.log("Initializing Product Module...");
+    
     // ---------------------------------------------
     // Form
     // ---------------------------------------------
@@ -124,24 +124,13 @@ function registerEvents() {
 
     }
 
-    // ---------------------------
-    // Continue Save
-    // ---------------------------
+   
 
-    // if (continueButton) {
+     // Vendor Search
+    const vendorInput = document.getElementById("vendor_input");
 
-    //     continueButton.addEventListener("click", submitProduct);
-
-    // }
-
-    // ---------------------------
-    // Vendor Search
-    // ---------------------------
-
-    if (input) {
-
-        input.addEventListener("keyup", searchVendor);
-
+    if (vendorInput) {
+        vendorInput.addEventListener("keyup", searchVendor);
     }
 
     // ---------------------------
@@ -312,77 +301,63 @@ function validateSellingPrice() {
 
 async function searchVendor() {
 
-    if (!input || !hidden || !listBox) {
-
-        return;
-
-    }
+    const input = document.getElementById("vendor_input");
+    const list = document.getElementById("vendor_suggestions");
 
     const q = input.value.trim();
 
-    listBox.innerHTML = "";
+    list.innerHTML = "";
 
-    hidden.value = "";
+    if (q.length < 2) {
+        return;
+    }
 
-    if (q === "") {
+    const response = await fetch(
+        `/api/vendors/search?q=${encodeURIComponent(q)}`
+    );
+
+    const vendors = await response.json();
+
+    if (!vendors.length) {
+
+        list.innerHTML = `
+            <button
+                type="button"
+                class="list-group-item list-group-item-action text-danger">
+                No Vendor Found
+            </button>
+        `;
 
         return;
-
     }
 
-    try {
+    vendors.forEach(v => {
 
-        const response = await fetch(
-            `/api/vendors/search?q=${encodeURIComponent(q)}`
-        );
+        const btn = document.createElement("button");
 
-        const vendors = await response.json();
+        btn.type = "button";
 
-        if (vendors.length > 0) {
+        btn.className =
+            "list-group-item list-group-item-action";
 
-            vendors.forEach(vendor => {
+        btn.innerHTML = `
+            <strong>${v.vendor_code}</strong><br>
+            <small>${v.name}</small>
+        `;
 
-                const btn = document.createElement("button");
+        btn.onclick = function () {
 
-                btn.type = "button";
+            input.value = `${v.vendor_code} - ${v.name}`;
 
-                btn.className =
-                    "list-group-item list-group-item-action";
+            document.getElementById("vendor_id").value = v.id;
 
-                btn.innerHTML = `
-                    <i class="bi bi-building"></i>
-                    ${vendor.name}
-                `;
+            list.innerHTML = "";
 
-                btn.addEventListener("click", function () {
+        };
 
-                    input.value = vendor.name;
+        list.appendChild(btn);
 
-                    hidden.value = vendor.id;
-
-                    listBox.innerHTML = "";
-
-                });
-
-                listBox.appendChild(btn);
-
-            });
-
-        }
-
-        else {
-
-            showAddVendorOption(q);
-
-        }
-
-    }
-
-    catch (error) {
-
-        console.error("Vendor Search Error :", error);
-
-    }
+    });
 
 }
 

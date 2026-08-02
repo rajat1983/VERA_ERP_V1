@@ -171,108 +171,75 @@ function confirmVendorSubmit(event) {
     });
 
 }
-function searchVendor() {
+async function searchVendor() {
 
-    const q = document.getElementById("vendorSearch").value;
+    const input = document.getElementById("vendor_input");
+    const hidden = document.getElementById("vendor_id");
+    const list = document.getElementById("vendor_suggestions");
 
-    fetch(`/vendor/auto-search?q=${encodeURIComponent(q)}`)
+    const q = input.value.trim();
 
-    .then(response => response.json())
+    list.innerHTML = "";
 
-    .then(rows => {
+    if (q.length < 2) {
+        return;
+    }
 
-        let html = "";
+    try {
 
-        rows.forEach((v, index) => {
+        const response = await fetch(
+            `/api/vendors/search?q=${encodeURIComponent(q)}`
+        );
 
-            html += `
+        const vendors = await response.json();
 
-            <tr>
+        if (!vendors.length) {
 
-                <td>${index + 1}</td>
-
-                <td><strong>${v.vendor_code ?? "-"}</strong></td>
-
-                <td>${v.name}</td>
-
-                <td>${v.phone ?? "-"}</td>
-
-                <td>${v.email ?? "-"}</td>
-
-                <td>${v.gst_number ?? "-"}</td>
-
-                <td>${v.city ?? "-"}</td>
-
-                <td class="text-center">
-
-                    ${
-                        v.status.toLowerCase() === "active"
-
-                        ? '<span class="badge bg-success">Active</span>'
-
-                        : '<span class="badge bg-danger">Inactive</span>'
-                    }
-
-                </td>
-
-                <td class="text-center">
-
-                    <a
-                        href="/vendor/view/${v.id}"
-                        class="btn btn-info btn-sm"
-                        title="View">
-
-                        <i class="bi bi-eye"></i>
-
-                    </a>
-
-                    <a
-                        href="/vendor/edit/${v.id}"
-                        class="btn btn-warning btn-sm"
-                        title="Edit">
-
-                        <i class="bi bi-pencil-square"></i>
-
-                    </a>
-
-                    <button
-                        type="button"
-                        class="btn btn-danger btn-sm"
-                        onclick="confirmVendorDelete(${v.id})">
-
-                        <i class="bi bi-trash"></i>
-
-                    </button>
-
-                </td>
-
-            </tr>
-
+            list.innerHTML = `
+                <button
+                    type="button"
+                    class="list-group-item list-group-item-action text-danger">
+                    No Vendor Found
+                </button>
             `;
+
+            return;
+        }
+
+        vendors.forEach(v => {
+
+            const btn = document.createElement("button");
+
+            btn.type = "button";
+
+            btn.className =
+                "list-group-item list-group-item-action";
+
+            btn.innerHTML = `
+                <strong>${v.vendor_code ?? ""}</strong>
+                ${v.vendor_code ? " - " : ""}
+                ${v.name}
+            `;
+
+            btn.onclick = function () {
+
+                input.value = `${v.vendor_code ?? ""} ${v.name}`.trim();
+
+                hidden.value = v.id;
+
+                list.innerHTML = "";
+
+            };
+
+            list.appendChild(btn);
 
         });
 
-        if (rows.length === 0) {
+    } catch (err) {
 
-            html = `
+        console.error(err);
 
-            <tr>
-
-                <td colspan="9" class="text-center text-muted">
-
-                    No vendors found.
-
-                </td>
-
-            </tr>
-
-            `;
-
-        }
-
-        document.getElementById("vendorTable").innerHTML = html;
-
-    });
+    }
 
 }
 

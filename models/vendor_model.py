@@ -297,17 +297,28 @@ def delete_vendor(id):
 def search_vendors(q):
     conn = get_db_connection()
     cur = conn.cursor()
+
+    like = f"%{q.lower()}%"
+
     cur.execute("""
-        SELECT id, name 
-        FROM vendors 
-        WHERE LOWER(name) LIKE %s 
-        ORDER BY name 
+        SELECT
+            id,
+            vendor_code,
+            name
+        FROM vendors
+        WHERE
+            LOWER(name) LIKE %s
+            OR LOWER(vendor_code) LIKE %s
+        ORDER BY name
         LIMIT 10
-    """, (f"%{q.lower()}%",))
-    rows = cur.fetchall()
+    """, (like, like))
+
+    vendors = cur.fetchall()
+
     cur.close()
     conn.close()
-    return rows
+
+    return vendors
 def create_vendor(name, phone="", email="", address=""):
     conn = get_db_connection()
     cur = conn.cursor()

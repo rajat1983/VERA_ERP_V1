@@ -5,6 +5,7 @@ import traceback
 from num2words import num2words
 from models import company_model
 sales_bp = Blueprint("sales", __name__)
+
 @sales_bp.route("/sales")
 def list_sales():
     page = int(request.args.get("page", 1))
@@ -26,8 +27,10 @@ def list_sales():
 from flask import flash
 
 @sales_bp.route("/sales/add", methods=["GET","POST"]) 
-def add_sale():
-    
+
+def add_sale():    
+    from datetime import date
+    today = date.today().isoformat()
     if request.method == "POST":
         try:
             invoice_no = sales_model.get_next_invoice_number()
@@ -62,7 +65,7 @@ def add_sale():
             #  CALL MODEL — MAY RAISE ERROR
             sale_id = sales_model.create_sale(
                 invoice_no,
-                customer_id,
+                customer_id,                
                 sale_date,
                 remarks,
                 discount,
@@ -88,7 +91,9 @@ def add_sale():
         return render_template(
             "sales/sale_create.html",
             customers=customers,
-            products=products
+            products=products,
+            today="TEST123",
+            abc="HELLO"
         )
 
     # GET REQUEST
