@@ -64,34 +64,115 @@ def create_sale(invoice_no, customer_id, sale_date, remarks, discount, items):
     cur = conn.cursor()
 
     try:
+
         total = 0
 
-        # Validate stock BEFORE inserting
-        for item in items:
-            if not check_stock(item["product_id"], item["qty"]):
-                product = get_product(item["product_id"])
-                pname = product["name"] if product else f"Product ID {item['product_id']}"
+        # ==========================================
+        # 1. Validate Stock Before Creating Sale
+        # ==========================================
 
-                raise ValueError(
-                    f"Not enough stock for '{pname}'. Requested Qty: {item['qty']}"
+        for item in items:
+
+            if not check_stock(
+                item["product_id"],
+                item["qty"]
+            ):
+
+                product = get_product(
+                    item["product_id"]
                 )
 
-        # Insert sale header
+                pname = (
+                    product["name"]
+                    if product
+                    else f"Product ID {item['product_id']}"
+                )
+
+                raise ValueError(
+                    f"Not enough stock for '{pname}'. "
+                    f"Requested Qty: {item['qty']}"
+                )
+
+        # ==========================================
+        # 2. Calculate Subtotal
+        # ==========================================
+
+        for item in items:
+
+            line_total = (
+                item["qty"] *
+                item["price"]
+            )
+
+            total += line_total
+
+        # ==========================================
+        # 3. Validate Discount Amount
+        # ==========================================
+
+        discount = float(discount)
+
+        if discount < 0:
+            raise ValueError(
+                "Discount cannot be negative."
+            )
+
+        if discount > total:
+            raise ValueError(
+                "Discount cannot be greater than subtotal."
+            )
+
+        # ==========================================
+        # 4. Insert Sale Header
+        # ==========================================
+
         cur.execute("""
-            INSERT INTO sales(invoice_no, customer_id, sale_date, remarks, discount, total_amount)
+            INSERT INTO sales
+            (
+                invoice_no,
+                customer_id,
+                sale_date,
+                remarks,
+                discount,
+                total_amount
+            )
             VALUES (%s,%s,%s,%s,%s,0)
-        """, (invoice_no, customer_id, sale_date, remarks, discount))
+        """, (
+            invoice_no,
+            customer_id,
+            sale_date,
+            remarks,
+            discount
+        ))
 
         sale_id = cur.lastrowid
 
-        # Insert sale items
+        # ==========================================
+        # 5. Insert Sale Items
+        #    + Reduce Stock
+        #    + Stock Movement
+        # ==========================================
+
         for item in items:
-            line_total = item["qty"] * item["price"]
-            total += line_total
+
+            line_total = (
+                item["qty"] *
+                item["price"]
+            )
+
+            # ------------------------------------------
+            # Insert Sale Item
+            # ------------------------------------------
 
             cur.execute("""
                 INSERT INTO sale_items
-                (sale_id, product_id, qty, price, line_total)
+                (
+                    sale_id,
+                    product_id,
+                    qty,
+                    price,
+                    line_total
+                )
                 VALUES (%s,%s,%s,%s,%s)
             """, (
                 sale_id,
@@ -101,36 +182,93 @@ def create_sale(invoice_no, customer_id, sale_date, remarks, discount, items):
                 line_total
             ))
 
+            # ------------------------------------------
+            # Reduce Product Stock
+            # ------------------------------------------
+
             cur.execute("""
                 UPDATE products
                 SET stock_qty = stock_qty - %s
                 WHERE id = %s
+                  AND stock_qty >= %s
             """, (
                 item["qty"],
-                item["product_id"]
+                item["product_id"],
+                item["qty"]
             ))
 
-        discount_percent = float(discount)
-        discount_amount = (total * discount_percent) / 100
-        total_after_discount = total - discount_amount
+            if cur.rowcount == 0:
+                raise ValueError(
+                    f"Insufficient stock for "
+                    f"Product ID {item['product_id']}."
+                )
+
+            # ------------------------------------------
+            # Stock Movement
+            # ------------------------------------------
+
+            cur.execute("""
+                INSERT INTO stock_movements
+                (
+                    product_id,
+                    movement_type,
+                    quantity,
+                    reference_id,
+                    reference_type
+                )
+                VALUES
+                (
+                    %s,
+                    'sale',
+                    %s,
+                    %s,
+                    'sale'
+                )
+            """, (
+                item["product_id"],
+                -item["qty"],
+                sale_id
+            ))
+
+        # ==========================================
+        # 6. Calculate Grand Total
+        #
+        # Discount is a ₹ amount
+        # ==========================================
+
+        grand_total = total - discount
+
+        # ==========================================
+        # 7. Update Sale Total
+        # ==========================================
 
         cur.execute("""
             UPDATE sales
-            SET total_amount=%s
-            WHERE id=%s
-        """, (total_after_discount, sale_id))
+            SET total_amount = %s
+            WHERE id = %s
+        """, (
+            grand_total,
+            sale_id
+        ))
+
+        # ==========================================
+        # 8. Commit
+        # ==========================================
 
         conn.commit()
+
         return sale_id
 
-    except Exception as e:
+    except Exception:
+
         conn.rollback()
+
         raise
 
     finally:
+
         cur.close()
         conn.close()
-
 def get_product(id):
     conn = get_db_connection()
     cur = conn.cursor()
@@ -205,61 +343,7 @@ def get_sale_items(sale_id):
     return rows
 
 from db import get_db_connection
-
 def update_sale(sale_id, customer_id, discount, total_amount, items):
-    conn = get_db_connection()
-    cur = conn.cursor()
-
-    # 1️⃣ Get old items
-    cur.execute("SELECT * FROM sale_items WHERE sale_id=%s", (sale_id,))
-    old_items = cur.fetchall()
-
-    # 2️⃣ Return stock for old items
-    for item in old_items:
-        cur.execute("""
-            UPDATE products 
-            SET stock_qty = stock_qty + %s 
-            WHERE id=%s
-        """, (item['qty'], item['product_id']))
-
-    # 3️⃣ Delete old items
-    cur.execute("DELETE FROM sale_items WHERE sale_id=%s", (sale_id,))
-
-    # 4️⃣ Update sale header
-    cur.execute("""
-        UPDATE sales 
-        SET customer_id=%s,
-            discount=%s,
-            total_amount=%s
-        WHERE id=%s
-    """, (customer_id, discount, total_amount, sale_id))
-
-    # 5️⃣ Insert new items + reduce stock
-    for it in items:
-        cur.execute("""
-            INSERT INTO sale_items 
-            (sale_id, product_id, qty, price, line_total)
-            VALUES (%s,%s,%s,%s,%s)
-        """, (
-            sale_id,
-            it["product_id"],
-            it["qty"],
-            it["price"],
-            it["line_total"]
-        ))
-
-        # reduce stock
-        cur.execute("""
-            UPDATE products 
-            SET stock_qty = stock_qty - %s
-            WHERE id=%s
-        """, (it["qty"], it["product_id"]))
-
-    conn.commit()
-    cur.close()
-    conn.close()
-    
-def cancel_sale(sale_id):
 
     conn = get_db_connection()
     cur = conn.cursor()
@@ -267,25 +351,7 @@ def cancel_sale(sale_id):
     try:
 
         # ==========================================
-        # Validate Sale
-        # ==========================================
-
-        cur.execute("""
-            SELECT sale_status
-            FROM sales
-            WHERE id = %s
-        """, (sale_id,))
-
-        sale = cur.fetchone()
-
-        if not sale:
-            raise Exception("Sale not found.")
-
-        if sale["sale_status"] == "Cancelled":
-            raise ValueError("Sale is already cancelled.")
-
-        # ==========================================
-        # Fetch Sale Items
+        # 1. Get Existing Sale Items
         # ==========================================
 
         cur.execute("""
@@ -294,59 +360,185 @@ def cancel_sale(sale_id):
             WHERE sale_id = %s
         """, (sale_id,))
 
-        items = cur.fetchall()
+        old_items = cur.fetchall()
 
         # ==========================================
-        # Restore Stock
+        # 2. Restore Old Stock
         # ==========================================
 
-        for item in items:
+        for item in old_items:
 
-            increase_stock(
+            cur.execute("""
+                UPDATE products
+                SET stock_qty = stock_qty + %s
+                WHERE id = %s
+            """, (
+                item["qty"],
+                item["product_id"]
+            ))
+
+            if cur.rowcount == 0:
+                raise ValueError(
+                    f"Unable to restore stock for "
+                    f"Product ID {item['product_id']}"
+                )
+
+            # Stock Movement - Reverse Old Sale
+            cur.execute("""
+                INSERT INTO stock_movements
+                (
+                    product_id,
+                    movement_type,
+                    quantity,
+                    reference_id,
+                    reference_type
+                )
+                VALUES
+                (
+                    %s,
+                    'sale',
+                    %s,
+                    %s,
+                    'sale'
+                )
+            """, (
                 item["product_id"],
-                item["qty"]
-            )
+                item["qty"],
+                sale_id
+            ))
 
         # ==========================================
-        # Update Sale Status
+        # 3. Remove Existing Sale Items
+        # ==========================================
+
+        cur.execute("""
+            DELETE FROM sale_items
+            WHERE sale_id = %s
+        """, (sale_id,))
+
+        # ==========================================
+        # 4. Update Sale Header
         # ==========================================
 
         cur.execute("""
             UPDATE sales
-            SET sale_status = 'Cancelled'
+            SET customer_id = %s,
+                discount = %s,
+                total_amount = %s
             WHERE id = %s
-        """, (sale_id,))
+        """, (
+            customer_id,
+            discount,
+            total_amount,
+            sale_id
+        ))
+
+        if cur.rowcount == 0:
+            cur.execute("""
+                SELECT invoice_no
+                FROM sales
+                WHERE id = %s
+            """, (sale_id,))
+
+            sale = cur.fetchone()
+
+            invoice_no = (
+                sale["invoice_no"]
+                if sale
+                else f"#{sale_id}"
+            )
+
+            raise ValueError(
+                f"Invoice {invoice_no} could not be updated."
+            )
+
+        # ==========================================
+        # 5. Insert New Sale Items
+        #    + Reduce Stock
+        # ==========================================
+
+        for item in items:
+
+            # Reduce stock atomically
+            cur.execute("""
+                UPDATE products
+                SET stock_qty = stock_qty - %s
+                WHERE id = %s
+                  AND stock_qty >= %s
+            """, (
+                item["qty"],
+                item["product_id"],
+                item["qty"]
+            ))
+
+            if cur.rowcount == 0:
+                raise ValueError(
+                    f"Insufficient stock for "
+                    f"Product ID {item['product_id']}."
+                )
+
+            # Insert Sale Item
+            cur.execute("""
+                INSERT INTO sale_items
+                (
+                    sale_id,
+                    product_id,
+                    qty,
+                    price,
+                    line_total
+                )
+                VALUES (%s, %s, %s, %s, %s)
+            """, (
+                sale_id,
+                item["product_id"],
+                item["qty"],
+                item["price"],
+                item["line_total"]
+            ))
+
+            # Stock Movement - New Sale Quantity
+            cur.execute("""
+                INSERT INTO stock_movements
+                (
+                    product_id,
+                    movement_type,
+                    quantity,
+                    reference_id,
+                    reference_type
+                )
+                VALUES
+                (
+                    %s,
+                    'sale',
+                    %s,
+                    %s,
+                    'sale'
+                )
+            """, (
+                item["product_id"],
+                -item["qty"],
+                sale_id
+            ))
+
+        # ==========================================
+        # 6. Commit Everything
+        # ==========================================
 
         conn.commit()
 
     except Exception:
+
+        # ==========================================
+        # Rollback Everything
+        # ==========================================
+
         conn.rollback()
         raise
 
     finally:
+
         cur.close()
         conn.close()
-# def delete_sale(sale_id):
-#     conn = get_db_connection()
-#     cur = conn.cursor()
-
-#     # 1️⃣ Get items before deleting
-#     cur.execute("SELECT product_id, qty FROM sale_items WHERE sale_id=%s", (sale_id,))
-#     items = cur.fetchall()
-
-#     # 2️⃣ Restore Stock
-#     for item in items:
-#         increase_stock(item["product_id"], item["qty"])
-
-#     # 3️⃣ Delete records
-#     cur.execute("DELETE FROM sale_items WHERE sale_id=%s", (sale_id,))
-#     cur.execute("DELETE FROM sales WHERE id=%s", (sale_id,))
-
-#     conn.commit()
-#     cur.close()
-#     conn.close()
-
-
 
 def get_sale_count(search):
     conn = get_db_connection()
@@ -414,3 +606,124 @@ def check_stock(product_id, qty):
         return False
     
     return row["stock_qty"] >= qty
+
+def cancel_sale(sale_id):
+
+    conn = get_db_connection()
+    cur = conn.cursor()
+
+    try:
+
+        # ==========================================
+        # 1. Validate Sale
+        # ==========================================
+
+        cur.execute("""
+            SELECT sale_status
+            FROM sales
+            WHERE id = %s
+        """, (sale_id,))
+
+        sale = cur.fetchone()
+
+        if not sale:
+            raise ValueError("Sale not found.")
+
+        if sale["sale_status"] == "Cancelled":
+            raise ValueError("Sale is already cancelled.")
+
+        # ==========================================
+        # 2. Fetch Sale Items
+        # ==========================================
+
+        cur.execute("""
+            SELECT product_id, qty
+            FROM sale_items
+            WHERE sale_id = %s
+        """, (sale_id,))
+
+        items = cur.fetchall()
+
+        if not items:
+            raise ValueError("Sale has no items to cancel.")
+
+        # ==========================================
+        # 3. Restore Stock + Create Stock Movement
+        # ==========================================
+
+        for item in items:
+
+            # Restore product stock
+            cur.execute("""
+                UPDATE products
+                SET stock_qty = stock_qty + %s
+                WHERE id = %s
+            """, (
+                item["qty"],
+                item["product_id"]
+            ))
+
+            if cur.rowcount == 0:
+                raise ValueError(
+                    f"Unable to restore stock for "
+                    f"Product ID {item['product_id']}."
+                )
+
+            # Create stock movement
+            cur.execute("""
+                INSERT INTO stock_movements
+                (
+                    product_id,
+                    movement_type,
+                    quantity,
+                    reference_id,
+                    reference_type
+                )
+                VALUES
+                (
+                    %s,
+                    'sale',
+                    %s,
+                    %s,
+                    'sale'
+                )
+            """, (
+                item["product_id"],
+                item["qty"],
+                sale_id
+            ))
+
+        # ==========================================
+        # 4. Update Sale Status
+        # ==========================================
+
+        cur.execute("""
+            UPDATE sales
+            SET sale_status = 'Cancelled'
+            WHERE id = %s
+        """, (sale_id,))
+
+        if cur.rowcount == 0:
+            raise ValueError(
+                f"Unable to cancel Sale ID {sale_id}."
+            )
+
+        # ==========================================
+        # 5. Commit
+        # ==========================================
+
+        conn.commit()
+
+    except Exception:
+
+        # ==========================================
+        # Rollback
+        # ==========================================
+
+        conn.rollback()
+        raise
+
+    finally:
+
+        cur.close()
+        conn.close()

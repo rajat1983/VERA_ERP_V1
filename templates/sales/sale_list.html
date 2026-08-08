@@ -39,21 +39,35 @@
   <td>{{ s.sale_date }}</td>
   <td>{{ s.customer_name }}</td>
   <td>{{ s.total_amount }}</td>
-  <td>{{ s.discount }}</td>
+  <td>{{ s.discount|int }}%</td>
   
-  <td>
-    <a href="/sales/view/{{s.id }}" class="btn btn-sm btn-info">View</a>
-    <a href="/sales/{{ s.id }}/edit" class="btn btn-sm btn-info">Edit</a>
-      
-    {% if s.sale_status=="Cancelled" %}
-<span class="badge bg-danger">Cancelled</span>
-{% else %}
-<a href="/sales/cancel/{{ s.id }}" class="btn btn-danger btn-sm" onclick="return confirm('Cancel this Invoice?')">Cancel</a>
-{% endif %}   
+ <td>
+    <a href="/sales/view/{{ s.id }}"
+       class="btn btn-sm btn-info">
+        View
+    </a>
 
-    <!--a href="/sales/delete/{{s.id }}"  onclick="return confirm('Delete this sale?')" class="btn btn-sm btn-danger">
-      </a-->
-  </td>
+    {% if s.sale_status == "Cancelled" %}
+
+        <span class="badge bg-danger">
+            Cancelled
+        </span>
+
+    {% else %}
+
+        <a href="/sales/{{ s.id }}/edit"
+           class="btn btn-sm btn-info">
+            Edit
+        </a>
+
+        <a href="/sales/cancel/{{ s.id }}"
+           class="btn btn-danger btn-sm"
+           onclick="return confirm('Cancel this Invoice?')">
+            Cancel
+        </a>
+
+    {% endif %}
+</td>
 </tr>
 {% endfor %}
 </tbody>

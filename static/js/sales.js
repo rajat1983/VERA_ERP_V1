@@ -273,18 +273,58 @@ function calculateInvoiceTotal() {
 
     });
 
-    // Read Discount
-    const discountInput = document.getElementById("discount_input");
+    // ==========================================
+    // Discount - Amount in ₹
+    // ==========================================
 
-    const discount = discountInput
+    const discountInput =
+        document.getElementById("discount_input");
+
+    let discount = discountInput
         ? (parseFloat(discountInput.value) || 0)
         : 0;
 
-    // GST (Phase 3)
+    // Prevent negative discount
+    if (discount < 0) {
+        discount = 0;
+
+        if (discountInput) {
+            discountInput.value = "0";
+        }
+    }
+
+    // Discount cannot exceed subtotal
+    if (discount > subtotal) {
+
+        discount = subtotal;
+
+        if (discountInput) {
+            discountInput.value = subtotal.toFixed(2);
+        }
+
+        Swal.fire({
+            icon: "warning",
+            title: "Invalid Discount",
+            text: "Discount cannot be greater than the subtotal."
+        });
+    }
+
+    // ==========================================
+    // GST
+    // ==========================================
+
     const gst = 0;
 
+    // ==========================================
     // Grand Total
-    const grandTotal = subtotal - discount + gst;
+    // ==========================================
+
+    const grandTotal =
+        subtotal - discount + gst;
+
+    // ==========================================
+    // Update UI
+    // ==========================================
 
     document.getElementById("subtotal").textContent =
         subtotal.toFixed(2);
@@ -297,7 +337,6 @@ function calculateInvoiceTotal() {
 
     document.getElementById("grand_total").textContent =
         grandTotal.toFixed(2);
-
 }
 
 
