@@ -29,7 +29,12 @@ def get_products():
 def get_vendors():
     conn = get_db_connection()
     cur = conn.cursor()
-    cur.execute("SELECT id, name FROM vendors ORDER BY name ASC")
+    cur.execute("""
+    SELECT id, name
+    FROM vendors
+    WHERE status = 'Active'
+    ORDER BY name ASC
+""")
     vendors = cur.fetchall()
     cur.close()
     conn.close()

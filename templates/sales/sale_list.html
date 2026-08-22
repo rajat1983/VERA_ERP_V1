@@ -3,7 +3,132 @@
 
 <h3>Sales List</h3>
 
-<a href="/sales/add" class="btn btn-primary mb-3">+ New Sale</a>
+<div class="d-flex justify-content-between align-items-center mb-3">
+
+    <h3 class="mb-0">
+        Sales List
+    </h3>
+
+    <a href="/sales/add"
+       class="btn btn-primary">
+        + New Sale
+    </a>
+
+</div>
+
+
+<!-- ==========================================
+     Sales KPI Cards
+========================================== -->
+
+<div class="row g-3 mb-4">
+
+    <!-- Total Sales -->
+    <div class="col-md-6 col-xl-3">
+
+        <div class="card shadow-sm border-0 h-100">
+
+            <div class="card-body">
+
+                <div class="text-muted small">
+                    Total Sales
+                </div>
+
+                <div class="fs-3 fw-bold mt-1">
+                    {{ sales_summary.total_sales or 0 }}
+                </div>
+
+                <div class="small text-muted mt-1">
+                    Confirmed invoices
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <!-- Today's Sales -->
+    <div class="col-md-6 col-xl-3">
+
+        <div class="card shadow-sm border-0 h-100">
+
+            <div class="card-body">
+
+                <div class="text-muted small">
+                    Today's Sales
+                </div>
+
+                <div class="fs-3 fw-bold mt-1">
+                    {{ sales_summary.today_sales or 0 }}
+                </div>
+
+                <div class="small text-muted mt-1">
+                    Confirmed today
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <!-- Total Revenue -->
+    <div class="col-md-6 col-xl-3">
+
+        <div class="card shadow-sm border-0 h-100">
+
+            <div class="card-body">
+
+                <div class="text-muted small">
+                    Total Revenue
+                </div>
+
+                <div class="fs-3 fw-bold mt-1">
+                    ₹{{ "%.2f"|format(
+                        sales_summary.total_revenue or 0
+                    ) }}
+                </div>
+
+                <div class="small text-muted mt-1">
+                    Confirmed sales
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <!-- Cancelled Sales -->
+    <div class="col-md-6 col-xl-3">
+
+        <div class="card shadow-sm border-0 h-100">
+
+            <div class="card-body">
+
+                <div class="text-muted small">
+                    Cancelled Sales
+                </div>
+
+                <div class="fs-3 fw-bold mt-1">
+                    {{ sales_summary.cancelled_sales or 0 }}
+                </div>
+
+                <div class="small text-muted mt-1">
+                    Cancelled invoices
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
 <form method="get" class="mb-3">
   <div class="input-group">
     <input type="text" id="saleSearch" class="form-control " placeholder="Search by Invoice..."
@@ -36,34 +161,30 @@
 {% else %}
 <span class="badge bg-danger">Cancelled</span>
 {% endif %}</td>
-  <td>{{ s.sale_date }}</td>
+  <td> {{ s.sale_date.strftime('%d/%m/%Y') }}</td>
   <td>{{ s.customer_name }}</td>
   <td>{{ s.total_amount }}</td>
   <td>{{ s.discount|int }}%</td>
   
  <td>
-    <a href="/sales/view/{{ s.id }}"
-       class="btn btn-sm btn-info">
-        View
-    </a>
+  <a href="/sales/view/{{ s.id }}" class="btn btn-info btn-sm"
+                title="View"> <i class="bi bi-eye"></i></a>
 
+   
     {% if s.sale_status == "Cancelled" %}
 
-        <span class="badge bg-danger">
-            Cancelled
-        </span>
+        <span class="badge bg-danger">            Cancelled        </span>
 
     {% else %}
-
-        <a href="/sales/{{ s.id }}/edit"
-           class="btn btn-sm btn-info">
-            Edit
-        </a>
+        
+        <a href="/sales/{{ s.id }}/edit" class="btn btn-warning btn-sm"
+                    title="Edit"><i class="bi bi-pencil-square"></i>  </a>
+        
 
         <a href="/sales/cancel/{{ s.id }}"
-           class="btn btn-danger btn-sm"
+           class="btn btn-danger btn-sm" title="Cancel"
            onclick="return confirm('Cancel this Invoice?')">
-            Cancel
+            <i class="bi bi-trash"></i>
         </a>
 
     {% endif %}

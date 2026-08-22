@@ -66,6 +66,23 @@ def create_sale(invoice_no, customer_id, sale_date, remarks, discount, items):
     try:
 
         total = 0
+        # ==========================================
+        # Validate Duplicate Products
+        # ==========================================
+
+        product_ids = set()
+
+        for item in items:
+
+            product_id = str(item["product_id"])
+
+            if product_id in product_ids:
+                raise ValueError(
+                    "Same product cannot be added more than once "
+                    "in the same invoice."
+                )
+
+            product_ids.add(product_id)
 
         # ==========================================
         # 1. Validate Stock Before Creating Sale
@@ -107,23 +124,34 @@ def create_sale(invoice_no, customer_id, sale_date, remarks, discount, items):
             total += line_total
 
         # ==========================================
-        # 3. Validate Discount Amount
+        # 3. Validate Discount Percentage
         # ==========================================
 
-        discount = float(discount)
+        discount_percent = float(discount)
 
-        if discount < 0:
+        if discount_percent < 0 or discount_percent > 100:
             raise ValueError(
-                "Discount cannot be negative."
-            )
-
-        if discount > total:
-            raise ValueError(
-                "Discount cannot be greater than subtotal."
+                "Discount must be between 0% and 100%."
             )
 
         # ==========================================
-        # 4. Insert Sale Header
+        # 4. Calculate Discount Amount
+        # ==========================================
+
+        discount_amount = (
+            total * discount_percent
+        ) / 100
+
+        # ==========================================
+        # 5. Calculate Grand Total
+        # ==========================================
+
+        grand_total = (
+            total - discount_amount
+        )
+
+        # ==========================================
+        # 6. Insert Sale Header
         # ==========================================
 
         cur.execute("""
@@ -136,19 +164,20 @@ def create_sale(invoice_no, customer_id, sale_date, remarks, discount, items):
                 discount,
                 total_amount
             )
-            VALUES (%s,%s,%s,%s,%s,0)
+            VALUES (%s, %s, %s, %s, %s, %s)
         """, (
             invoice_no,
             customer_id,
             sale_date,
             remarks,
-            discount
+            discount_percent,
+            grand_total
         ))
 
         sale_id = cur.lastrowid
 
         # ==========================================
-        # 5. Insert Sale Items
+        # 7. Insert Sale Items
         #    + Reduce Stock
         #    + Stock Movement
         # ==========================================
@@ -173,7 +202,7 @@ def create_sale(invoice_no, customer_id, sale_date, remarks, discount, items):
                     price,
                     line_total
                 )
-                VALUES (%s,%s,%s,%s,%s)
+                VALUES (%s, %s, %s, %s, %s)
             """, (
                 sale_id,
                 item["product_id"],
@@ -231,27 +260,6 @@ def create_sale(invoice_no, customer_id, sale_date, remarks, discount, items):
             ))
 
         # ==========================================
-        # 6. Calculate Grand Total
-        #
-        # Discount is a ₹ amount
-        # ==========================================
-
-        grand_total = total - discount
-
-        # ==========================================
-        # 7. Update Sale Total
-        # ==========================================
-
-        cur.execute("""
-            UPDATE sales
-            SET total_amount = %s
-            WHERE id = %s
-        """, (
-            grand_total,
-            sale_id
-        ))
-
-        # ==========================================
         # 8. Commit
         # ==========================================
 
@@ -262,13 +270,13 @@ def create_sale(invoice_no, customer_id, sale_date, remarks, discount, items):
     except Exception:
 
         conn.rollback()
-
         raise
 
     finally:
 
         cur.close()
         conn.close()
+
 def get_product(id):
     conn = get_db_connection()
     cur = conn.cursor()
@@ -347,8 +355,25 @@ def update_sale(sale_id, customer_id, discount, total_amount, items):
 
     conn = get_db_connection()
     cur = conn.cursor()
-
+    
     try:
+        # ==========================================
+        # Validate Duplicate Products
+        # ==========================================
+
+        product_ids = set()
+
+        for item in items:
+
+            product_id = str(item["product_id"])
+
+            if product_id in product_ids:
+                raise ValueError(
+                    "Same product cannot be added more than once "
+                    "in the same invoice."
+                )
+
+            product_ids.add(product_id)
 
         # ==========================================
         # 1. Get Existing Sale Items
@@ -722,6 +747,61 @@ def cancel_sale(sale_id):
 
         conn.rollback()
         raise
+
+    finally:
+
+        cur.close()
+        conn.close()
+
+def get_sales_summary():
+
+    conn = get_db_connection()
+    cur = conn.cursor()
+
+    try:
+
+        cur.execute("""
+            SELECT
+
+                COUNT(
+                    CASE
+                        WHEN sale_status = 'Confirmed'
+                        THEN 1
+                    END
+                ) AS total_sales,
+
+                COUNT(
+                    CASE
+                        WHEN sale_status = 'Confirmed'
+                        AND DATE(sale_date) = CURDATE()
+                        THEN 1
+                    END
+                ) AS today_sales,
+
+                COALESCE(
+                    SUM(
+                        CASE
+                            WHEN sale_status = 'Confirmed'
+                            THEN total_amount
+                            ELSE 0
+                        END
+                    ),
+                    0
+                ) AS total_revenue,
+
+                COUNT(
+                    CASE
+                        WHEN sale_status = 'Cancelled'
+                        THEN 1
+                    END
+                ) AS cancelled_sales
+
+            FROM sales
+        """)
+
+        summary = cur.fetchone()
+
+        return summary
 
     finally:
 

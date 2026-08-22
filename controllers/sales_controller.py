@@ -7,19 +7,58 @@ from models import company_model
 sales_bp = Blueprint("sales", __name__)
 
 @sales_bp.route("/sales")
+@sales_bp.route("/sales")
 def list_sales():
-    page = int(request.args.get("page", 1))
-    search = request.args.get("q", "")
-    per_page = 10
-    offset = (page - 1) * per_page
 
-    sales = sales_model.get_all_sales(search, per_page, offset)
-    total = sales_model.get_sale_count(search)
-    total_pages = (total + per_page - 1) // per_page
+    page = int(
+        request.args.get("page", 1)
+    )
+
+    search = request.args.get(
+        "q",
+        ""
+    )
+
+    per_page = 10
+
+    offset = (
+        page - 1
+    ) * per_page
+
+    # ==========================================
+    # Sales List
+    # ==========================================
+
+    sales = sales_model.get_all_sales(
+        search,
+        per_page,
+        offset
+    )
+
+    total = sales_model.get_sale_count(
+        search
+    )
+
+    total_pages = (
+        total + per_page - 1
+    ) // per_page
+
+    # ==========================================
+    # Sales KPI Summary
+    # ==========================================
+
+    sales_summary = (
+        sales_model.get_sales_summary()
+    )
+
+    # ==========================================
+    # Render Sales List
+    # ==========================================
 
     return render_template(
         "/sales/sale_list.html",
         sales=sales,
+        sales_summary=sales_summary,
         page=page,
         total_pages=total_pages,
         q=search
@@ -50,16 +89,16 @@ def add_sale():
             remarks = request.form.get(
                 "remarks",
                 ""
-            )
-
-            discount_value = request.form.get(
-                "discount",
-                "0"
-            ).strip()
+            )           
 
             # ==========================================
             # 2. Validate Discount
             # ==========================================
+
+            discount_value = request.form.get(
+                "discount",
+                "0"
+                ).strip()
 
             try:
                 discount = float(
@@ -69,13 +108,13 @@ def add_sale():
                 )
             except ValueError:
                 raise ValueError(
-                    "Discount must be a valid amount."
-                )
+                "Discount must be a valid percentage."
+            )
 
-            if discount < 0:
+            if discount < 0 or discount > 100:
                 raise ValueError(
-                    "Discount cannot be negative."
-                )
+                "Discount must be between 0% and 100%."
+            )
 
             # ==========================================
             # 3. Get Sale Items

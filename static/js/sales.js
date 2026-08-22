@@ -27,91 +27,124 @@ function initializeRow(row) {
     const info = row.querySelector(".product-info-icon");
 
     // Product Changed
-    product.addEventListener("change", function () {
+    // Product Changed
+product.addEventListener("change", function () {
 
-        const option = this.selectedOptions[0];
+    const option = this.selectedOptions[0];
 
-        if (!option.value) {
+    if (!option.value) {
 
-            price.value = "0.00";
-
-            row.querySelector(".amount").value = "0.00";
-
-            if (info._tippy) {
-                info._tippy.destroy();
-            }
-
-            info.style.display = "none";
-
-            calculateInvoiceTotal();
-
-            return;
-
-        }
-
-        // Auto Fill Selling Price
-        price.value = option.dataset.sprice;
-
-        // Tooltip
-        info.style.display = "inline-block";
+        price.value = "0.00";
+        row.querySelector(".amount").value = "0.00";
 
         if (info._tippy) {
             info._tippy.destroy();
         }
 
-        tippy(info, {
+        info.style.display = "none";
 
-            theme: "light-border",
+        calculateInvoiceTotal();
 
-            allowHTML: true,
+        return;
+    }
 
-            placement: "right",
+    // ==========================================
+    // Prevent Duplicate Product
+    // ==========================================
 
-            content: `
+    const selectedProductId = option.value;
 
-                <table class="table table-sm mb-0">
+    const duplicate = Array.from(
+        document.querySelectorAll(
+            "#items tbody select[name='product_id[]']"
+        )
+    ).some(function (select) {
 
-                    <tr>
-
-                        <th>Available Stock</th>
-
-                        <td>${option.dataset.stock}</td>
-
-                    </tr>
-
-                    <tr>
-
-                        <th>Purchase Price</th>
-
-                        <td>₹ ${option.dataset.pprice}</td>
-
-                    </tr>
-
-                    <tr>
-
-                        <th>Selling Price</th>
-
-                        <td>₹ ${option.dataset.sprice}</td>
-
-                    </tr>
-
-                    <tr>
-
-                        <th>GST</th>
-
-                        <td>${option.dataset.tax}%</td>
-
-                    </tr>
-
-                </table>
-
-            `
-
-        });
-
-        calculateRow(row);
+        return (
+            select !== product &&
+            select.value === selectedProductId
+        );
 
     });
+
+    if (duplicate) {
+
+        Swal.fire({
+            icon: "warning",
+            title: "Product Already Added",
+            text: "This product is already added to the sale. Please change the product or update the existing quantity."
+        });
+
+        // Reset current row
+        product.selectedIndex = 0;
+
+        price.value = "0.00";
+
+        row.querySelector(".amount").value = "0.00";
+
+        if (info._tippy) {
+            info._tippy.destroy();
+        }
+
+        info.style.display = "none";
+
+        calculateInvoiceTotal();
+
+        return;
+    }
+
+    // ==========================================
+    // Auto Fill Selling Price
+    // ==========================================
+
+    price.value = option.dataset.sprice;
+
+    // ==========================================
+    // Tooltip
+    // ==========================================
+
+    info.style.display = "inline-block";
+
+    if (info._tippy) {
+        info._tippy.destroy();
+    }
+
+    tippy(info, {
+        theme: "light-border",
+        allowHTML: true,
+        placement: "right",
+        content: `
+
+            <table class="table table-sm mb-0">
+
+                <tr>
+                    <th>Available Stock</th>
+                    <td>${option.dataset.stock}</td>
+                </tr>
+
+                <tr>
+                    <th>Purchase Price</th>
+                    <td>₹ ${option.dataset.pprice}</td>
+                </tr>
+
+                <tr>
+                    <th>Selling Price</th>
+                    <td>₹ ${option.dataset.sprice}</td>
+                </tr>
+
+                <tr>
+                    <th>GST</th>
+                    <td>${option.dataset.tax}%</td>
+                </tr>
+
+            </table>
+
+        `
+    });
+
+    calculateRow(row);
+
+});
 
 
     // Qty Changed
@@ -263,6 +296,9 @@ function calculateRow(row) {
 // ==========================================
 // Invoice Total
 // ==========================================
+// ==========================================
+// Invoice Total
+// ==========================================
 function calculateInvoiceTotal() {
 
     let subtotal = 0;
@@ -274,40 +310,48 @@ function calculateInvoiceTotal() {
     });
 
     // ==========================================
-    // Discount - Amount in ₹
+    // Discount Percentage
     // ==========================================
 
     const discountInput =
         document.getElementById("discount_input");
 
-    let discount = discountInput
+    let discountPercent = discountInput
         ? (parseFloat(discountInput.value) || 0)
         : 0;
 
     // Prevent negative discount
-    if (discount < 0) {
-        discount = 0;
+    if (discountPercent < 0) {
+
+        discountPercent = 0;
 
         if (discountInput) {
             discountInput.value = "0";
         }
     }
 
-    // Discount cannot exceed subtotal
-    if (discount > subtotal) {
+    // Maximum discount = 100%
+    if (discountPercent > 100) {
 
-        discount = subtotal;
+        discountPercent = 100;
 
         if (discountInput) {
-            discountInput.value = subtotal.toFixed(2);
+            discountInput.value = "100";
         }
 
         Swal.fire({
             icon: "warning",
             title: "Invalid Discount",
-            text: "Discount cannot be greater than the subtotal."
+            text: "Discount cannot be greater than 100%."
         });
     }
+
+    // ==========================================
+    // Calculate Discount Amount
+    // ==========================================
+
+    const discountAmount =
+        (subtotal * discountPercent) / 100;
 
     // ==========================================
     // GST
@@ -320,17 +364,17 @@ function calculateInvoiceTotal() {
     // ==========================================
 
     const grandTotal =
-        subtotal - discount + gst;
+        subtotal - discountAmount + gst;
 
     // ==========================================
-    // Update UI
+    // Update Summary
     // ==========================================
 
     document.getElementById("subtotal").textContent =
         subtotal.toFixed(2);
 
     document.getElementById("discount").textContent =
-        discount.toFixed(2);
+        discountAmount.toFixed(2);
 
     document.getElementById("gst_total").textContent =
         gst.toFixed(2);
@@ -438,5 +482,117 @@ document.addEventListener("DOMContentLoaded", function () {
 }
 
     calculateInvoiceTotal();
+
+});
+// ==========================================
+// Cancel Sale - Unsaved Changes Confirmation
+// ==========================================
+
+document.addEventListener("DOMContentLoaded", function () {
+
+    const cancelButton =
+        document.getElementById("btnCancelSale");
+
+    if (!cancelButton) {
+        return;
+    }
+
+    cancelButton.addEventListener("click", function (e) {
+
+        const rows =
+            document.querySelectorAll("#items tbody tr");
+
+        let hasChanges = false;
+
+        // Check product selections
+        rows.forEach(function (row) {
+
+            const product =
+                row.querySelector(
+                    "select[name='product_id[]']"
+                );
+
+            const qty =
+                row.querySelector(
+                    "input[name='qty[]']"
+                );
+
+            const price =
+                row.querySelector(
+                    "input[name='price[]']"
+                );
+
+            if (
+                (product && product.value) ||
+                (qty && qty.value && qty.value !== "1") ||
+                (price && price.value && price.value !== "0.00")
+            ) {
+                hasChanges = true;
+            }
+
+        });
+
+        // Check customer
+        const customer =
+            document.querySelector(
+                "select[name='customer_id']"
+            );
+
+        if (customer && customer.value) {
+            hasChanges = true;
+        }
+
+        // Check discount
+        const discount =
+            document.getElementById(
+                "discount_input"
+            );
+
+        if (
+            discount &&
+            parseFloat(discount.value || 0) !== 0
+        ) {
+            hasChanges = true;
+        }
+
+        // Check remarks
+        const remarks =
+            document.querySelector(
+                "textarea[name='remarks']"
+            );
+
+        if (
+            remarks &&
+            remarks.value.trim() !== ""
+        ) {
+            hasChanges = true;
+        }
+
+        // Nothing changed → navigate directly
+        if (!hasChanges) {
+            return;
+        }
+
+        // Prevent immediate navigation
+        e.preventDefault();
+
+        Swal.fire({
+            icon: "warning",
+            title: "Discard Sale?",
+            text: "You have unsaved changes. Are you sure you want to cancel?",
+            showCancelButton: true,
+            confirmButtonText: "Discard",
+            cancelButtonText: "Stay",
+            reverseButtons: true
+        }).then(function (result) {
+
+            if (result.isConfirmed) {
+                window.location.href =
+                    cancelButton.href;
+            }
+
+        });
+
+    });
 
 });
