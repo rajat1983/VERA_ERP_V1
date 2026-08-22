@@ -127,10 +127,18 @@ def add_product(data):
                 selling_price,
                 stock_qty,
                 reorder_level,
+                tax_rate,
+                hsn_code,
+                unit,
+                product_type,
                 status
             )
             VALUES
             (
+                %s,
+                %s,
+                %s,
+                %s,
                 %s,
                 %s,
                 %s,
@@ -151,6 +159,10 @@ def add_product(data):
             data["selling_price"],
             data["stock_qty"],
             data["reorder_level"],
+            data.get("tax_rate") or 0,
+            data.get("hsn_code"),
+            data.get("unit") or "pcs",
+            data.get("product_type") or "finished_goods",
             data["status"]
 
         ))
@@ -210,6 +222,10 @@ def update_product(id, data):
             selling_price=%s,
             stock_qty=%s,
             reorder_level=%s,
+            tax_rate=%s,
+            hsn_code=%s,
+            unit=%s,
+            product_type=%s,
             status=%s
         WHERE id=%s
     """, (
@@ -221,6 +237,10 @@ def update_product(id, data):
         data["selling_price"],
         data["stock_qty"],
         data["reorder_level"],
+        data.get("tax_rate") or 0,
+        data.get("hsn_code"),
+        data.get("unit") or "pcs",
+        data.get("product_type") or "finished_goods",
         data["status"],
         id
     ))

@@ -90,7 +90,7 @@ def get_dashboard_kpi():
 # -----------------------------
 # Sales Chart
 # -----------------------------
-def get_sales_by_date():
+def get_sales_by_date(from_date=None, to_date=None):
     conn = get_db_connection()
     cur = conn.cursor()
 
@@ -98,9 +98,11 @@ def get_sales_by_date():
         SELECT DATE(sale_date) AS date,
                SUM(total_amount) AS total
         FROM sales
+        WHERE (%s IS NULL OR DATE(sale_date) >= %s)
+          AND (%s IS NULL OR DATE(sale_date) <= %s)
         GROUP BY DATE(sale_date)
         ORDER BY date ASC
-    """)
+    """, (from_date, from_date, to_date, to_date))
 
     rows = cur.fetchall()
     conn.close()

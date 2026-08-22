@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="d-flex justify-content-between mb-3">
+  <h4>Production Batches</h4>
+  <a href="{{ url_for('production.add_production') }}" class="btn btn-primary">+ New Batch</a>
+</div>
+<table class="table table-bordered">
+  <thead>
+    <tr>
+      <th>Batch</th><th>Product</th><th>Qty</th><th>Wastage</th><th>Date</th><th>Status</th><th>Action</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for b in batches %}
+    <tr>
+      <td>{{ b.batch_code }}</td>
+      <td>{{ b.product_name }}</td>
+      <td>{{ b.quantity_produced }}</td>
+      <td>{{ b.wastage }}</td>
+      <td>{{ b.batch_date }}</td>
+      <td>{{ b.status }}</td>
+      <td class="text-nowrap">
+        {% if b.status != 'cancelled' %}
+        <a class="btn btn-sm btn-outline-danger" href="{{ url_for('production.cancel_production', id=b.id) }}"
+           onclick="return confirm('Cancel this batch and reverse stock?')">Cancel</a>
+        {% endif %}
+      </td>
+    </tr>
+    {% else %}
+    <tr><td colspan="7" class="text-center">No production batches</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

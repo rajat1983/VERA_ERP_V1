@@ -142,7 +142,7 @@ product.addEventListener("change", function () {
         `
     });
 
-    calculateRow(row);
+    calculateRow(row, false);
 
 });
 
@@ -150,7 +150,13 @@ product.addEventListener("change", function () {
     // Qty Changed
     qty.addEventListener("input", function () {
 
-        calculateRow(row);
+        calculateRow(row, false);
+
+    });
+
+    qty.addEventListener("change", function () {
+
+        calculateRow(row, true);
 
     });
 
@@ -242,7 +248,7 @@ function removeRow(btn) {
 // ==========================================
 // Calculate Row
 // ==========================================
-function calculateRow(row) {
+function calculateRow(row, warnStock) {
 
     const qtyInput = row.querySelector(".qty");
     const priceInput = row.querySelector(".price");
@@ -252,7 +258,6 @@ function calculateRow(row) {
     const qty = parseFloat(qtyInput.value) || 0;
     const price = parseFloat(priceInput.value) || 0;
 
-    // Stock Validation
     const option = product.selectedOptions[0];
 
     if (option && option.value) {
@@ -263,11 +268,13 @@ function calculateRow(row) {
 
             qtyInput.classList.add("is-invalid");
 
-            Swal.fire({
-                icon: "warning",
-                title: "Insufficient Stock",
-                text: `Only ${stock} item(s) available in stock.`
-            });
+            if (warnStock) {
+                Swal.fire({
+                    icon: "warning",
+                    title: "Insufficient Stock",
+                    text: `Only ${stock} item(s) available in stock.`
+                });
+            }
 
             qtyInput.value = stock;
 
@@ -357,7 +364,14 @@ function calculateInvoiceTotal() {
     // GST
     // ==========================================
 
-    const gst = 0;
+    let gst = 0;
+
+    document.querySelectorAll("#items tbody tr").forEach(function (row) {
+        const amount = parseFloat(row.querySelector(".amount").value) || 0;
+        const option = row.querySelector("select[name='product_id[]']").selectedOptions[0];
+        const tax = option && option.value ? (parseFloat(option.dataset.tax) || 0) : 0;
+        gst += amount * tax / 100;
+    });
 
     // ==========================================
     // Grand Total
@@ -396,7 +410,8 @@ if (saleForm) {
 
         const rows = document.querySelectorAll("#items tbody tr");
 
-        let valid = true;
+        let valid = false;
+        let incomplete = false;
 
         rows.forEach(function (row) {
 
@@ -409,15 +424,20 @@ if (saleForm) {
             const price =
                 parseFloat(row.querySelector(".price").value) || 0;
 
-            if (!product || qty <= 0 || price <= 0) {
-
-                valid = false;
-
+            if (!product) {
+                return;
             }
+
+            if (qty <= 0 || price <= 0) {
+                incomplete = true;
+                return;
+            }
+
+            valid = true;
 
         });
 
-        if (!valid) {
+        if (incomplete || !valid) {
 
             e.preventDefault();
 

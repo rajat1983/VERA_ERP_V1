@@ -127,7 +127,8 @@ function bindEnterNavigation() {
 // }
 function calculateTotals() {
 
-    let grandTotal = 0;
+    let subtotal = 0;
+    let gst = 0;
 
     document.querySelectorAll("#items_table tr").forEach(row => {
 
@@ -138,13 +139,31 @@ function calculateTotals() {
             parseFloat(row.querySelector(".price").value) || 0;
 
         const total = qty * price;
+        const product = row.querySelector(".product");
+        const option = product ? product.selectedOptions[0] : null;
+        const tax = option && option.value ? (parseFloat(option.dataset.tax) || 0) : 0;
 
         row.querySelector(".line-total").value =
             total.toFixed(2);
 
-        grandTotal += total;
+        subtotal += total;
+        gst += total * tax / 100;
 
     });
+
+    const discountInput = document.getElementById("discount_input");
+    let discountPercent = discountInput ? (parseFloat(discountInput.value) || 0) : 0;
+    if (discountPercent < 0) discountPercent = 0;
+    if (discountPercent > 100) discountPercent = 100;
+    const discountAmount = subtotal * discountPercent / 100;
+    const grandTotal = subtotal - discountAmount + gst;
+
+    const subtotalEl = document.getElementById("subtotal");
+    const discountEl = document.getElementById("discount");
+    const gstEl = document.getElementById("gst_total");
+    if (subtotalEl) subtotalEl.innerText = subtotal.toFixed(2);
+    if (discountEl) discountEl.innerText = discountAmount.toFixed(2);
+    if (gstEl) gstEl.innerText = gst.toFixed(2);
 
     document.getElementById("grandTotal").innerText =
         grandTotal.toFixed(2);
@@ -155,7 +174,8 @@ document.addEventListener("input", function(e){
 
     if(
         e.target.classList.contains("qty") ||
-        e.target.classList.contains("price")
+        e.target.classList.contains("price") ||
+        e.target.id === "discount_input"
     ){
 
         calculateTotals();

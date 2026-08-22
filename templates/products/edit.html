@@ -379,6 +379,26 @@
 
                                     </div>
 
+                                    <div class="col-md-4 mb-3">
+                                        <label class="form-label">GST / Tax %</label>
+                                        <input type="number" step="0.01" min="0" name="tax_rate" class="form-control" value="{{ product.tax_rate or 0 }}">
+                                    </div>
+                                    <div class="col-md-4 mb-3">
+                                        <label class="form-label">HSN</label>
+                                        <input type="text" name="hsn_code" class="form-control" value="{{ product.hsn_code or '' }}">
+                                    </div>
+                                    <div class="col-md-4 mb-3">
+                                        <label class="form-label">Unit</label>
+                                        <input type="text" name="unit" class="form-control" value="{{ product.unit or 'pcs' }}">
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">Product Type</label>
+                                        <select name="product_type" class="form-select">
+                                            <option value="finished_goods" {% if product.product_type == 'finished_goods' %}selected{% endif %}>Finished goods</option>
+                                            <option value="raw_material" {% if product.product_type == 'raw_material' %}selected{% endif %}>Raw material</option>
+                                        </select>
+                                    </div>
+
                                 </div>
 
                             </div>

@@ -3,6 +3,17 @@
 ============================ -->
 {% extends "base.html" %}
 {% block content %}
+<form class="row g-2 mb-3">
+    <div class="col-auto">
+        <input type="date" name="from_date" class="form-control" value="{{ from_date }}">
+    </div>
+    <div class="col-auto">
+        <input type="date" name="to_date" class="form-control" value="{{ to_date }}">
+    </div>
+    <div class="col-auto">
+        <button class="btn btn-outline-primary">Filter sales chart</button>
+    </div>
+</form>
 <div class="d-flex justify-content-between align-items-center mb-4">
 
     <div>

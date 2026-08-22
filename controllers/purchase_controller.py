@@ -2,6 +2,7 @@ from flask import Blueprint, render_template, request, redirect, url_for, flash
 from models import purchase_model
 from models import vendor_model
 from models import product_model
+from models.purchase_cancel import cancel_purchase
 
 
 purchase_bp = Blueprint("purchase", __name__)
@@ -9,11 +10,21 @@ purchase_bp = Blueprint("purchase", __name__)
 @purchase_bp.route("/purchases")
 def list_purchases():
 
-    purchases = purchase_model.get_all_purchases()
+    page = int(request.args.get("page", 1))
+    search = request.args.get("q", "")
+    per_page = 10
+    offset = (page - 1) * per_page
+
+    purchases = purchase_model.get_all_purchases(search, per_page, offset)
+    total = purchase_model.get_purchase_count(search)
+    total_pages = (total + per_page - 1) // per_page if total else 1
 
     return render_template(
         "purchases/list.html",
-        purchases=purchases
+        purchases=purchases,
+        page=page,
+        total_pages=total_pages,
+        q=search
     )
 
 @purchase_bp.route("/purchases/add", methods=["GET", "POST"])
@@ -102,7 +113,8 @@ def add_purchase():
                 vendor_id,
                 vendor_invoice_no,
                 purchase_date,
-                items
+                items,
+                discount=request.form.get("discount", 0)
             )
 
             flash(
@@ -148,9 +160,25 @@ def view_purchase(id):
 @purchase_bp.route("/purchases/delete/<int:id>")
 def delete_purchase(id):
 
-    purchase_model.delete_purchase(id)
+    try:
+        cancel_purchase(id)
+        flash("Purchase cancelled and stock reversed successfully", "warning")
+    except ValueError as e:
+        flash(str(e), "warning")
+    except Exception as e:
+        flash(str(e), "danger")
+    return redirect(url_for("purchase.list_purchases"))
 
-    flash("Purchase deleted and stock reversed successfully", "success")
+@purchase_bp.route("/purchases/cancel/<int:id>")
+def cancel_purchase_route(id):
+
+    try:
+        cancel_purchase(id)
+        flash("Purchase cancelled and stock reversed successfully", "warning")
+    except ValueError as e:
+        flash(str(e), "warning")
+    except Exception as e:
+        flash(str(e), "danger")
     return redirect(url_for("purchase.list_purchases"))
 
 @purchase_bp.route("/purchases/edit/<int:id>", methods=["GET", "POST"])
@@ -247,7 +275,8 @@ def edit_purchase(id):
                 vendor_id=vendor_id,
                 vendor_invoice_no=vendor_invoice_no,
                 purchase_date=purchase_date,
-                items=items
+                items=items,
+                discount=request.form.get("discount", 0)
 
             )
 

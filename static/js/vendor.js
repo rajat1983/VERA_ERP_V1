@@ -90,33 +90,31 @@ function autoSearchVendor() {
 
                             </td>
 
-                            <td class="text-center">
+                            <td class="text-center text-nowrap">
 
-                                <a href="/vendors/view/${vr.id}"
-                                   class="btn btn-info btn-sm"
-                                   title="View">
+                                <div class="d-inline-flex flex-nowrap align-items-center gap-1">
 
-                                    <i class="bi bi-eye"></i>
+                                    <a href="/vendors/view/${vr.id}"
+                                       class="btn btn-info btn-sm"
+                                       title="View">
+                                        <i class="bi bi-eye"></i>
+                                    </a>
 
-                                </a>
+                                    <a href="/vendors/edit/${vr.id}"
+                                       class="btn btn-warning btn-sm"
+                                       title="Edit">
+                                        <i class="bi bi-pencil-square"></i>
+                                    </a>
 
-                                <a href="/vendors/edit/${vr.id}"
-                                   class="btn btn-warning btn-sm"
-                                   title="Edit">
+                                    <button
+                                        type="button"
+                                        class="btn btn-danger btn-sm"
+                                        onclick="confirmVendorDelete(${vr.id})"
+                                        title="Delete">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
 
-                                    <i class="bi bi-pencil-square"></i>
-
-                                </a>
-
-                                <button
-                                    type="button"
-                                    class="btn btn-danger btn-sm"
-                                    onclick="confirmVendorDelete(${vr.id})"
-                                    title="Delete">
-
-                                    <i class="bi bi-trash"></i>
-
-                                </button>
+                                </div>
 
                             </td>
 

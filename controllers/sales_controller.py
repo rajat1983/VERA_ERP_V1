@@ -1,12 +1,11 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
 from models import sales_model, product_model, customer_model
-from models.sales_model import get_next_invoice_number
 import traceback
 from num2words import num2words
 from models import company_model
+
 sales_bp = Blueprint("sales", __name__)
 
-@sales_bp.route("/sales")
 @sales_bp.route("/sales")
 def list_sales():
 
@@ -79,8 +78,6 @@ def add_sale():
             # ==========================================
             # 1. Get Sale Information
             # ==========================================
-
-            invoice_no = sales_model.get_next_invoice_number()
 
             customer_id = request.form["customer_id"]
 
@@ -188,7 +185,6 @@ def add_sale():
             # ==========================================
 
             sale_id = sales_model.create_sale(
-                invoice_no,
                 customer_id,
                 sale_date,
                 remarks,
@@ -268,6 +264,13 @@ def sale_view(sale_id):
     + " Only"
 )
 
+    gst_amount = float(sale.get("gst_amount") or 0)
+    if not gst_amount:
+        gst_amount = 0
+        for item in items:
+            gst_amount += float(item.get("line_total") or 0) * float(item.get("tax_rate") or 0) / 100.0
+    sale["gst_amount"] = gst_amount
+
     return render_template(
         "sales/sale_view.html",
         sale=sale,
@@ -326,15 +329,12 @@ def sale_update(id):
         # 1. Validate Sale
         # ==========================================
 
-        sale = sales_model.get_sale_by_id(id)
+        sale, existing_items = sales_model.get_sale_by_id(id)
 
         if not sale:
             raise ValueError("Sale not found.")
 
-        # get_sale_by_id() returns a tuple
-        sale_status = sale[0]
-
-        if sale_status == "Cancelled":
+        if sale.get("sale_status") == "Cancelled":
             raise ValueError(
                 "Cancelled sale cannot be edited."
             )
@@ -366,7 +366,6 @@ def sale_update(id):
         # ==========================================
 
         items = []
-        total = 0
 
         for i in range(len(product_ids)):
 
@@ -386,14 +385,10 @@ def sale_update(id):
                     "Price cannot be negative."
                 )
 
-            line_total = qty * price
-            total += line_total
-
             items.append({
                 "product_id": product_ids[i],
                 "qty": qty,
-                "price": price,
-                "line_total": line_total
+                "price": price
             })
 
         # ==========================================
@@ -414,28 +409,10 @@ def sale_update(id):
                 "Discount must be between 0% and 100%."
             )
 
-        # ==========================================
-        # 6. Calculate Discount & Grand Total
-        # ==========================================
-
-        discount_amount = (
-            total * discount
-        ) / 100
-
-        grand_total = (
-            total -
-            discount_amount
-        )
-
-        # ==========================================
-        # 7. Update Sale
-        # ==========================================
-
         sales_model.update_sale(
             id,
             customer_id,
             discount,
-            grand_total,
             items
         )
 

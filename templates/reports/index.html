@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block content %}
+<h4>Reports</h4>
+<form class="row g-2 mb-3">
+  <div class="col-md-3"><input type="date" name="from_date" class="form-control" value="{{ from_date }}"></div>
+  <div class="col-md-3"><input type="date" name="to_date" class="form-control" value="{{ to_date }}"></div>
+</form>
+<div class="list-group">
+  <a class="list-group-item" href="{{ url_for('report.sales', from_date=from_date, to_date=to_date) }}">Sales</a>
+  <a class="list-group-item" href="{{ url_for('report.purchases', from_date=from_date, to_date=to_date) }}">Purchases</a>
+  <a class="list-group-item" href="{{ url_for('report.stock') }}">Stock</a>
+  <a class="list-group-item" href="{{ url_for('report.low_stock') }}">Low stock</a>
+  <a class="list-group-item" href="{{ url_for('report.payments', from_date=from_date, to_date=to_date) }}">Payments</a>
+</div>
+{% endblock %}

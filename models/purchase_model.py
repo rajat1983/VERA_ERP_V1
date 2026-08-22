@@ -1,11 +1,13 @@
 from db import get_db_connection
+from utils.totals import calculate_document_totals
 
 def create_purchase(
     purchase_no,
     vendor_id,
     vendor_invoice_no,
     purchase_date,
-    items
+    items,
+    discount=0
 ):
 
     conn = get_db_connection()
@@ -13,38 +15,49 @@ def create_purchase(
 
     try:
 
-        subtotal = 0
+        for item in items:
+            cur.execute(
+                "SELECT tax_rate FROM products WHERE id=%s",
+                (item["product_id"],),
+            )
+            prod = cur.fetchone()
+            item["tax_rate"] = float(prod["tax_rate"] if prod else 0)
 
-        # Purchase Header
+        totals = calculate_document_totals(items, discount)
+
         cur.execute("""
             INSERT INTO purchases
             (
                 purchase_no,
                 vendor_id,
                 vendor_invoice_no,
-                purchase_date
+                purchase_date,
+                discount,
+                discount_amount,
+                gst_amount,
+                subtotal,
+                total_amount,
+                status
             )
             VALUES
             (
-                %s,
-                %s,
-                %s,
-                %s
+                %s, %s, %s, %s, %s, %s, %s, %s, %s, 'confirmed'
             )
         """, (
             purchase_no,
             vendor_id,
             vendor_invoice_no,
-            purchase_date
+            purchase_date,
+            totals["discount_percent"],
+            totals["discount_amount"],
+            totals["gst_amount"],
+            totals["subtotal"],
+            totals["grand_total"]
         ))
 
         purchase_id = cur.lastrowid
 
-        # Purchase Items
         for item in items:
-
-            line_total = item["qty"] * item["price"]
-            subtotal += line_total
 
             cur.execute("""
                 INSERT INTO purchase_items
@@ -68,22 +81,8 @@ def create_purchase(
                 item["product_id"],
                 item["qty"],
                 item["price"],
-                line_total
+                item["line_total"]
             ))
-
-        # Update Purchase Total
-        cur.execute("""
-            UPDATE purchases
-            SET
-                subtotal=%s,
-                total_amount=%s,
-                status='confirmed'
-            WHERE id=%s
-        """, (
-            subtotal,
-            subtotal,
-            purchase_id
-        ))
 
         # Update Stock
         for item in items:
@@ -134,18 +133,23 @@ def create_purchase(
         cur.close()
         conn.close()
 
-def get_all_purchases():
+def get_all_purchases(search="", limit=10, offset=0):
 
     conn = get_db_connection()
     cur = conn.cursor()
+    like = f"%{search}%"
 
     cur.execute("""
         SELECT p.*,
                v.name AS vendor_name
         FROM purchases p
         JOIN vendors v ON p.vendor_id = v.id
+        WHERE p.purchase_no LIKE %s
+           OR p.vendor_invoice_no LIKE %s
+           OR v.name LIKE %s
         ORDER BY p.id DESC
-    """)
+        LIMIT %s OFFSET %s
+    """, (like, like, like, limit, offset))
 
     purchases = cur.fetchall()
 
@@ -153,6 +157,26 @@ def get_all_purchases():
     conn.close()
 
     return purchases
+
+
+def get_purchase_count(search=""):
+    conn = get_db_connection()
+    cur = conn.cursor()
+    like = f"%{search}%"
+    cur.execute("""
+        SELECT COUNT(*) AS total
+        FROM purchases p
+        JOIN vendors v ON p.vendor_id = v.id
+        WHERE p.purchase_no LIKE %s
+           OR p.vendor_invoice_no LIKE %s
+           OR v.name LIKE %s
+    """, (like, like, like))
+    total = cur.fetchone()["total"]
+    cur.close()
+    conn.close()
+    return total
+
+
 def get_purchase_by_id(purchase_id):
 
     conn = get_db_connection()
@@ -309,13 +333,21 @@ def update_purchase(
     vendor_id,
     vendor_invoice_no,
     purchase_date,
-    items
+    items,
+    discount=0
 ):
 
     conn = get_db_connection()
     cur = conn.cursor()
 
     try:
+
+        cur.execute("SELECT status FROM purchases WHERE id=%s", (purchase_id,))
+        existing = cur.fetchone()
+        if not existing:
+            raise ValueError("Purchase not found.")
+        if str(existing["status"]).lower() == "cancelled":
+            raise ValueError("Cancelled purchase cannot be edited.")
 
         subtotal = 0
 
@@ -379,7 +411,14 @@ def update_purchase(
 
             line_total = item["qty"] * item["price"]
 
-            subtotal += line_total
+            item["line_total"] = line_total
+
+            cur.execute(
+                "SELECT tax_rate FROM products WHERE id=%s",
+                (item["product_id"],),
+            )
+            prod = cur.fetchone()
+            item["tax_rate"] = float(prod["tax_rate"] if prod else 0)
 
             cur.execute("""
                 INSERT INTO purchase_items
@@ -403,7 +442,7 @@ def update_purchase(
                 item["product_id"],
                 item["qty"],
                 item["price"],
-                line_total
+                item["line_total"]
             ))
 
             # -----------------------------------------
@@ -450,15 +489,23 @@ def update_purchase(
         # Update Purchase Total
         # -----------------------------------------
 
+        totals = calculate_document_totals(items, discount)
+
         cur.execute("""
             UPDATE purchases
             SET
                 subtotal = %s,
+                discount = %s,
+                discount_amount = %s,
+                gst_amount = %s,
                 total_amount = %s
             WHERE id = %s
         """, (
-            subtotal,
-            subtotal,
+            totals["subtotal"],
+            totals["discount_percent"],
+            totals["discount_amount"],
+            totals["gst_amount"],
+            totals["grand_total"],
             purchase_id
         ))
 

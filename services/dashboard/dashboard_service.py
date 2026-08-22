@@ -5,7 +5,7 @@ from services.dashboard.business_health_service import BusinessHealthService
 class DashboardService:
 
     @staticmethod
-    def load_dashboard():
+    def load_dashboard(from_date=None, to_date=None):
 
         return {
 
@@ -21,12 +21,16 @@ class DashboardService:
 
             "recent_transactions": dashboard_model.get_recent_transactions(),
 
-            "sales_by_date": dashboard_model.get_sales_by_date(),
+            "sales_by_date": dashboard_model.get_sales_by_date(from_date, to_date),
 
             "top_products": dashboard_model.get_top_products(),
 
             "top_customers": dashboard_model.get_top_customers(),
 
-            "stock_levels": dashboard_model.get_stock_levels()
+            "stock_levels": dashboard_model.get_stock_levels(),
+
+            "from_date": from_date or "",
+
+            "to_date": to_date or ""
 
         }

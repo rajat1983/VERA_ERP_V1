@@ -72,6 +72,10 @@ def add_product():
                 "selling_price": request.form.get("selling_price"),
                 "stock_qty": request.form.get("stock_qty"),
                 "reorder_level": request.form.get("reorder_level"),
+                "tax_rate": request.form.get("tax_rate") or 0,
+                "hsn_code": request.form.get("hsn_code"),
+                "unit": request.form.get("unit") or "pcs",
+                "product_type": request.form.get("product_type") or "finished_goods",
                 "status": request.form.get("status")
             }
 
@@ -155,6 +159,10 @@ def edit_product(id):
             "selling_price": request.form["selling_price"],
             "stock_qty": request.form["stock_qty"],
             "reorder_level": request.form["reorder_level"],
+            "tax_rate": request.form.get("tax_rate") or 0,
+            "hsn_code": request.form.get("hsn_code"),
+            "unit": request.form.get("unit") or "pcs",
+            "product_type": request.form.get("product_type") or "finished_goods",
             "status": request.form["status"]
 
         }

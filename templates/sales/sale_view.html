@@ -333,6 +333,22 @@ Discount ({{ "%.0f"|format(sale.discount) }}%)
 
 </tr>
 
+<tr>
+
+<th colspan="4" class="text-end">
+
+GST
+
+</th>
+
+<th class="text-end">
+
+₹ {{ "{:,.2f}".format(sale.gst_amount or 0) }}
+
+</th>
+
+</tr>
+
 <tr class="table-success">
 
 <th colspan="4" class="text-end">

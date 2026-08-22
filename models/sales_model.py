@@ -1,39 +1,50 @@
-import pymysql
 from db import get_db_connection
 from datetime import datetime
-from models.product_model import reduce_stock, increase_stock
+from utils.totals import calculate_document_totals
 
-def get_next_invoice_number():
+
+def _next_invoice_number(cur):
     year = datetime.now().strftime("%Y")
+    lock_name = f"vera_invoice_{year}"
+    cur.execute("SELECT GET_LOCK(%s, 10) AS locked", (lock_name,))
+    lock = cur.fetchone()
+    if not lock or not int(lock["locked"]):
+        raise ValueError("Could not allocate invoice number. Please retry.")
 
-    conn = get_db_connection()
-    cur = conn.cursor()
-
-    # Get latest invoice for this year
-    cur.execute("""
-        SELECT invoice_no 
-        FROM sales 
+    cur.execute(
+        """
+        SELECT invoice_no
+        FROM sales
         WHERE invoice_no LIKE %s
-        ORDER BY invoice_no DESC 
+        ORDER BY invoice_no DESC
         LIMIT 1
-    """, (year + "%",))
-
+        FOR UPDATE
+        """,
+        (year + "%",),
+    )
     row = cur.fetchone()
-
-    if row:
-        last_invoice = row["invoice_no"]
-        # Extract last 5 digits
-        last_seq = int(last_invoice[-5:])
+    if row and row["invoice_no"]:
+        last_seq = int(str(row["invoice_no"])[-5:])
         next_seq = last_seq + 1
     else:
-        next_seq = 1   # First invoice of the year
+        next_seq = 1
+    return f"{year}{next_seq:05d}", lock_name
 
-    next_invoice = f"{year}{next_seq:05d}"
 
-    cur.close()
-    conn.close()
+def get_next_invoice_number():
+    conn = get_db_connection()
+    cur = conn.cursor()
+    lock_name = None
+    try:
+        invoice, lock_name = _next_invoice_number(cur)
+        return invoice
+    finally:
+        if lock_name:
+            cur.execute("SELECT RELEASE_LOCK(%s)", (lock_name,))
+        cur.close()
+        conn.close()
 
-    return next_invoice
+
 def get_all_sales(search, limit, offset):
     conn = get_db_connection()
     cur = conn.cursor()
@@ -46,26 +57,28 @@ def get_all_sales(search, limit, offset):
                s.sale_date,
                 s.total_amount,
                 s.discount,
+                s.payment_status,
                 c.name AS customer_name
          FROM sales s
          JOIN customers c ON s.customer_id = c.id
+         WHERE s.invoice_no LIKE %s OR c.name LIKE %s
          ORDER BY s.id DESC
         LIMIT %s OFFSET %s
-    """, (limit, offset))
+    """, (like, like, limit, offset))
 
     data = cur.fetchall()
     cur.close()
     conn.close()
     return data
 
-def create_sale(invoice_no, customer_id, sale_date, remarks, discount, items):
+def create_sale(customer_id, sale_date, remarks, discount, items):
 
     conn = get_db_connection()
     cur = conn.cursor()
+    lock_name = None
 
     try:
 
-        total = 0
         # ==========================================
         # Validate Duplicate Products
         # ==========================================
@@ -85,7 +98,7 @@ def create_sale(invoice_no, customer_id, sale_date, remarks, discount, items):
             product_ids.add(product_id)
 
         # ==========================================
-        # 1. Validate Stock Before Creating Sale
+        # 1. Validate Stock + attach tax rate
         # ==========================================
 
         for item in items:
@@ -110,49 +123,16 @@ def create_sale(invoice_no, customer_id, sale_date, remarks, discount, items):
                     f"Requested Qty: {item['qty']}"
                 )
 
-        # ==========================================
-        # 2. Calculate Subtotal
-        # ==========================================
-
-        for item in items:
-
-            line_total = (
-                item["qty"] *
-                item["price"]
+            cur.execute(
+                "SELECT tax_rate FROM products WHERE id=%s",
+                (item["product_id"],),
             )
+            prod = cur.fetchone()
+            item["tax_rate"] = float(prod["tax_rate"] if prod else 0)
 
-            total += line_total
+        totals = calculate_document_totals(items, discount)
 
-        # ==========================================
-        # 3. Validate Discount Percentage
-        # ==========================================
-
-        discount_percent = float(discount)
-
-        if discount_percent < 0 or discount_percent > 100:
-            raise ValueError(
-                "Discount must be between 0% and 100%."
-            )
-
-        # ==========================================
-        # 4. Calculate Discount Amount
-        # ==========================================
-
-        discount_amount = (
-            total * discount_percent
-        ) / 100
-
-        # ==========================================
-        # 5. Calculate Grand Total
-        # ==========================================
-
-        grand_total = (
-            total - discount_amount
-        )
-
-        # ==========================================
-        # 6. Insert Sale Header
-        # ==========================================
+        invoice_no, lock_name = _next_invoice_number(cur)
 
         cur.execute("""
             INSERT INTO sales
@@ -162,16 +142,22 @@ def create_sale(invoice_no, customer_id, sale_date, remarks, discount, items):
                 sale_date,
                 remarks,
                 discount,
-                total_amount
+                discount_amount,
+                gst_amount,
+                total_amount,
+                sale_status,
+                payment_status
             )
-            VALUES (%s, %s, %s, %s, %s, %s)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, 'Confirmed', 'Pending')
         """, (
             invoice_no,
             customer_id,
             sale_date,
             remarks,
-            discount_percent,
-            grand_total
+            totals["discount_percent"],
+            totals["discount_amount"],
+            totals["gst_amount"],
+            totals["grand_total"]
         ))
 
         sale_id = cur.lastrowid
@@ -274,15 +260,18 @@ def create_sale(invoice_no, customer_id, sale_date, remarks, discount, items):
 
     finally:
 
+        if lock_name:
+            try:
+                cur.execute("SELECT RELEASE_LOCK(%s)", (lock_name,))
+            except Exception:
+                pass
         cur.close()
         conn.close()
 
 def get_product(id):
     conn = get_db_connection()
     cur = conn.cursor()
-    cur.execute("""
-        SELECT name FROM products WHERE id=%s       
-    """, (id))
+    cur.execute("SELECT name FROM products WHERE id=%s", (id,))
     pname = cur.fetchone()
     cur.close()
     conn.close()
@@ -320,7 +309,8 @@ def get_sale_by_id(sale_id):
     cur.execute("""
         SELECT
             si.*,
-            p.name AS product_name
+            p.name AS product_name,
+            p.tax_rate
         FROM sale_items si
         JOIN products p
             ON si.product_id = p.id
@@ -351,12 +341,19 @@ def get_sale_items(sale_id):
     return rows
 
 from db import get_db_connection
-def update_sale(sale_id, customer_id, discount, total_amount, items):
+def update_sale(sale_id, customer_id, discount, items):
 
     conn = get_db_connection()
     cur = conn.cursor()
     
     try:
+        cur.execute("SELECT sale_status FROM sales WHERE id=%s", (sale_id,))
+        existing = cur.fetchone()
+        if not existing:
+            raise ValueError("Sale not found.")
+        if existing["sale_status"] == "Cancelled":
+            raise ValueError("Cancelled sale cannot be edited.")
+
         # ==========================================
         # Validate Duplicate Products
         # ==========================================
@@ -374,6 +371,16 @@ def update_sale(sale_id, customer_id, discount, total_amount, items):
                 )
 
             product_ids.add(product_id)
+
+        for item in items:
+            cur.execute(
+                "SELECT tax_rate FROM products WHERE id=%s",
+                (item["product_id"],),
+            )
+            prod = cur.fetchone()
+            item["tax_rate"] = float(prod["tax_rate"] if prod else 0)
+
+        totals = calculate_document_totals(items, discount)
 
         # ==========================================
         # 1. Get Existing Sale Items
@@ -449,12 +456,16 @@ def update_sale(sale_id, customer_id, discount, total_amount, items):
             UPDATE sales
             SET customer_id = %s,
                 discount = %s,
+                discount_amount = %s,
+                gst_amount = %s,
                 total_amount = %s
             WHERE id = %s
         """, (
             customer_id,
-            discount,
-            total_amount,
+            totals["discount_percent"],
+            totals["discount_amount"],
+            totals["gst_amount"],
+            totals["grand_total"],
             sale_id
         ))
 
@@ -572,8 +583,10 @@ def get_sale_count(search):
 
     cur.execute("""
         SELECT COUNT(*) AS total
-        FROM sales
-        WHERE invoice_no LIKE %s """, (like))
+        FROM sales s
+        JOIN customers c ON c.id = s.customer_id
+        WHERE s.invoice_no LIKE %s OR c.name LIKE %s
+    """, (like, like))
 
     total = cur.fetchone()["total"]
     cur.close()

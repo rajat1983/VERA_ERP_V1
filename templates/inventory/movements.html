@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="d-flex justify-content-between mb-3">
+  <h4>Stock Movements</h4>
+</div>
+<form class="row g-2 mb-3">
+  <div class="col-md-8">
+    <input class="form-control" name="q" value="{{ q }}" placeholder="Search product, SKU or type">
+  </div>
+  <div class="col-md-2"><button class="btn btn-primary">Search</button></div>
+</form>
+<div class="table-responsive">
+<table class="table table-bordered table-striped">
+  <thead class="table-light">
+    <tr>
+      <th>Date</th><th>Product</th><th>SKU</th><th>Type</th><th>Qty</th><th>Ref</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for r in rows %}
+    <tr>
+      <td>{{ r.created_at }}</td>
+      <td>{{ r.product_name }}</td>
+      <td>{{ r.sku }}</td>
+      <td>{{ r.movement_type }}</td>
+      <td>{{ r.quantity }}</td>
+      <td>{{ r.reference_type }} #{{ r.reference_id }}</td>
+    </tr>
+    {% else %}
+    <tr><td colspan="6" class="text-center">No movements</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+</div>
+<p class="text-muted">{{ total }} records</p>
+{% endblock %}
