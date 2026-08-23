@@ -1,35 +1,24 @@
 {% extends "base.html" %}
+{% block title %}Customers — VERA ERP{% endblock %}
+{% block page_title %}Customers{% endblock %}
 {% block content %}
 
-<div class="container-fluid mt-4">
+<div class="container-fluid">
 
-    <!-- Page Header -->
-
-    <div class="d-flex justify-content-between align-items-center mb-3">
-
-        <h3 class="mb-0">
-
-            <i class="bi bi-people-fill text-primary"></i>
-
-            Customer Management
-
-        </h3>
-
-        <a
-            href="{{ url_for('customer.add') }}"
-            class="btn btn-success">
-
+    <div class="page-header">
+        <div>
+            <h1>Customers</h1>
+            <p>Customer master used on sales invoices.</p>
+        </div>
+        {% if can('create', 'customer') %}
+        <a href="{{ url_for('customer.add') }}" class="btn btn-primary">
             <i class="bi bi-plus-circle"></i>
-
-            Add Customer
-
+            Add customer
         </a>
-
+        {% endif %}
     </div>
 
-    <!-- Search Card -->
-
-    <div class="card shadow-sm mb-3">
+    <div class="page-toolbar">
 
         <div class="card-body">
 
@@ -68,23 +57,15 @@
 
     <!-- Customer List -->
 
-    <div class="card shadow">
+    <div class="page-card">
 
-        <div class="card-header bg-primary text-white">
-
-            <h5 class="mb-0">
-
-                Customer List
-
-            </h5>
-
-        </div>
+        <div class="page-card-title">Customer list</div>
 
         <div class="card-body">
 
             <div class="table-responsive overflow-visible">
 
-<table class="table table-hover table-bordered align-middle">
+<table class="table table-hover vera-table align-middle">
 
     <thead class="table-light">
 
@@ -104,7 +85,7 @@
 
             <th width="110" class="text-center">Status</th>
 
-            <th width="170" class="text-center">Action</th>
+            <th class="text-end table-actions">Action</th>
 
         </tr>
 
@@ -196,7 +177,7 @@
 
             <!-- Action -->
 
-            <td class="text-center">
+            <td class="text-end table-actions">
 
                 <a
                     href="{{ url_for('customer.view', id=c.id) }}"
@@ -207,6 +188,7 @@
 
                 </a>
 
+                {% if can('edit', 'customer') %}
                 <a
                     href="{{ url_for('customer.edit', id=c.id) }}"
                     class="btn btn-warning btn-sm"
@@ -215,7 +197,9 @@
                     <i class="bi bi-pencil-square"></i>
 
                 </a>
+                {% endif %}
 
+                {% if can('delete') %}
                 <button
                     type="button"
                     class="btn btn-danger btn-sm"
@@ -225,6 +209,7 @@
                     <i class="bi bi-trash"></i>
 
                 </button>
+                {% endif %}
 
             </td>
 
@@ -383,10 +368,8 @@ function searchCustomer() {
 
                 </td>
 
-                <td class="text-center">
-
-                    <a
-                        href="/customer/view/${r.id}"
+                <td class="text-end table-actions">
+                    <a href="/customer/view/${r.id}"
                         class="btn btn-info btn-sm"
                         title="View">
 
@@ -394,6 +377,7 @@ function searchCustomer() {
 
                     </a>
 
+                    {% if can('edit', 'customer') %}
                     <a
                         href="/customer/edit/${r.id}"
                         class="btn btn-warning btn-sm"
@@ -402,7 +386,9 @@ function searchCustomer() {
                         <i class="bi bi-pencil-square"></i>
 
                     </a>
+                    {% endif %}
 
+                    {% if can('delete') %}
                     <button
                         class="btn btn-danger btn-sm"
                         onclick="confirmCustomerDelete(${r.id})">
@@ -410,6 +396,7 @@ function searchCustomer() {
                         <i class="bi bi-trash"></i>
 
                     </button>
+                    {% endif %}
 
                 </td>
 
@@ -478,6 +465,8 @@ function confirmCustomerDelete(id) {
 
 }
 
-</script>
+{% endblock %}
 
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/customer.js') }}"></script>
 {% endblock %}

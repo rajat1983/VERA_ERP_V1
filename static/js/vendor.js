@@ -100,19 +100,21 @@ function autoSearchVendor() {
                                         <i class="bi bi-eye"></i>
                                     </a>
 
+                                    ${window.veraCan && window.veraCan.edit ? `
                                     <a href="/vendors/edit/${vr.id}"
                                        class="btn btn-warning btn-sm"
                                        title="Edit">
                                         <i class="bi bi-pencil-square"></i>
-                                    </a>
+                                    </a>` : ""}
 
+                                    ${window.veraCan && window.veraCan.delete ? `
                                     <button
                                         type="button"
                                         class="btn btn-danger btn-sm"
                                         onclick="confirmVendorDelete(${vr.id})"
                                         title="Delete">
                                         <i class="bi bi-trash"></i>
-                                    </button>
+                                    </button>` : ""}
 
                                 </div>
 

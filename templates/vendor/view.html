@@ -1,22 +1,16 @@
 {% extends "base.html" %}
-
+{% block title %}Vendor — VERA ERP{% endblock %}
+{% block page_title %}Vendors{% endblock %}
 {% block content %}
 
-<div class="container mt-4">
+<div class="page-header">
+  <div>
+    <h1>Vendor details</h1>
+    <p>{{ vendor.vendor_code }} · {{ vendor.name }}</p>
+  </div>
+</div>
 
-    <div class="card shadow">
-
-        <div class="card-header bg-primary text-white">
-
-            <h4 class="mb-0">
-
-                <i class="bi bi-truck"></i>
-
-                Vendor Details
-
-            </h4>
-
-        </div>
+<div class="page-card">
 
         <div class="card-body">
 
@@ -289,6 +283,7 @@
 
                 <!-- Edit -->
 
+                {% if can('edit', 'vendor') %}
                 <a
                     href="{{ url_for('vendor.edit_vendor', id=vendor.id) }}"
                     class="btn btn-warning">
@@ -298,6 +293,7 @@
                     Edit Vendor
 
                 </a>
+                {% endif %}
 
             </div>
 

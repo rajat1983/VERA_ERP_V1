@@ -1,0 +1,12 @@
+{% macro csrf_input() %}
+<input type="hidden" name="csrf_token" value="{{ get_csrf_token() }}">
+{% endmacro %}
+
+{% macro post_button(action, confirm_text, title, btn_class, icon=None, label=None) %}
+<form method="post" action="{{ action }}" class="d-inline" onsubmit="return confirm({{ confirm_text|tojson }})">
+  {{ csrf_input() }}
+  <button type="submit" class="{{ btn_class }}" title="{{ title }}">
+    {% if icon %}<i class="bi {{ icon }}"></i>{% endif %}{% if icon and label %} {% endif %}{% if label %}{{ label }}{% endif %}
+  </button>
+</form>
+{% endmacro %}

@@ -1,6 +1,8 @@
+import csv
 from datetime import date, timedelta
+from io import StringIO
 
-from flask import Blueprint, render_template, request
+from flask import Blueprint, Response, render_template, request
 
 from models import report_model
 
@@ -13,6 +15,34 @@ def _range():
     return from_date, to_date
 
 
+def _csv_download(filename, headers, rows, keys):
+    buf = StringIO()
+    writer = csv.writer(buf)
+    writer.writerow(headers)
+    for row in rows:
+        writer.writerow(["" if row.get(k) is None else str(row.get(k)) for k in keys])
+    return Response(
+        buf.getvalue(),
+        mimetype="text/csv; charset=utf-8",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
+def _show(title, filename, headers, rows, keys, from_date, to_date, show_dates=True):
+    if request.args.get("export") == "csv":
+        return _csv_download(filename, headers, rows, keys)
+    return render_template(
+        "reports/table.html",
+        title=title,
+        from_date=from_date,
+        to_date=to_date,
+        headers=headers,
+        rows=rows,
+        keys=keys,
+        show_dates=show_dates,
+    )
+
+
 @report_bp.route("/reports")
 def index():
     from_date, to_date = _range()
@@ -22,68 +52,100 @@ def index():
 @report_bp.route("/reports/sales")
 def sales():
     from_date, to_date = _range()
-    return render_template(
-        "reports/table.html",
-        title="Sales Report",
-        from_date=from_date,
-        to_date=to_date,
-        headers=["Invoice", "Date", "Customer", "Discount %", "GST", "Total", "Sale Status", "Payment"],
-        rows=report_model.sales_report(from_date, to_date),
-        keys=["invoice_no", "sale_date", "customer_name", "discount", "gst_amount", "total_amount", "sale_status", "payment_status"],
+    return _show(
+        "Sales report",
+        "sales-report.csv",
+        ["Invoice", "Date", "Customer", "Discount %", "GST", "Total", "Sale Status", "Payment"],
+        report_model.sales_report(from_date, to_date),
+        ["invoice_no", "sale_date", "customer_name", "discount", "gst_amount", "total_amount", "sale_status", "payment_status"],
+        from_date,
+        to_date,
     )
 
 
 @report_bp.route("/reports/purchases")
 def purchases():
     from_date, to_date = _range()
-    return render_template(
-        "reports/table.html",
-        title="Purchase Report",
-        from_date=from_date,
-        to_date=to_date,
-        headers=["Purchase No", "Date", "Vendor", "Discount %", "GST", "Total", "Status"],
-        rows=report_model.purchase_report(from_date, to_date),
-        keys=["purchase_no", "purchase_date", "vendor_name", "discount", "gst_amount", "total_amount", "status"],
+    return _show(
+        "Purchase report",
+        "purchase-report.csv",
+        ["Purchase No", "Date", "Vendor", "Discount %", "GST", "Total", "Status"],
+        report_model.purchase_report(from_date, to_date),
+        ["purchase_no", "purchase_date", "vendor_name", "discount", "gst_amount", "total_amount", "status"],
+        from_date,
+        to_date,
     )
 
 
 @report_bp.route("/reports/stock")
 def stock():
     from_date, to_date = _range()
-    return render_template(
-        "reports/table.html",
-        title="Stock Report",
-        from_date=from_date,
-        to_date=to_date,
-        headers=["SKU", "Name", "Qty", "Reorder", "Cost", "Selling", "Status"],
-        rows=report_model.stock_report(),
-        keys=["sku", "name", "stock_qty", "reorder_level", "cost_price", "selling_price", "status"],
+    return _show(
+        "Stock report",
+        "stock-report.csv",
+        ["SKU", "Name", "Qty", "Reorder", "Cost", "Selling", "Status"],
+        report_model.stock_report(),
+        ["sku", "name", "stock_qty", "reorder_level", "cost_price", "selling_price", "status"],
+        from_date,
+        to_date,
+        show_dates=False,
     )
 
 
 @report_bp.route("/reports/low-stock")
 def low_stock():
     from_date, to_date = _range()
-    return render_template(
-        "reports/table.html",
-        title="Low Stock Report",
-        from_date=from_date,
-        to_date=to_date,
-        headers=["SKU", "Name", "Qty", "Reorder", "Threshold"],
-        rows=report_model.low_stock_report(),
-        keys=["sku", "name", "stock_qty", "reorder_level", "threshold"],
+    return _show(
+        "Low stock report",
+        "low-stock-report.csv",
+        ["SKU", "Name", "Qty", "Reorder", "Threshold"],
+        report_model.low_stock_report(),
+        ["sku", "name", "stock_qty", "reorder_level", "threshold"],
+        from_date,
+        to_date,
+        show_dates=False,
     )
 
 
 @report_bp.route("/reports/payments")
 def payments():
     from_date, to_date = _range()
-    return render_template(
-        "reports/table.html",
-        title="Payments Report",
-        from_date=from_date,
-        to_date=to_date,
-        headers=["Date", "Amount", "Mode", "Reference", "Invoice", "Customer"],
-        rows=report_model.payment_report(from_date, to_date),
-        keys=["payment_date", "amount", "payment_mode", "reference_no", "invoice_no", "customer_name"],
+    return _show(
+        "Payments report",
+        "payments-report.csv",
+        ["Date", "Amount", "Mode", "Reference", "Invoice", "Customer"],
+        report_model.payment_report(from_date, to_date),
+        ["payment_date", "amount", "payment_mode", "reference_no", "invoice_no", "customer_name"],
+        from_date,
+        to_date,
+    )
+
+
+@report_bp.route("/reports/receivables")
+def receivables():
+    from_date, to_date = _range()
+    return _show(
+        "Receivables aging",
+        "receivables-aging.csv",
+        ["Invoice", "Date", "Customer", "Total", "Paid", "Due", "Days", "Bucket"],
+        report_model.receivables_aging(),
+        ["invoice_no", "sale_date", "customer_name", "total_amount", "paid_amount", "due", "days_overdue", "bucket"],
+        from_date,
+        to_date,
+        show_dates=False,
+    )
+
+
+@report_bp.route("/reports/payables")
+def payables():
+    from_date, to_date = _range()
+    return _show(
+        "Payables aging",
+        "payables-aging.csv",
+        ["Purchase No", "Date", "Vendor", "Total", "Paid", "Due", "Days", "Bucket"],
+        report_model.payables_aging(),
+        ["purchase_no", "purchase_date", "vendor_name", "total_amount", "paid_amount", "due", "days_overdue", "bucket"],
+        from_date,
+        to_date,
+        show_dates=False,
     )

@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block title %}Users — VERA ERP{% endblock %}
+{% block page_title %}Users{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1>Users and roles</h1>
+    <p>Admin full access. Manager create/edit (no delete). Staff view all and sales add/edit/print.</p>
+  </div>
+  <a class="btn btn-primary" href="{{ url_for('users.add_user') }}">New user</a>
+</div>
+<div class="page-card">
+  <div class="table-responsive">
+    <table class="table vera-table mb-0">
+      <thead>
+        <tr>
+          <th>Username</th>
+          <th>Role</th>
+          <th>Status</th>
+          <th class="text-end">Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for u in users %}
+        <tr>
+          <td>{{ u.username }}</td>
+          <td>{{ u.role }}</td>
+          <td>
+            {% if u.is_active %}
+              <span class="badge text-bg-success">Active</span>
+            {% else %}
+              <span class="badge text-bg-secondary">Inactive</span>
+            {% endif %}
+          </td>
+          <td class="text-end">
+            <a class="btn btn-sm btn-outline-primary" href="{{ url_for('users.edit_user', id=u.id) }}">Edit</a>
+          </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="4"><div class="empty-state">No users.</div></td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

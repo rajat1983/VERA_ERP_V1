@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block title %}Stock — VERA ERP{% endblock %}
+{% block page_title %}Stock{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1>Stock on hand</h1>
+    <p>Quantities on the product record. Adjustments write a ledger row.</p>
+  </div>
+  {% if can('adjust') %}
+  <a class="btn btn-primary" href="{{ url_for('inventory.adjust_stock') }}">Adjust stock</a>
+  {% endif %}
+</div>
+<div class="row g-3 mb-3">
+  <div class="col-6 col-lg-3"><div class="dash-kpi"><div class="dash-kpi-label">Products</div><div class="dash-kpi-value">{{ product_count }}</div></div></div>
+  <div class="col-6 col-lg-3"><div class="dash-kpi dash-kpi-warn"><div class="dash-kpi-label">Low stock</div><div class="dash-kpi-value">{{ low_count }}</div></div></div>
+  <div class="col-6 col-lg-3"><div class="dash-kpi dash-kpi-danger"><div class="dash-kpi-label">Out of stock</div><div class="dash-kpi-value">{{ out_count }}</div></div></div>
+  <div class="col-6 col-lg-3"><div class="dash-kpi"><div class="dash-kpi-label">Value at cost</div><div class="dash-kpi-value">₹ {{ "{:,.0f}".format(stock_value) }}</div></div></div>
+</div>
+<form method="get" class="page-toolbar">
+  <div class="row g-2">
+    <div class="col-md-8"><input class="form-control" name="q" value="{{ q }}" placeholder="Search name or SKU"></div>
+    <div class="col-md-4"><button class="btn btn-outline-primary">Search</button></div>
+  </div>
+</form>
+<div class="page-card">
+  <div class="table-responsive">
+    <table class="table vera-table table-hover align-middle mb-0">
+      <thead><tr><th>SKU</th><th>Name</th><th class="text-end">Qty</th><th class="text-end">Reorder</th><th class="text-end">Value</th><th>Status</th></tr></thead>
+      <tbody>
+        {% for r in rows %}
+        <tr>
+          <td>{{ r.sku }}</td>
+          <td><a href="{{ url_for('product.view_product', id=r.id, next=request.full_path) }}">{{ r.name }}</a></td>
+          <td class="text-end">{{ r.stock_qty }}</td>
+          <td class="text-end">{{ r.threshold }}</td>
+          <td class="text-end">₹ {{ "{:,.2f}".format(r.stock_value or 0) }}</td>
+          <td>{% if (r.stock_qty or 0) <= 0 %}<span class="badge text-bg-danger">Out</span>{% elif (r.stock_qty or 0) <= (r.threshold or 0) %}<span class="badge text-bg-warning">Low</span>{% else %}<span class="badge text-bg-success">OK</span>{% endif %}</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="6"><div class="empty-state">No products.</div></td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

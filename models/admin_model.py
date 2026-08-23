@@ -21,6 +21,10 @@ def clear_transaction_data():
             cur.execute("TRUNCATE TABLE payments")
         except Exception:
             pass
+        try:
+            cur.execute("TRUNCATE TABLE vendor_payments")
+        except Exception:
+            pass
         cur.execute("UPDATE products SET stock_qty = 0")
         cur.execute("SET FOREIGN_KEY_CHECKS=1")
         conn.commit()
@@ -52,6 +56,10 @@ def reset_database():
         cur.execute("TRUNCATE TABLE stock_movements")
         try:
             cur.execute("TRUNCATE TABLE payments")
+        except Exception:
+            pass
+        try:
+            cur.execute("TRUNCATE TABLE vendor_payments")
         except Exception:
             pass
         cur.execute("TRUNCATE TABLE customers")

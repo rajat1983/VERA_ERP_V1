@@ -1,23 +1,16 @@
 {% extends "base.html" %}
-
+{% block title %}Customer — VERA ERP{% endblock %}
+{% block page_title %}Customers{% endblock %}
 {% block content %}
 
-<div class="container mt-4">
-
-<div class="card shadow">
-
-<div class="card-header bg-primary text-white">
-
-<h4>
-
-<i class="bi bi-person-vcard"></i>
-
-Customer Details
-
-</h4>
-
+<div class="page-header">
+  <div>
+    <h1>Customer details</h1>
+    <p>{{ customer.customer_code }} · {{ customer.name }}</p>
+  </div>
 </div>
 
+<div class="page-card">
 <div class="card-body">
     <div class="row">
 
@@ -252,6 +245,7 @@ Back
 
 </a>
 
+{% if can('edit', 'customer') %}
 <a
 href="{{ url_for('customer.edit', id=customer.id) }}"
 class="btn btn-warning">
@@ -261,6 +255,7 @@ class="btn btn-warning">
 Edit Customer
 
 </a>
+{% endif %}
 
 </div>
 

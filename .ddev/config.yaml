@@ -14,7 +14,10 @@ hooks:
         - exec: bash .ddev/hooks/web/post-start
 use_dns_when_possible: true
 composer_version: "2"
-web_environment: []
+web_environment:
+  - FLASK_DEBUG=1
+  - SECRET_KEY=ddev-local-only-not-for-production
+  - VERA_SHOW_DEFAULT_LOGIN=1
 corepack_enable: false
 web_extra_exposed_ports:
     - name: flask

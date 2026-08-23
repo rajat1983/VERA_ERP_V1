@@ -1,360 +1,96 @@
 {% extends "base.html" %}
-
+{% block title %}Purchase — VERA ERP{% endblock %}
+{% block page_title %}Purchases{% endblock %}
 {% block content %}
 
-<div class="container-fluid">
-
-    <!-- Page Header -->
-    <div class="d-flex justify-content-between align-items-center mb-4">
-
-        <div>
-            <h3 class="mb-0">
-                Purchase Details
-            </h3>
-            <small class="text-muted">
-                View Purchase Information
-            </small>
-        </div>
-
-        <div>
-
-            <a href="{{ url_for('purchase.list_purchases') }}"
-               class="btn btn-secondary">
-
-                <i class="fa fa-arrow-left"></i>
-                Back
-
-            </a>
-
-            <a href="{{ url_for('purchase.edit_purchase', id=purchase.id) }}" class="btn btn-warning">   <i class="fa fa-edit"></i>        Edit      </a>
-
-            <button class="btn btn-primary"
-                    onclick="window.print()">
-
-                <i class="fa fa-print"></i>
-                Print
-
-            </button>
-
-        </div>
-
-    </div>
-
-    <!-- Summary Cards -->
-
-    <div class="row mb-4">
-
-        <!-- Purchase Information -->
-
-        <div class="col-md-6">
-
-            <div class="card shadow-sm h-100">
-
-                <div class="card-header bg-primary text-white">
-
-                    <strong>Purchase Information</strong>
-
-                </div>
-
-                <div class="card-body">
-
-                    <table class="table table-borderless mb-0">
-
-                        <tr>
-                            <td width="40%"><strong>Purchase No</strong></td>
-                            <td>{{ purchase.purchase_no }}</td>
-                        </tr>
-
-                        <tr>
-                            <td><strong>Purchase Date</strong></td>
-                            <td>{{ purchase.purchase_date }}</td>
-                        </tr>
-
-                        <tr>
-                            <td><strong>Status</strong></td>
-
-                            <td>
-
-                                {% if purchase.status == 'Confirmed' %}
-
-                                    <span class="badge bg-success">
-                                        Confirmed
-                                    </span>
-
-                                {% elif purchase.status == 'Draft' %}
-
-                                    <span class="badge bg-warning">
-                                        Draft
-                                    </span>
-
-                                {% else %}
-
-                                    <span class="badge bg-secondary">
-                                        Completed
-                                    </span>
-
-                                {% endif %}
-
-                            </td>
-
-                        </tr>
-
-                    </table>
-
-                </div>
-
-            </div>
-
-        </div>
-
-        <!-- Vendor Information -->
-
-        <div class="col-md-6">
-
-            <div class="card shadow-sm h-100">
-
-                <div class="card-header bg-success text-white">
-
-                    <strong>Vendor Information</strong>
-
-                </div>
-
-                <div class="card-body">
-
-                    <table class="table table-borderless mb-0">
-
-                        <tr>
-                            <td width="40%"><strong>Vendor</strong></td>
-                            <td>{{ purchase.vendor_name }}</td>
-                        </tr>
-
-                        <tr>
-                            <td><strong>Invoice No</strong></td>
-                            <td>{{ purchase.vendor_invoice_no }}</td>
-                        </tr>
-
-                        <tr>
-                            <td><strong>Total Items</strong></td>
-                            <td>{{ items|length }}</td>
-                        </tr>
-
-                    </table>
-
-                </div>
-
-            </div>
-
-        </div>
-
-    </div>
-	    <!-- Purchased Items -->
-
-    <div class="card shadow-sm mb-4">
-
-        <div class="card-header d-flex justify-content-between align-items-center">
-
-            <strong>
-                Purchased Items
-            </strong>
-
-            <span class="badge bg-primary">
-                {{ items|length }} Item(s)
-            </span>
-
-        </div>
-
-        <div class="card-body p-0">
-
-            {% set ns = namespace(grand_total=0) %}
-
-            <table class="table table-hover align-middle mb-0">
-
-                <thead class="table-dark">
-
-                    <tr>
-
-                        <th width="60" class="text-center">#</th>
-
-                        <th>Product</th>
-
-                        <th width="120" class="text-center">
-                            Quantity
-                        </th>
-
-                        <th width="150" class="text-end">
-                            Purchase Price
-                        </th>
-
-                        <th width="170" class="text-end">
-                            Line Total
-                        </th>
-
-                    </tr>
-
-                </thead>
-
-                <tbody>
-
-                {% if items %}
-
-                    {% for item in items %}
-
-                        {% set line_total = item.quantity * item.price %}
-                        {% set ns.grand_total = ns.grand_total + line_total %}
-
-                        <tr>
-
-                            <td class="text-center">
-
-                                {{ loop.index }}
-
-                            </td>
-
-                            <td>
-
-                                <strong>{{ item.product_name }}</strong>
-
-                            </td>
-
-                            <td class="text-center">
-
-                                {{ item.quantity }}
-
-                            </td>
-
-                            <td class="text-end">
-
-                                ₹ {{ "%.2f"|format(item.price) }}
-
-                            </td>
-
-                            <td class="text-end fw-bold">
-
-                                ₹ {{ "%.2f"|format(line_total) }}
-
-                            </td>
-
-                        </tr>
-
-                    {% endfor %}
-
-                {% else %}
-
-                    <tr>
-
-                        <td colspan="5"
-                            class="text-center text-muted py-4">
-
-                            No purchase items found.
-
-                        </td>
-
-                    </tr>
-
-                {% endif %}
-
-                </tbody>
-
-            </table>
-
-        </div>
-
-    </div>
-	    <!-- Grand Total -->
-
-    <div class="row mb-4">
-
-        <div class="col-md-4 offset-md-8">
-
-            <div class="card shadow-sm border-success">
-
-                <div class="card-header bg-success text-white">
-
-                    <strong>Order Summary</strong>
-
-                </div>
-
-                <div class="card-body">
-
-                    <table class="table table-borderless mb-0">
-
-                        <tr>
-
-                            <td>
-
-                                <strong>Total Items</strong>
-
-                            </td>
-
-                            <td class="text-end">
-
-                                {{ items|length }}
-
-                            </td>
-
-                        </tr>
-
-                        <tr class="border-top">
-
-                            <td>
-
-                                <h5 class="mb-0">
-                                    Grand Total
-                                </h5>
-
-                            </td>
-
-                            <td class="text-end">
-
-                                <h4 class="mb-0 text-success">
-
-                                    ₹ {{ "%.2f"|format(ns.grand_total) }}
-
-                                </h4>
-
-                            </td>
-
-                        </tr>
-
-                    </table>
-
-                </div>
-
-            </div>
-
-        </div>
-
-    </div>
-
-    <!-- Remarks -->
-
-    <div class="card shadow-sm mb-4">
-
-        <div class="card-header">
-
-            <strong>Remarks</strong>
-
-        </div>
-
-        <div class="card-body">
-
-            {% if purchase.remarks %}
-
-                {{ purchase.remarks }}
-
-            {% else %}
-
-                <span class="text-muted">
-                    No remarks available.
-                </span>
-
-            {% endif %}
-
-        </div>
-
-    </div>
-
+<div class="page-header">
+  <div>
+    <h1>Purchase {{ purchase.purchase_no }}</h1>
+    <p>{{ purchase.vendor_name }} · {{ purchase.vendor_invoice_no }}</p>
+  </div>
+  <div class="d-flex gap-2">
+    <a href="{{ url_for('purchase.list_purchases') }}" class="btn btn-outline-secondary">Back</a>
+    {% if purchase.status|lower != 'cancelled' and can('edit', 'purchase') %}
+    <a href="{{ url_for('purchase.edit_purchase', id=purchase.id) }}" class="btn btn-outline-primary">Edit</a>
+    {% endif %}
+    <button type="button" class="btn btn-primary no-print" onclick="window.print()">Print</button>
+  </div>
 </div>
 
+<div class="row g-3 mb-3">
+  <div class="col-md-6">
+    <div class="page-card h-100">
+      <div class="page-card-title">Purchase</div>
+      <div class="card-body">
+        <div class="dash-highlight"><span>Number</span><strong>{{ purchase.purchase_no }}</strong></div>
+        <div class="dash-highlight"><span>Date</span><strong>{{ purchase.purchase_date }}</strong></div>
+        <div class="dash-highlight">
+          <span>Status</span>
+          {% if purchase.status|lower == 'confirmed' %}
+            <span class="badge text-bg-success">Confirmed</span>
+          {% elif purchase.status|lower == 'cancelled' %}
+            <span class="badge text-bg-secondary">Cancelled</span>
+          {% else %}
+            <span class="badge text-bg-warning">{{ purchase.status }}</span>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-6">
+    <div class="page-card h-100">
+      <div class="page-card-title">Vendor</div>
+      <div class="card-body">
+        <div class="dash-highlight"><span>Name</span><strong>{{ purchase.vendor_name }}</strong></div>
+        <div class="dash-highlight"><span>Invoice</span><strong>{{ purchase.vendor_invoice_no }}</strong></div>
+        <div class="dash-highlight"><span>Lines</span><strong>{{ items|length }}</strong></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="page-card mb-3">
+  <div class="page-card-title">Items</div>
+  <div class="table-responsive">
+    <table class="table vera-table align-middle mb-0">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Product</th>
+          <th class="text-end">Qty</th>
+          <th class="text-end">Price</th>
+          <th class="text-end">Line total</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in items %}
+        <tr>
+          <td>{{ loop.index }}</td>
+          <td>{{ item.product_name }}</td>
+          <td class="text-end">{{ item.quantity }}</td>
+          <td class="text-end">₹ {{ "%.2f"|format(item.price) }}</td>
+          <td class="text-end">₹ {{ "%.2f"|format(item.line_total if item.line_total is not none else item.quantity * item.price) }}</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="5" class="text-center text-muted py-4">No items.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="row">
+  <div class="col-md-5 offset-md-7">
+    <div class="page-card totals-panel">
+      <div class="page-card-title">Totals</div>
+      <table class="table mb-0">
+        <tr><th>Subtotal</th><td class="text-end">₹ {{ "%.2f"|format(purchase.subtotal or 0) }}</td></tr>
+        <tr><th>Discount</th><td class="text-end">₹ {{ "%.2f"|format(purchase.discount_amount or 0) }}</td></tr>
+        <tr><th>GST</th><td class="text-end">₹ {{ "%.2f"|format(purchase.gst_amount or 0) }}</td></tr>
+        <tr class="fw-semibold"><th>Grand total</th><th class="text-end">₹ {{ "%.2f"|format(purchase.total_amount or 0) }}</th></tr>
+      </table>
+    </div>
+  </div>
+</div>
 
 {% endblock %}

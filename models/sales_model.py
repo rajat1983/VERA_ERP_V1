@@ -293,7 +293,11 @@ def get_sale_by_id(sale_id):
             c.name AS customer_name,
             c.address,
             c.phone,
-            c.email
+            c.email,
+            c.gst_no AS customer_gstin,
+            c.city AS customer_city,
+            c.state AS customer_state,
+            c.pincode AS customer_pincode
         FROM sales s
         JOIN customers c
             ON s.customer_id = c.id
@@ -310,7 +314,9 @@ def get_sale_by_id(sale_id):
         SELECT
             si.*,
             p.name AS product_name,
-            p.tax_rate
+            p.tax_rate,
+            p.hsn_code,
+            p.unit
         FROM sale_items si
         JOIN products p
             ON si.product_id = p.id

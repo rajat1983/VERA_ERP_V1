@@ -2,7 +2,9 @@
 {% block content %}
 
 <h3>Vendors</h3>
+{% if can('create', 'vendor') %}
 <a href="/vendors/add" class="btn btn-primary mb-3"> + Add Vendor</a>
+{% endif %}
 
 <form method="get" class="mb-3">
   <div class="input-group">
@@ -37,8 +39,12 @@
       <td>{{ v.gst_number }}</td>
       <td>{{ v.status }}</td>
       <td>
+        {% if can('edit', 'vendor') %}
         <a href="/vendors/edit/{{ v.id }}" class="btn btn-warning btn-sm">Edit</a>
+        {% endif %}
+        {% if can('delete') %}
         <a href="/vendors/delete/{{ v.id }}" class="btn btn-danger btn-sm">Delete</a>
+        {% endif %}
       </td>
     </tr>
   {% endfor %}

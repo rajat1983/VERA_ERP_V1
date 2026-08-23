@@ -340,11 +340,12 @@ def get_dashboard_alerts():
             "message": f"{low_stock} Products below reorder level"
         })
 
-    # Pending Customer Payments
+    # Pending Customer Payments (open confirmed invoices only)
     cur.execute("""
         SELECT COUNT(*) total
         FROM sales
-        WHERE payment_status='Pending'
+        WHERE sale_status='Confirmed'
+          AND payment_status IN ('Pending', 'Partial')
     """)
 
     pending = cur.fetchone()["total"]
@@ -353,9 +354,138 @@ def get_dashboard_alerts():
         alerts.append({
             "type": "warning",
             "icon": "💰",
-            "message": f"{pending} Pending customer payments"
+            "message": f"{pending} invoices with unpaid balance"
         })
 
     conn.close()
 
     return alerts
+
+
+def get_payment_overview():
+    conn = get_db_connection()
+    cur = conn.cursor()
+
+    cur.execute("""
+        SELECT IFNULL(SUM(amount), 0) AS total
+        FROM payments
+        WHERE payment_date = CURDATE()
+    """)
+    collected_today = float(cur.fetchone()["total"])
+
+    cur.execute("""
+        SELECT IFNULL(SUM(amount), 0) AS total
+        FROM payments
+        WHERE YEAR(payment_date) = YEAR(CURDATE())
+          AND MONTH(payment_date) = MONTH(CURDATE())
+    """)
+    collected_month = float(cur.fetchone()["total"])
+
+    cur.execute("""
+        SELECT
+            COUNT(*) AS invoice_count,
+            IFNULL(SUM(total_amount - IFNULL(paid_amount, 0)), 0) AS outstanding
+        FROM sales
+        WHERE sale_status = 'Confirmed'
+          AND IFNULL(paid_amount, 0) < total_amount
+    """)
+    due = cur.fetchone()
+
+    cur.execute("""
+        SELECT
+            IFNULL(SUM(payment_status = 'Pending'), 0) AS pending,
+            IFNULL(SUM(payment_status = 'Partial'), 0) AS partial,
+            IFNULL(SUM(payment_status = 'Paid'), 0) AS paid
+        FROM sales
+        WHERE sale_status = 'Confirmed'
+    """)
+    status = cur.fetchone()
+
+    conn.close()
+    return {
+        "collected_today": collected_today,
+        "collected_month": collected_month,
+        "outstanding_amount": float(due["outstanding"]),
+        "outstanding_count": int(due["invoice_count"] or 0),
+        "pending_count": int(status["pending"] or 0),
+        "partial_count": int(status["partial"] or 0),
+        "paid_count": int(status["paid"] or 0),
+    }
+
+
+def get_outstanding_invoices(limit=8):
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute(
+        """
+        SELECT
+            s.id,
+            s.invoice_no,
+            s.sale_date,
+            s.total_amount,
+            IFNULL(s.paid_amount, 0) AS paid_amount,
+            s.payment_status,
+            c.name AS customer_name
+        FROM sales s
+        JOIN customers c ON c.id = s.customer_id
+        WHERE s.sale_status = 'Confirmed'
+          AND IFNULL(s.paid_amount, 0) < s.total_amount
+        ORDER BY s.sale_date ASC, s.id ASC
+        LIMIT %s
+        """,
+        (limit,),
+    )
+    rows = cur.fetchall()
+    conn.close()
+    result = []
+    for r in rows:
+        total = float(r["total_amount"] or 0)
+        paid = float(r["paid_amount"] or 0)
+        result.append({
+            "id": r["id"],
+            "invoice_no": r["invoice_no"],
+            "sale_date": r["sale_date"],
+            "customer_name": r["customer_name"],
+            "total_amount": total,
+            "paid_amount": paid,
+            "due_amount": round(total - paid, 2),
+            "payment_status": r["payment_status"],
+        })
+    return result
+
+
+def get_recent_payments(limit=8):
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute(
+        """
+        SELECT
+            p.payment_date,
+            p.amount,
+            p.payment_mode,
+            p.reference_no,
+            s.invoice_no,
+            s.id AS sale_id,
+            c.name AS customer_name
+        FROM payments p
+        JOIN sales s ON s.id = p.sale_id
+        JOIN customers c ON c.id = s.customer_id
+        ORDER BY p.id DESC
+        LIMIT %s
+        """,
+        (limit,),
+    )
+    rows = cur.fetchall()
+    conn.close()
+    return [
+        {
+            "payment_date": r["payment_date"],
+            "amount": float(r["amount"] or 0),
+            "payment_mode": r["payment_mode"],
+            "reference_no": r["reference_no"],
+            "invoice_no": r["invoice_no"],
+            "sale_id": r["sale_id"],
+            "customer_name": r["customer_name"],
+        }
+        for r in rows
+    ]

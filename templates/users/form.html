@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% from "_macros.html" import csrf_input %}
+{% block title %}{% if user %}Edit user{% else %}New user{% endif %} — VERA ERP{% endblock %}
+{% block page_title %}Users{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1>{% if user %}Edit user{% else %}New user{% endif %}</h1>
+  </div>
+</div>
+<div class="form-card" style="max-width:560px">
+  <form method="post">
+    {{ csrf_input() }}
+    <div class="mb-3">
+      <label class="form-label" for="username">Username</label>
+      <input id="username" name="username" class="form-control" value="{{ user.username if user else '' }}" {% if user %}readonly{% endif %} required>
+    </div>
+    <div class="mb-3">
+      <label class="form-label" for="password">Password{% if user %} (leave blank to keep){% endif %}</label>
+      <input id="password" type="password" name="password" class="form-control" {% if not user %}required{% endif %} autocomplete="new-password">
+    </div>
+    <div class="mb-3">
+      <label class="form-label" for="role_id">Role</label>
+      <select id="role_id" name="role_id" class="form-select" required>
+        {% for r in roles %}
+        <option value="{{ r.id }}" {% if user and user.role_id == r.id %}selected{% endif %}>{{ r.name }} — {{ r.description }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="mb-3">
+      <label class="form-label" for="is_active">Status</label>
+      <select id="is_active" name="is_active" class="form-select">
+        <option value="1" {% if not user or user.is_active %}selected{% endif %}>Active</option>
+        <option value="0" {% if user and not user.is_active %}selected{% endif %}>Inactive</option>
+      </select>
+    </div>
+    <div class="doc-actions">
+      <button class="btn btn-primary">Save</button>
+      <a class="btn btn-outline-secondary" href="{{ url_for('users.list_users') }}">Cancel</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

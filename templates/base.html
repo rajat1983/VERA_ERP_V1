@@ -1,115 +1,132 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <title>VERA ERP</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}VERA ERP{% endblock %}</title>
   <meta name="csrf-token" content="{{ get_csrf_token() }}">
-
-<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-<link rel="stylesheet" href="{{ url_for('static', filename='css/vera-dashboard.css') }}">
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
-<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-<script src="{{ url_for('static', filename='js/common.js') }}"></script>
-<script src="{{ url_for('static', filename='js/customer.js') }}"></script>
-<script src="{{ url_for('static', filename='js/vendor.js') }}"></script>
-<script src="{{ url_for('static', filename='js/location.js') }}"></script>
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/vera-theme.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/vera-dashboard.css') }}">
+  {% block extra_css %}{% endblock %}
+  {% block extra_head %}{% endblock %}
 </head>
-
-<script>
-   // for Validation
-  (() => {
-  'use strict'
-  const forms = document.querySelectorAll('.needs-validation')
-  Array.from(forms).forEach(form => {
-    form.addEventListener('submit', event => {
-      if (!form.checkValidity()) {
-        event.preventDefault()
-        event.stopPropagation()
-      }
-      form.classList.add('was-validated')
-    }, false)
-  })
-})()
-function openEditModal(id, name, email) {
-  document.getElementById("edit-id").value = id;
-  document.getElementById("edit-name").value = name;
-  document.getElementById("edit-email").value = email;
-
-  const modal = new bootstrap.Modal(document.getElementById("editModal"));
-  modal.show();
-}
-
-</script>
-
-<body class="container mt-4">
-  <!-- Example split danger button -->
-<div class="btn-group flex-wrap">
-  <a href='/dashboard' class="btn btn-success">Dashboard</a>
-  <a href='/list' class="btn btn-primary">Employee</a>
-  <a href='/vendors' class="btn btn-info">Vendors</a>
-  <a href='/products' class="btn btn-success">Products</a>
-  <a href='/customers' class="btn btn-secondary">Customers</a>
-  <a href='/sales' class="btn btn-danger">Sales</a>
-  <a href='/purchases' class="btn btn-warning">Purchase</a>
-  <a href='/production' class="btn btn-primary">Production</a>
-  <a href='/stock-movements' class="btn btn-primary">Stock</a>
-  <a href='/payments' class="btn btn-dark">Payments</a>
-  <a href='/reports' class="btn btn-outline-primary">Reports</a>
-  {% if session.get('user_id') %}
-  <a href='/logout' class="btn btn-outline-secondary">Logout</a>
+<body>
+<a class="skip-link" href="#main">Skip to content</a>
+{% set path = request.path %}
+{% macro nav_item(href, label, icon, active) %}
+  <a class="nav-link{% if active %} active{% endif %}" href="{{ href }}"{% if active %} aria-current="page"{% endif %}>
+    <i class="bi {{ icon }}"></i><span>{{ label }}</span>
+  </a>
+{% endmacro %}
+{% macro app_nav() %}
+<nav class="app-nav" aria-label="Main">
+  <div class="nav-section">Overview</div>
+  {{ nav_item('/dashboard', 'Dashboard', 'bi-grid-1x2', path.startswith('/dashboard')) }}
+  <div class="nav-section">Masters</div>
+  {{ nav_item('/customers', 'Customers', 'bi-people', path.startswith('/customers')) }}
+  {{ nav_item('/vendors', 'Vendors', 'bi-truck', path.startswith('/vendors')) }}
+  {{ nav_item('/products', 'Products', 'bi-box-seam', path.startswith('/products')) }}
+  {{ nav_item('/list', 'Employees', 'bi-person-badge', path == '/list' or path.startswith('/edit/') or path in ['/add', '/create']) }}
+  <div class="nav-section">Transactions</div>
+  {{ nav_item('/sales', 'Sales', 'bi-receipt', path.startswith('/sales')) }}
+  {{ nav_item('/purchases', 'Purchases', 'bi-bag', path.startswith('/purchases')) }}
+  {{ nav_item('/production', 'Production', 'bi-gear', path.startswith('/production')) }}
+  {{ nav_item('/payments', 'Payments', 'bi-cash-stack', path.startswith('/payments')) }}
+  <div class="nav-section">Inventory</div>
+  {{ nav_item('/stock', 'Stock', 'bi-boxes', path == '/stock') }}
+  {{ nav_item('/stock/low', 'Low stock', 'bi-exclamation-triangle', path.startswith('/stock/low')) }}
+  {% if can('adjust') %}
+  {{ nav_item('/stock/adjust', 'Adjustments', 'bi-sliders', path.startswith('/stock/adjust')) }}
   {% endif %}
+  {{ nav_item('/stock-movements', 'Movements', 'bi-arrow-left-right', path.startswith('/stock-movements')) }}
+  <div class="nav-section">Insights</div>
+  {{ nav_item('/reports', 'Reports', 'bi-graph-up', path.startswith('/reports')) }}
+  {% if can('admin') %}
+  <div class="nav-section">Administration</div>
+  {{ nav_item('/settings', 'Company', 'bi-building', path.startswith('/settings')) }}
+  {{ nav_item('/users', 'Users', 'bi-person-lock', path.startswith('/users')) }}
+  {{ nav_item('/admin', 'Admin', 'bi-shield', path.startswith('/admin')) }}
+  {% endif %}
+</nav>
+{% endmacro %}
+
+<div class="app-shell">
+  <aside class="app-sidebar-desktop d-none d-lg-block">
+    <a class="app-brand" href="/dashboard">VERA ERP</a>
+    {{ app_nav() }}
+  </aside>
+
+  <div class="offcanvas offcanvas-start app-offcanvas d-lg-none" tabindex="-1" id="appSidebar">
+    <div class="offcanvas-header">
+      <h5 class="offcanvas-title text-white mb-0">VERA ERP</h5>
+      <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+    </div>
+    <div class="offcanvas-body">
+      {{ app_nav() }}
+    </div>
+  </div>
+
+  <div class="app-content">
+    <header class="app-topbar d-flex align-items-center justify-content-between no-print">
+      <div class="d-flex align-items-center gap-2">
+        <button class="btn btn-outline-secondary d-lg-none app-menu-btn" type="button" data-bs-toggle="offcanvas" data-bs-target="#appSidebar" aria-label="Open menu" aria-controls="appSidebar">
+          <i class="bi bi-list"></i>
+        </button>
+        <strong>{% block page_title %}VERA ERP{% endblock %}</strong>
+      </div>
+      <div class="text-muted small">
+        {% if session.get('username') %}{{ session.get('username') }}{% if session.get('role') %} ({{ session.get('role') }}){% endif %} · {% endif %}
+        <a href="{{ url_for('auth.logout') }}">Logout</a>
+      </div>
+    </header>
+
+    <main id="main" class="app-main">
+      {% set perm_notice = namespace(text='') %}
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+          {% for category, message in messages %}
+            {% if category == 'permission' %}
+              {% set perm_notice.text = message %}
+            {% else %}
+            <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+              {{ message }}
+              <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+            {% endif %}
+          {% endfor %}
+        {% endif %}
+      {% endwith %}
+      {% block content %}{% endblock %}
+    </main>
+  </div>
 </div>
 
-  <div class="container mt-3">
-  {% with messages = get_flashed_messages(with_categories=true) %}
-    {% if messages %}
-      {% for category, message in messages %}
-        <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
-          {{ message }}
-          <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        </div>
-      {% endfor %}
-    {% endif %}
-  {% endwith %}
-</div>
-  {% block content %}{% endblock %}
-  <script>
-function autoSearch() {
-  const q = document.getElementById("searchBox").value;
-
-  fetch(`/auto-search?q=${encodeURIComponent(q)}`)
-    .then(res => res.json())
-    .then(data => {
-      let rows = "";
-
-      data.forEach(emp => {
-        rows += `
-          <tr>
-            <td>${emp.id}</td>
-            <td>${emp.name}</td>
-            <td>${emp.email}</td>
-            <td>
-              <a href="/edit/${emp.id}" class="btn btn-sm btn-warning">Edit</a>
-              <a href="/delete/${emp.id}" class="btn btn-sm btn-danger">Delete</a>
-            </td>
-          </tr>
-        `;
-      });
-
-      document.getElementById("employeeTable").innerHTML = rows;
-    })
-    .catch(err => console.error(err));
-}
-
-
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script>
+  window.veraCan = {
+    create: {{ can('create')|tojson }},
+    edit: {{ can('edit')|tojson }},
+    delete: {{ can('delete')|tojson }},
+    pay: {{ can('pay')|tojson }},
+    adjust: {{ can('adjust')|tojson }},
+    admin: {{ can('admin')|tojson }},
+    salesWrite: {{ can('create', 'sales')|tojson }}
+  };
 </script>
-<link
-rel="stylesheet"href="https://unpkg.com/tippy.js@6/dist/tippy.css">
-
-<script src="https://unpkg.com/@popperjs/core@2"></script>
-
-<script src="https://unpkg.com/tippy.js@6"></script>
+<script src="{{ url_for('static', filename='js/common.js') }}"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+{% if perm_notice.text %}
+<script>
+  Swal.fire({
+    icon: "warning",
+    title: "Permission denied",
+    text: {{ perm_notice.text|tojson }},
+    confirmButtonText: "OK"
+  });
+</script>
+{% endif %}
+{% block extra_js %}{% endblock %}
 </body>
 </html>

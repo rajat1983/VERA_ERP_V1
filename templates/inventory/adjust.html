@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% from "_macros.html" import csrf_input %}
+{% block title %}Adjust stock — VERA ERP{% endblock %}
+{% block page_title %}Inventory{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1>Stock adjustment</h1>
+    <p>In increases on-hand quantity. Out decreases it. A reason is required and is audited.</p>
+  </div>
+</div>
+<div class="form-card" style="max-width:640px">
+  <form method="post">
+    {{ csrf_input() }}
+    <div class="mb-3">
+      <label class="form-label" for="product_id">Product</label>
+      <select id="product_id" name="product_id" class="form-select" required>
+        <option value="">-- Select Product --</option>
+        {% for p in products %}
+        <option value="{{ p.id }}">{{ p.name }} (stock {{ p.stock_qty }})</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="row g-3">
+      <div class="col-md-4">
+        <label class="form-label" for="direction">Direction</label>
+        <select id="direction" name="direction" class="form-select">
+          <option value="in">In</option>
+          <option value="out">Out</option>
+        </select>
+      </div>
+      <div class="col-md-4">
+        <label class="form-label" for="quantity">Quantity</label>
+        <input id="quantity" type="number" min="1" name="quantity" class="form-control" required>
+      </div>
+    </div>
+    <div class="mb-3 mt-3">
+      <label class="form-label" for="reason">Reason</label>
+      <input id="reason" name="reason" class="form-control" required maxlength="255">
+    </div>
+    <div class="doc-actions">
+      <button class="btn btn-primary">Save adjustment</button>
+      <a class="btn btn-outline-secondary" href="{{ url_for('inventory.stock_on_hand') }}">Cancel</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

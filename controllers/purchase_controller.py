@@ -3,6 +3,7 @@ from models import purchase_model
 from models import vendor_model
 from models import product_model
 from models.purchase_cancel import cancel_purchase
+from utils.audit import write_audit
 
 
 purchase_bp = Blueprint("purchase", __name__)
@@ -157,28 +158,30 @@ def view_purchase(id):
         purchase=purchase,
         items=items
     )
-@purchase_bp.route("/purchases/delete/<int:id>")
+@purchase_bp.route("/purchases/delete/<int:id>", methods=["POST"])
 def delete_purchase(id):
 
     try:
         cancel_purchase(id)
+        write_audit("CANCEL", "purchase", "purchase", id)
         flash("Purchase cancelled and stock reversed successfully", "warning")
     except ValueError as e:
         flash(str(e), "warning")
-    except Exception as e:
-        flash(str(e), "danger")
+    except Exception:
+        flash("Could not cancel this purchase.", "danger")
     return redirect(url_for("purchase.list_purchases"))
 
-@purchase_bp.route("/purchases/cancel/<int:id>")
+@purchase_bp.route("/purchases/cancel/<int:id>", methods=["POST"])
 def cancel_purchase_route(id):
 
     try:
         cancel_purchase(id)
+        write_audit("CANCEL", "purchase", "purchase", id)
         flash("Purchase cancelled and stock reversed successfully", "warning")
     except ValueError as e:
         flash(str(e), "warning")
-    except Exception as e:
-        flash(str(e), "danger")
+    except Exception:
+        flash("Could not cancel this purchase.", "danger")
     return redirect(url_for("purchase.list_purchases"))
 
 @purchase_bp.route("/purchases/edit/<int:id>", methods=["GET", "POST"])

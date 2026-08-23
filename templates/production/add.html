@@ -1,45 +1,45 @@
 {% extends "base.html" %}
+{% block title %}New production — VERA ERP{% endblock %}
+{% block page_title %}Production{% endblock %}
 {% block content %}
 
-<h4>Add Production</h4>
-
-<form method="POST">
-
-<div class="row mb-3">
-
-<div class="col-md-4">
-<label>Product</label>
-<select name="product_id" class="form-control" required>
-<option value="">Select Product</option>
-
-{% for p in products %}
-<option value="{{ p.id }}">{{ p.name }}</option>
-{% endfor %}
-
-</select>
+<div class="page-header">
+  <div>
+    <h1>New batch</h1>
+    <p>Creates finished-goods stock. Only finished-goods products are listed.</p>
+  </div>
 </div>
 
-<div class="col-md-3">
-<label>Quantity Produced</label>
-<input type="number" name="quantity" class="form-control" required>
+<div class="form-card" style="max-width:720px">
+  <form method="POST">
+    <input type="hidden" name="csrf_token" value="{{ get_csrf_token() }}">
+    <div class="row g-3">
+      <div class="col-md-6">
+        <label class="form-label" for="product_id">Product <span class="text-danger">*</span></label>
+        <select id="product_id" name="product_id" class="form-select" required>
+          <option value="">-- Select Product --</option>
+          {% for p in products %}
+          <option value="{{ p.id }}">{{ p.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-3">
+        <label class="form-label" for="quantity">Quantity produced</label>
+        <input id="quantity" type="number" name="quantity" class="form-control" min="1" required>
+      </div>
+      <div class="col-md-3">
+        <label class="form-label" for="wastage">Wastage</label>
+        <input id="wastage" type="number" name="wastage" class="form-control" min="0" value="0">
+      </div>
+      <div class="col-md-4">
+        <label class="form-label" for="batch_date">Batch date</label>
+        <input id="batch_date" type="date" name="batch_date" class="form-control" value="{{ request.form.get('batch_date') or today }}" required>
+      </div>
+    </div>
+    <div class="doc-actions">
+      <button class="btn btn-primary">Create production</button>
+      <a href="{{ url_for('production.list_production') }}" class="btn btn-outline-secondary">Cancel</a>
+    </div>
+  </form>
 </div>
-
-<div class="col-md-3">
-<label>Wastage</label>
-<input type="number" name="wastage" class="form-control" value="0">
-</div>
-
-<div class="col-md-2">
-<label>Batch Date</label>
-<input type="date" name="batch_date" class="form-control" required>
-</div>
-
-</div>
-
-<button class="btn btn-primary">Create Production</button>
-
-<a href="/production" class="btn btn-secondary">Cancel</a>
-
-</form>
-
 {% endblock %}

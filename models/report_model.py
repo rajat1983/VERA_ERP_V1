@@ -100,3 +100,59 @@ def payment_report(from_date, to_date):
     cur.close()
     conn.close()
     return rows
+
+
+def receivables_aging():
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute(
+        """
+        SELECT s.invoice_no, s.sale_date, c.name AS customer_name,
+               s.total_amount, IFNULL(s.paid_amount,0) AS paid_amount,
+               (s.total_amount - IFNULL(s.paid_amount,0)) AS due,
+               DATEDIFF(CURDATE(), s.sale_date) AS days_overdue,
+               CASE
+                 WHEN DATEDIFF(CURDATE(), s.sale_date) <= 30 THEN '0-30'
+                 WHEN DATEDIFF(CURDATE(), s.sale_date) <= 60 THEN '31-60'
+                 WHEN DATEDIFF(CURDATE(), s.sale_date) <= 90 THEN '61-90'
+                 ELSE '90+'
+               END AS bucket
+        FROM sales s
+        JOIN customers c ON c.id = s.customer_id
+        WHERE s.sale_status='Confirmed'
+          AND IFNULL(s.paid_amount,0) < s.total_amount
+        ORDER BY s.sale_date
+        """
+    )
+    rows = cur.fetchall()
+    cur.close()
+    conn.close()
+    return rows
+
+
+def payables_aging():
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute(
+        """
+        SELECT p.purchase_no, p.purchase_date, v.name AS vendor_name,
+               p.total_amount, IFNULL(p.paid_amount,0) AS paid_amount,
+               (p.total_amount - IFNULL(p.paid_amount,0)) AS due,
+               DATEDIFF(CURDATE(), p.purchase_date) AS days_overdue,
+               CASE
+                 WHEN DATEDIFF(CURDATE(), p.purchase_date) <= 30 THEN '0-30'
+                 WHEN DATEDIFF(CURDATE(), p.purchase_date) <= 60 THEN '31-60'
+                 WHEN DATEDIFF(CURDATE(), p.purchase_date) <= 90 THEN '61-90'
+                 ELSE '90+'
+               END AS bucket
+        FROM purchases p
+        JOIN vendors v ON v.id = p.vendor_id
+        WHERE LOWER(p.status)='confirmed'
+          AND IFNULL(p.paid_amount,0) < p.total_amount
+        ORDER BY p.purchase_date
+        """
+    )
+    rows = cur.fetchall()
+    cur.close()
+    conn.close()
+    return rows

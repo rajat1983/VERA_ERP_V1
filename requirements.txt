@@ -3,3 +3,4 @@ PyMySQL
 python-dotenv
 num2words
 mysql-connector-python
+pytest

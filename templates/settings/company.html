@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% from "_macros.html" import csrf_input %}
+{% block title %}Company settings — VERA ERP{% endblock %}
+{% block page_title %}Settings{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1>Company settings</h1>
+    <p>Used on invoices and product codes. Admin only.</p>
+  </div>
+</div>
+<div class="form-card" style="max-width:760px">
+  <form method="post">
+    {{ csrf_input() }}
+    <div class="row g-3">
+      <div class="col-md-8">
+        <label class="form-label" for="company_name">Company name</label>
+        <input id="company_name" name="company_name" class="form-control" value="{{ company.company_name or '' }}">
+      </div>
+      <div class="col-md-4">
+        <label class="form-label" for="product_prefix">Product prefix</label>
+        <input id="product_prefix" name="product_prefix" class="form-control" value="{{ company.product_prefix or '' }}">
+      </div>
+      <div class="col-md-6">
+        <label class="form-label" for="gstin">GSTIN</label>
+        <input id="gstin" name="gstin" class="form-control" value="{{ company.gstin or '' }}">
+      </div>
+      <div class="col-md-6">
+        <label class="form-label" for="phone">Phone</label>
+        <input id="phone" name="phone" class="form-control" value="{{ company.phone or '' }}">
+      </div>
+      <div class="col-12">
+        <label class="form-label" for="email">Email</label>
+        <input id="email" name="email" class="form-control" value="{{ company.email or '' }}">
+      </div>
+      <div class="col-12">
+        <label class="form-label" for="address1">Address 1</label>
+        <input id="address1" name="address1" class="form-control" value="{{ company.address1 or '' }}">
+      </div>
+      <div class="col-12">
+        <label class="form-label" for="address2">Address 2</label>
+        <input id="address2" name="address2" class="form-control" value="{{ company.address2 or '' }}">
+      </div>
+      <div class="col-md-4">
+        <label class="form-label" for="city">City</label>
+        <input id="city" name="city" class="form-control" value="{{ company.city or '' }}">
+      </div>
+      <div class="col-md-4">
+        <label class="form-label" for="state">State</label>
+        <input id="state" name="state" class="form-control" value="{{ company.state or '' }}">
+      </div>
+      <div class="col-md-4">
+        <label class="form-label" for="pincode">Pincode</label>
+        <input id="pincode" name="pincode" class="form-control" value="{{ company.pincode or '' }}">
+      </div>
+    </div>
+    <div class="doc-actions">
+      <button class="btn btn-primary">Save settings</button>
+    </div>
+  </form>
+</div>
+{% endblock %}

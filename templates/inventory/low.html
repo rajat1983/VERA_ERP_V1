@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block title %}Low stock — VERA ERP{% endblock %}
+{% block page_title %}Inventory{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1>Low stock</h1>
+    <p>At or below reorder / low-stock threshold.</p>
+  </div>
+  <a class="btn btn-outline-secondary" href="{{ url_for('inventory.stock_on_hand') }}">All stock</a>
+</div>
+<div class="page-card">
+  <div class="table-responsive">
+    <table class="table vera-table mb-0">
+      <thead><tr><th>SKU</th><th>Name</th><th class="text-end">Qty</th><th class="text-end">Threshold</th></tr></thead>
+      <tbody>
+        {% for r in rows %}
+        <tr>
+          <td>{{ r.sku }}</td>
+          <td>{{ r.name }}</td>
+          <td class="text-end">{{ r.stock_qty }}</td>
+          <td class="text-end">{{ r.threshold }}</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="4"><div class="empty-state">No low-stock items.</div></td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

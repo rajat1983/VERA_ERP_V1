@@ -191,8 +191,8 @@ function bindRemoveRow() {
 
     document.addEventListener("click", function (e) {
 
-        if (!e.target.classList.contains("remove-row"))
-            return;
+        const btn = e.target.closest(".remove-row");
+        if (!btn) return;
 
         const rows = document.querySelectorAll("#items_table tr");
 

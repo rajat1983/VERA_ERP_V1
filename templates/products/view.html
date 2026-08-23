@@ -1,18 +1,16 @@
 {% extends "base.html" %}
-
+{% block title %}Product — VERA ERP{% endblock %}
+{% block page_title %}Products{% endblock %}
 {% block content %}
 
-<div class="container mt-4">
+<div class="page-header">
+  <div>
+    <h1>Product details</h1>
+    <p>{{ product.name }}</p>
+  </div>
+</div>
 
-    <div class="card shadow">
-
-        <div class="card-header bg-primary text-white">
-
-            <h4 class="mb-0">
-                Product Details
-            </h4>
-
-        </div>
+<div class="page-card">
 
         <div class="card-body">
 
@@ -167,17 +165,19 @@ style="max-height:220px;">
 
             <div class="text-end">
 
+                {% if can('edit', 'product') %}
                 <a href="/products/edit/{{ product.id }}"
                 class="btn btn-warning">
 
                     Edit
 
                 </a>
+                {% endif %}
 
-                <a href="/products"
+                <a href="{{ back_href }}"
                 class="btn btn-secondary">
 
-                    Back
+                    {{ back_label }}
 
                 </a>
 

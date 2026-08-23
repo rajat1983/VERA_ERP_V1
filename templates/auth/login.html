@@ -1,17 +1,47 @@
-{% extends "base.html" %}
+{% extends "auth/layout.html" %}
 {% block content %}
-<h3>Login</h3>
-<p class="text-muted">Local default: <code>admin</code> / <code>admin123</code></p>
-<form method="POST">
+<h1 class="h4 mb-1">VERA ERP</h1>
+<p class="text-muted mb-4">Sign in to continue</p>
+<form method="POST" id="loginForm">
   <input type="hidden" name="csrf_token" value="{{ get_csrf_token() }}">
+  {% if request.args.get('next') %}
+  <input type="hidden" name="next" value="{{ request.args.get('next') }}">
+  {% endif %}
   <div class="mb-3">
-    <label>Username</label>
-    <input class="form-control" name="username" required>
+    <label class="form-label" for="username">Username</label>
+    <input class="form-control" id="username" name="username" autocomplete="username" required>
   </div>
   <div class="mb-3">
-    <label>Password</label>
-    <input class="form-control" type="password" name="password" required>
+    <label class="form-label" for="password">Password</label>
+    <div class="input-group">
+      <input class="form-control" id="password" type="password" name="password" autocomplete="current-password" required>
+      <button class="btn btn-outline-secondary" type="button" id="togglePassword" aria-label="Show password" aria-pressed="false">Show</button>
+    </div>
   </div>
-  <button class="btn btn-primary">Login</button>
+  <button class="btn btn-primary w-100" id="loginSubmit" type="submit">Sign in</button>
 </form>
+{% if show_default_login %}
+<p class="text-muted small mt-3 mb-0">
+  Local users: admin / admin123 · manager / manager123 · staff / staff123
+</p>
+{% endif %}
+<script>
+  (function () {
+    const pwd = document.getElementById("password");
+    const toggle = document.getElementById("togglePassword");
+    const form = document.getElementById("loginForm");
+    const submit = document.getElementById("loginSubmit");
+    toggle.addEventListener("click", function () {
+      const show = pwd.type === "password";
+      pwd.type = show ? "text" : "password";
+      toggle.textContent = show ? "Hide" : "Show";
+      toggle.setAttribute("aria-pressed", show ? "true" : "false");
+      toggle.setAttribute("aria-label", show ? "Hide password" : "Show password");
+    });
+    form.addEventListener("submit", function () {
+      submit.disabled = true;
+      submit.textContent = "Signing in…";
+    });
+  })();
+</script>
 {% endblock %}

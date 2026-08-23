@@ -1,34 +1,69 @@
 {% extends "base.html" %}
+{% from "_macros.html" import post_button %}
+{% block title %}Production — VERA ERP{% endblock %}
+{% block page_title %}Production{% endblock %}
 {% block content %}
-<div class="d-flex justify-content-between mb-3">
-  <h4>Production Batches</h4>
-  <a href="{{ url_for('production.add_production') }}" class="btn btn-primary">+ New Batch</a>
+
+<div class="page-header">
+  <div>
+    <h1>Production</h1>
+    <p>Finished-goods batches. Cancel reverses stock for that batch.</p>
+  </div>
+  {% if can('create', 'production') %}
+  <a href="{{ url_for('production.add_production') }}" class="btn btn-primary">New batch</a>
+  {% endif %}
 </div>
-<table class="table table-bordered">
-  <thead>
-    <tr>
-      <th>Batch</th><th>Product</th><th>Qty</th><th>Wastage</th><th>Date</th><th>Status</th><th>Action</th>
-    </tr>
-  </thead>
-  <tbody>
-    {% for b in batches %}
-    <tr>
-      <td>{{ b.batch_code }}</td>
-      <td>{{ b.product_name }}</td>
-      <td>{{ b.quantity_produced }}</td>
-      <td>{{ b.wastage }}</td>
-      <td>{{ b.batch_date }}</td>
-      <td>{{ b.status }}</td>
-      <td class="text-nowrap">
-        {% if b.status != 'cancelled' %}
-        <a class="btn btn-sm btn-outline-danger" href="{{ url_for('production.cancel_production', id=b.id) }}"
-           onclick="return confirm('Cancel this batch and reverse stock?')">Cancel</a>
-        {% endif %}
-      </td>
-    </tr>
-    {% else %}
-    <tr><td colspan="7" class="text-center">No production batches</td></tr>
-    {% endfor %}
-  </tbody>
-</table>
+
+<div class="page-card">
+  <div class="page-card-title">Batches</div>
+  <div class="table-responsive">
+    <table class="table vera-table table-hover align-middle mb-0">
+      <thead>
+        <tr>
+          <th>Batch</th>
+          <th>Product</th>
+          <th class="text-end">Qty</th>
+          <th class="text-end">Wastage</th>
+          <th>Date</th>
+          <th>Status</th>
+          <th class="text-end table-actions">Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for b in batches %}
+        <tr>
+          <td>{{ b.batch_code }}</td>
+          <td>{{ b.product_name }}</td>
+          <td class="text-end">{{ b.quantity_produced }}</td>
+          <td class="text-end">{{ b.wastage }}</td>
+          <td>{{ b.batch_date }}</td>
+          <td>
+            {% if b.status|lower == 'cancelled' %}
+              <span class="badge text-bg-secondary">Cancelled</span>
+            {% else %}
+              <span class="badge text-bg-success">{{ b.status }}</span>
+            {% endif %}
+          </td>
+          <td class="text-end table-actions">
+            {% if b.status|lower != 'cancelled' and can('delete') %}
+            {{ post_button(url_for('production.cancel_production', id=b.id), 'Cancel this batch and reverse stock?', 'Cancel', 'btn btn-sm btn-outline-danger', label='Cancel') }}
+            {% endif %}
+          </td>
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="7">
+            <div class="empty-state">
+              No production batches.
+              {% if can('create', 'production') %}
+              <div class="mt-3"><a class="btn btn-sm btn-primary" href="{{ url_for('production.add_production') }}">New batch</a></div>
+              {% endif %}
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
 {% endblock %}

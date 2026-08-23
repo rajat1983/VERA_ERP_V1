@@ -1,413 +1,245 @@
 {% extends "base.html" %}
-
+{% block title %}Invoice {{ sale.invoice_no }} — VERA ERP{% endblock %}
+{% block page_title %}Invoice{% endblock %}
 {% block content %}
-
 <style>
-.invoice-box{
-
-    width:95%;
-
-    margin:auto;
-
-    padding:15px;
-
+.invoice-page {
+  max-width: 210mm;
+  margin: 0 auto;
+  background: #fff;
+  padding: 4px 0 16px;
 }
-
-.summary-table td,
-.summary-table th{
-    padding:8px;
+.invoice-parties {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 12px 0;
+  table-layout: fixed;
+  margin: 0 -12px 8px;
 }
-
-@media print{
-
-.btn{
-    display:none;
+.invoice-parties > tbody > tr > td {
+  width: 50%;
+  vertical-align: top;
+  padding: 0;
 }
-
-body{
-    margin:0;
-    background:#fff;
+.invoice-parties .card {
+  margin: 0;
+  height: 100%;
 }
-
-.invoice-box{
-    box-shadow:none;
-    border:none;
+.invoice-parties .card-header,
+.invoice-meta .card-header {
+  padding: 8px 12px;
 }
-.card-body{
-    padding:.75rem 1rem;
+.invoice-parties .card-body {
+  padding: 10px 12px;
 }
-.table td,
-.table th{
-
-    padding:6px 8px;
-
-    vertical-align:middle;
-
+.invoice-meta .card-body {
+  padding: 10px 8px;
 }
-.row{
-
-    margin-bottom:12px;
-
+.invoice-items thead th {
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
 }
-
+.invoice-words {
+  padding: 10px 12px;
+}
+.invoice-sign {
+  width: 100%;
+  margin-top: 28px;
+}
+.invoice-sign td {
+  width: 50%;
+  padding-top: 28px;
+}
+@media print {
+  @page {
+    size: A4;
+    margin: 8mm;
+  }
+  .no-print { display: none !important; }
+  .app-main { padding: 0 !important; }
+  .invoice-page {
+    max-width: none;
+    padding: 0;
+    margin: 0;
+  }
+  .invoice-parties {
+    border-spacing: 8px 0;
+    margin: 0 0 8px;
+    page-break-inside: avoid;
+  }
+  .invoice-parties,
+  .invoice-parties > tbody,
+  .invoice-parties > tbody > tr {
+    display: table !important;
+    width: 100% !important;
+  }
+  .invoice-parties > tbody > tr > td {
+    display: table-cell !important;
+    width: 50% !important;
+    max-width: 50% !important;
+  }
+  .card,
+  .card-header,
+  .badge,
+  .table-dark,
+  .table-success,
+  .bg-primary,
+  .bg-success,
+  .bg-dark {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+  .invoice-meta,
+  .invoice-items {
+    page-break-inside: avoid;
+  }
+  .invoice-meta .row {
+    display: table !important;
+    width: 100% !important;
+    table-layout: fixed;
+  }
+  .invoice-meta .row > [class*="col-"] {
+    display: table-cell !important;
+    width: 25% !important;
+    float: none !important;
+    max-width: none !important;
+  }
 }
 </style>
 
-<div class="invoice-box">
+<div class="invoice-page">
+  <div class="d-flex justify-content-end gap-2 mb-3 no-print">
+    <button type="button" class="btn btn-success" onclick="window.print()" aria-label="Print invoice">Print Invoice</button>
+    {% if sale.sale_status != 'Cancelled' and can('edit', 'sales') %}
+    <a href="/sales/{{ sale.id }}/edit" class="btn btn-outline-primary">Edit</a>
+    {% endif %}
+    <a href="/sales" class="btn btn-secondary">Back</a>
+  </div>
 
-<div class="row">
-
-    <!-- Company -->
-    <div class="col-md-6">
-
+  <table class="invoice-parties">
+    <tr>
+      <td>
         <div class="card border-primary shadow-sm">
-
-            <div class="card-header bg-primary text-white">
-                <strong>Company Details</strong>
-            </div>
-
-            <div class="card-body">
-
-                <h4 class="fw-bold text-primary">
-                    {{ company.company_name }}
-                </h4>
-
-                <div>{{ company.address1 }}</div>
-
-                {% if company.address2 %}
-                    <div>{{ company.address2 }}</div>
-                {% endif %}
-
-                <div>
-                    {{ company.city }},
-                    {{ company.state }}
-                    {{ company.pincode }}
-                </div>
-
-                <div>
-                    <strong>GSTIN :</strong>
-                    {{ company.gstin }}
-                </div>
-
-                <div>
-                    <strong>Phone :</strong>
-                    {{ company.phone }}
-                </div>
-
-                <div>
-                    <strong>Email :</strong>
-                    {{ company.email }}
-                </div>
-
-            </div>
-
+          <div class="card-header bg-primary text-white">
+            <strong>Company Details</strong>
+          </div>
+          <div class="card-body">
+            <h4 class="fw-bold text-primary mb-2">{{ company.company_name if company else '—' }}</h4>
+            {% if company %}
+            <div>{{ company.address1 }}</div>
+            {% if company.address2 %}<div>{{ company.address2 }}</div>{% endif %}
+            <div>{{ company.city }}{% if company.state %}, {{ company.state }}{% endif %} {{ company.pincode or '' }}</div>
+            <div><strong>GSTIN :</strong> {{ company.gstin }}</div>
+            <div><strong>Phone :</strong> {{ company.phone }}</div>
+            <div><strong>Email :</strong> {{ company.email }}</div>
+            {% endif %}
+          </div>
         </div>
-
-    </div>
-
-    <!-- Customer -->
-
-    <div class="col-md-6">
-
+      </td>
+      <td>
         <div class="card border-success shadow-sm">
-
-            <div class="card-header bg-success text-white">
-
-                <strong>Customer Details</strong>
-
+          <div class="card-header bg-success text-white">
+            <strong>Customer Details</strong>
+          </div>
+          <div class="card-body">
+            <h4 class="fw-bold mb-2">{{ sale.customer_name }}</h4>
+            <div>{{ sale.address or '—' }}</div>
+            {% if sale.customer_city or sale.customer_state or sale.customer_pincode %}
+            <div>
+              {{ sale.customer_city or '' }}{% if sale.customer_state %}{{ ', ' if sale.customer_city else '' }}{{ sale.customer_state }}{% endif %}
+              {{ sale.customer_pincode or '' }}
             </div>
-
-            <div class="card-body">
-
-                <h4 class="fw-bold">
-
-                    {{ sale.customer_name }}
-
-                </h4>
-
-                <div>
-
-                    {{ sale.address if sale.address else "-" }}
-
-                </div>
-
-                <div class="mt-2">
-
-                    <strong>Phone :</strong>
-
-                    {{ sale.phone if sale.phone else "-" }}
-
-                </div>
-
-                <div>
-
-                    <strong>Email :</strong>
-
-                    {{ sale.email if sale.email else "-" }}
-
-                </div>
-
-            </div>
-
+            {% endif %}
+            {% if sale.customer_gstin %}<div class="mt-2"><strong>GSTIN :</strong> {{ sale.customer_gstin }}</div>{% endif %}
+            <div class="mt-2"><strong>Phone :</strong> {{ sale.phone or '—' }}</div>
+            <div><strong>Email :</strong> {{ sale.email or '—' }}</div>
+          </div>
         </div>
+      </td>
+    </tr>
+  </table>
 
-    </div>
-
-</div>
-
-<hr>
-
-<div class="card shadow-sm mt-3 mb-2">
-
+  <div class="card shadow-sm mt-3 mb-3 invoice-meta">
     <div class="card-header bg-dark text-white">
-
-        <strong>Sales Invoice</strong>
-
+      <strong>Sales Invoice</strong>
     </div>
-
     <div class="card-body">
-
-        <div class="row text-center">
-
-            <div class="col-md-3">
-
-                <small class="text-muted">
-
-                    Invoice No
-
-                </small>
-
-                <h5>
-
-                    {{ sale.invoice_no }}
-
-                </h5>
-
-            </div>
-
-            <div class="col-md-3">
-
-                <small class="text-muted">
-
-                    Invoice Date
-
-                </small>
-
-                <h5>
-
-                    {{ sale.sale_date.strftime('%d-%b-%Y') if sale.sale_date else "-" }}
-
-                </h5>
-
-            </div>
-
-            <div class="col-md-3">
-
-                <small class="text-muted">
-
-                    Status
-
-                </small>
-
-                <br>
-
-                <span class="badge bg-success">
-
-                    {{ sale.sale_status }}
-
-                </span>
-
-            </div>
-
-            <div class="col-md-3">
-
-                <small class="text-muted">
-
-                    Payment
-
-                </small>
-
-                <br>
-
-                <span class="badge bg-warning text-dark">
-
-                    {{ sale.payment_status }}
-
-                </span>
-
-            </div>
-
+      <div class="row text-center g-0">
+        <div class="col-3">
+          <small class="text-muted">Invoice No</small>
+          <h5 class="mb-0">{{ sale.invoice_no }}</h5>
         </div>
-
+        <div class="col-3">
+          <small class="text-muted">Invoice Date</small>
+          <h5 class="mb-0">{{ sale.sale_date.strftime('%d-%b-%Y') if sale.sale_date else '—' }}</h5>
+        </div>
+        <div class="col-3">
+          <small class="text-muted">Status</small>
+          <div><span class="badge bg-success">{{ sale.sale_status }}</span></div>
+        </div>
+        <div class="col-3">
+          <small class="text-muted">Payment</small>
+          <div><span class="badge bg-warning text-dark">{{ sale.payment_status }}</span></div>
+        </div>
+      </div>
     </div>
+  </div>
 
+  <table class="table table-bordered invoice-items mb-2">
+    <thead class="table-dark">
+      <tr>
+        <th width="5%">#</th>
+        <th>Product</th>
+        <th class="text-center">HSN</th>
+        <th class="text-center">Qty</th>
+        <th class="text-end">Rate</th>
+        <th class="text-center">GST %</th>
+        <th class="text-end">Amount</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for i in items %}
+      <tr>
+        <td>{{ loop.index }}</td>
+        <td>{{ i.product_name }}</td>
+        <td class="text-center">{{ i.hsn_code or '—' }}</td>
+        <td class="text-center">{{ i.qty }}{% if i.unit %} {{ i.unit }}{% endif %}</td>
+        <td class="text-end">₹ {{ "{:,.2f}".format(i.price) }}</td>
+        <td class="text-center">{{ "{:g}".format(i.tax_rate or 0) }}%</td>
+        <td class="text-end">₹ {{ "{:,.2f}".format(i.line_total) }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+    <tfoot>
+      <tr>
+        <th colspan="6" class="text-end">Sub Total</th>
+        <th class="text-end">₹ {{ "{:,.2f}".format(sale.subtotal if sale.subtotal is not none else items|sum(attribute='line_total')) }}</th>
+      </tr>
+      <tr>
+        <th colspan="6" class="text-end">Discount ({{ "%.0f"|format(sale.discount or 0) }}%)</th>
+        <th class="text-end text-danger">− ₹ {{ "{:,.2f}".format(sale.discount_amount or 0) }}</th>
+      </tr>
+      <tr>
+        <th colspan="6" class="text-end">GST</th>
+        <th class="text-end">₹ {{ "{:,.2f}".format(sale.gst_amount or 0) }}</th>
+      </tr>
+      <tr class="table-success">
+        <th colspan="6" class="text-end">Grand Total</th>
+        <th class="text-end">₹ {{ "{:,.2f}".format(sale.total_amount) }}</th>
+      </tr>
+    </tfoot>
+  </table>
+
+  <div class="invoice-words">
+    <b>Amount in Words</b>
+    <div>{{ sale.amount_in_words }}</div>
+  </div>
+
+  <table class="invoice-sign">
+    <tr>
+      <td>Customer Signature<hr class="mt-4 mb-0"></td>
+      <td class="text-end">Authorized Signature<hr class="mt-4 mb-0"></td>
+    </tr>
+  </table>
 </div>
-
-
-
-<br>
-
-<table class="table table-bordered">
-
-<thead class="table-dark">
-
-<tr>
-
-<th width="5%">#</th>
-
-<th>Product</th>
-
-<th class="text-center">Qty</th>
-
-<th class="text-end">Rate</th>
-
-<th class="text-end">Amount</th>
-
-</tr>
-
-</thead>
-
-<tbody>
-
-{% set ns = namespace(total=0) %}
-
-{% for i in items %}
-
-{% set ns.total = ns.total + i.line_total %}
-
-<tr>
-
-<td>{{ loop.index }}</td>
-
-<td>{{ i.product_name }}</td>
-
-<td class="text-center">{{ i.qty }}</td>
-
-<td class="text-end">
-₹ {{ "{:,.2f}".format(i.price) }}
-</td>
-
-<td class="text-end">
-₹ {{ "{:,.2f}".format(i.line_total) }}
-</td>
-
-</tr>
-
-{% endfor %}
-
-{% set discount_amount = ns.total * sale.discount / 100 %}
-
-</tbody>
-
-<tfoot>
-
-<tr>
-
-<th colspan="4" class="text-end">
-
-Sub Total
-
-</th>
-
-<th class="text-end">
-
-₹ {{ "{:,.2f}".format(ns.total) }}
-
-</th>
-
-</tr>
-
-<tr>
-
-<th colspan="4" class="text-end">
-
-Discount ({{ "%.0f"|format(sale.discount) }}%)
-
-</th>
-
-<th class="text-end text-danger">
-
-- ₹ {{ "{:,.2f}".format(discount_amount) }}
-
-</th>
-
-</tr>
-
-<tr>
-
-<th colspan="4" class="text-end">
-
-GST
-
-</th>
-
-<th class="text-end">
-
-₹ {{ "{:,.2f}".format(sale.gst_amount or 0) }}
-
-</th>
-
-</tr>
-
-<tr class="table-success">
-
-<th colspan="4" class="text-end">
-
-Grand Total
-
-</th>
-
-<th class="text-end">
-
-₹ {{ "{:,.2f}".format(sale.total_amount) }}
-
-</th>
-
-</tr>
-
-</tfoot>
-
-</table>
-
-<div "padding:10px 15px">
-
-<b>Amount in Words</b>
-
-<br>
-
-{{ sale.amount_in_words }}
-
-</div>
-
-<div class="row mt-5">
-
-<div class="col-md-6">Customer Signature<hr></div>
-
-<div class="col-md-6 text-end">Authorized Signature<hr>
-
-</div>
-
-</div>
-
-<div class="mt-4">
-
-<button
-onclick="window.print()"
-class="btn btn-success">
-
-🖨 Print Invoice
-
-</button>
-
-<a href="/sales"
-class="btn btn-secondary">
-
-Back
-
-</a>
-
-</div>
-
-</div>
-
 {% endblock %}

@@ -5,7 +5,9 @@
 
 document.addEventListener("DOMContentLoaded", function () {
 
-    initializeRow(document.querySelector("#items tbody tr"));
+    document.querySelectorAll("#items tbody tr").forEach(function (row) {
+        initializeRow(row);
+    });
 
     const btn = document.getElementById("btnAddItem");
 
@@ -15,11 +17,51 @@ document.addEventListener("DOMContentLoaded", function () {
 
 });
 
+function productTippyContent(option) {
+    return `
+            <table class="table table-sm mb-0">
+                <tr>
+                    <th>Available Stock</th>
+                    <td>${option.dataset.stock}</td>
+                </tr>
+                <tr>
+                    <th>Purchase Price</th>
+                    <td>₹ ${option.dataset.pprice}</td>
+                </tr>
+                <tr>
+                    <th>Selling Price</th>
+                    <td>₹ ${option.dataset.sprice}</td>
+                </tr>
+                <tr>
+                    <th>GST</th>
+                    <td>${option.dataset.tax}%</td>
+                </tr>
+            </table>
+        `;
+}
+
+function attachProductTippy(info, option) {
+    if (!info || !option) return;
+    if (info._tippy) {
+        info._tippy.destroy();
+    }
+    tippy(info, {
+        theme: "light-border",
+        allowHTML: true,
+        placement: "right",
+        trigger: "mouseenter focus",
+        interactive: true,
+        content: productTippyContent(option)
+    });
+}
+
 
 // ==========================================
 // Initialize Product Row
 // ==========================================
 function initializeRow(row) {
+
+    if (!row) return;
 
     const product = row.querySelector("select[name='product_id[]']");
     const qty = row.querySelector("input[name='qty[]']");
@@ -103,44 +145,8 @@ product.addEventListener("change", function () {
     // Tooltip
     // ==========================================
 
-    info.style.display = "inline-block";
-
-    if (info._tippy) {
-        info._tippy.destroy();
-    }
-
-    tippy(info, {
-        theme: "light-border",
-        allowHTML: true,
-        placement: "right",
-        content: `
-
-            <table class="table table-sm mb-0">
-
-                <tr>
-                    <th>Available Stock</th>
-                    <td>${option.dataset.stock}</td>
-                </tr>
-
-                <tr>
-                    <th>Purchase Price</th>
-                    <td>₹ ${option.dataset.pprice}</td>
-                </tr>
-
-                <tr>
-                    <th>Selling Price</th>
-                    <td>₹ ${option.dataset.sprice}</td>
-                </tr>
-
-                <tr>
-                    <th>GST</th>
-                    <td>${option.dataset.tax}%</td>
-                </tr>
-
-            </table>
-
-        `
-    });
+    info.style.display = "inline-flex";
+    attachProductTippy(info, option);
 
     calculateRow(row, false);
 
@@ -167,6 +173,12 @@ product.addEventListener("change", function () {
         calculateRow(row);
 
     });
+
+    if (product.value) {
+        const option = product.selectedOptions[0];
+        info.style.display = "inline-flex";
+        attachProductTippy(info, option);
+    }
 
 }
 

@@ -3,7 +3,11 @@ from db import get_db_connection
 def get_customers():
     conn = get_db_connection()
     cur = conn.cursor()  
-    cur.execute(""" SELECT id,name FROM customers  ORDER BY id DESC """)
+    cur.execute("""
+        SELECT id, name FROM customers
+        WHERE LOWER(IFNULL(status, 'active')) = 'active'
+        ORDER BY name
+    """)
     data = cur.fetchall()
     cur.close()
     conn.close()

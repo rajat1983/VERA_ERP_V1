@@ -211,6 +211,14 @@ def product_search():
     products = product_model.product_search(q)
     return jsonify(products)
 
+def _safe_return_path(value, default="/products"):
+    if not value or not isinstance(value, str):
+        return default
+    if not value.startswith("/") or value.startswith("//") or ":" in value:
+        return default
+    return value
+
+
 @product_bp.route("/products/view/<int:id>")
 def view_product(id):
 
@@ -220,7 +228,17 @@ def view_product(id):
         flash("Product not found.", "danger")
         return redirect(url_for("product.index"))
 
+    back_href = _safe_return_path(request.args.get("next"), "/products")
+    if back_href.startswith("/stock-movements"):
+        back_label = "Back to movements"
+    elif back_href.startswith("/stock"):
+        back_label = "Back to stock"
+    else:
+        back_label = "Back to products"
+
     return render_template(
         "products/view.html",
-        product=product
+        product=product,
+        back_href=back_href,
+        back_label=back_label,
     )

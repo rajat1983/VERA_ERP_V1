@@ -1,24 +1,60 @@
 {% extends "base.html" %}
+{% block title %}{{ title }} — VERA ERP{% endblock %}
+{% block page_title %}Reports{% endblock %}
 {% block content %}
-<div class="d-flex justify-content-between mb-3">
-  <h4>{{ title }}</h4>
-  <a href="{{ url_for('report.index') }}" class="btn btn-secondary">Back</a>
-</div>
-<form class="row g-2 mb-3">
-  <div class="col-md-3"><input type="date" name="from_date" class="form-control" value="{{ from_date }}"></div>
-  <div class="col-md-3"><input type="date" name="to_date" class="form-control" value="{{ to_date }}"></div>
-  <div class="col-md-2"><button class="btn btn-primary">Filter</button></div>
-</form>
-<div class="table-responsive">
-<table class="table table-bordered table-striped">
-  <thead class="table-light"><tr>{% for h in headers %}<th>{{ h }}</th>{% endfor %}</tr></thead>
-  <tbody>
-    {% for row in rows %}
-    <tr>{% for k in keys %}<td>{{ row[k] }}</td>{% endfor %}</tr>
+
+<div class="page-header">
+  <div>
+    <h1>{{ title }}</h1>
+    {% if show_dates %}
+    <p>{{ from_date }} → {{ to_date }}</p>
     {% else %}
-    <tr><td colspan="{{ headers|length }}" class="text-center">No data</td></tr>
-    {% endfor %}
-  </tbody>
-</table>
+    <p>Current stock snapshot.</p>
+    {% endif %}
+  </div>
+  <div class="d-flex gap-2 flex-wrap no-print">
+    <a class="btn btn-outline-primary" href="{{ url_for(request.endpoint, from_date=from_date, to_date=to_date, export='csv') }}">Download CSV</a>
+    <a class="btn btn-outline-secondary no-print" href="{{ url_for('report.index', from_date=from_date, to_date=to_date) }}">All reports</a>
+    <button type="button" class="btn btn-primary no-print" onclick="window.print()">Print</button>
+  </div>
+</div>
+
+{% if show_dates %}
+<form method="get" class="page-toolbar no-print">
+  <div class="row g-2 align-items-end">
+    <div class="col-md-3">
+      <label class="form-label" for="from_date">From</label>
+      <input id="from_date" type="date" name="from_date" class="form-control" value="{{ from_date }}">
+    </div>
+    <div class="col-md-3">
+      <label class="form-label" for="to_date">To</label>
+      <input id="to_date" type="date" name="to_date" class="form-control" value="{{ to_date }}">
+    </div>
+    <div class="col-md-2">
+      <button class="btn btn-outline-primary w-100">Filter</button>
+    </div>
+  </div>
+</form>
+{% endif %}
+
+<div class="page-card">
+  <div class="table-responsive">
+    <table class="table vera-table table-hover align-middle mb-0">
+      <thead>
+        <tr>{% for h in headers %}<th>{{ h }}</th>{% endfor %}</tr>
+      </thead>
+      <tbody>
+        {% for row in rows %}
+        <tr>{% for k in keys %}<td>{{ row[k] }}</td>{% endfor %}</tr>
+        {% else %}
+        <tr>
+          <td colspan="{{ headers|length }}">
+            <div class="empty-state">No rows for this report.</div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
 </div>
 {% endblock %}

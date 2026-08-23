@@ -1,4 +1,6 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
+from datetime import date
+from utils.audit import write_audit
 from models import sales_model, product_model, customer_model
 import traceback
 from num2words import num2words
@@ -62,7 +64,6 @@ def list_sales():
         total_pages=total_pages,
         q=search
     )
-from flask import flash
 
 @sales_bp.route("/sales/add", methods=["GET","POST"]) 
 
@@ -283,18 +284,19 @@ def sale_view(sale_id):
 #     sales_model.delete_sale(sale_id)
 #     flash("Sale deleted successfully", "success")
 #     return redirect(url_for("sales.list_sales"))
-@sales_bp.route("/sales/cancel/<int:sale_id>")
+@sales_bp.route("/sales/cancel/<int:sale_id>", methods=["POST"])
 def cancel_sale(sale_id):
 
     try:
         sales_model.cancel_sale(sale_id)
+        write_audit("CANCEL", "sales", "sale", sale_id)
         flash("Sale cancelled successfully.", "warning")
 
     except ValueError as ex:
         flash(str(ex), "warning")
 
-    except Exception as ex:
-        flash("Something went wrong.", "danger")
+    except Exception:
+        flash("Could not cancel this sale.", "danger")
 
     return redirect(url_for("sales.list_sales"))
 

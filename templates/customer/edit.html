@@ -1,19 +1,17 @@
 {% extends "base.html" %}
-
+{% from "_macros.html" import csrf_input %}
+{% block title %}Edit customer — VERA ERP{% endblock %}
+{% block page_title %}Customers{% endblock %}
 {% block content %}
 
-<div class="container-fluid mt-4">
+<div class="page-header">
+  <div>
+    <h1>Edit customer</h1>
+    <p>Customer code cannot be changed.</p>
+  </div>
+</div>
 
-    <div class="card shadow">
-
-        <div class="card-header bg-primary text-white">
-
-            <h4 class="mb-0">
-                <i class="bi bi-pencil-square"></i>
-                Update Customer
-            </h4>
-
-        </div>
+<div class="page-card">
 
         <div class="card-body">
 
@@ -27,6 +25,7 @@
                         data-mode="edit"
                         novalidate
                         onsubmit="confirmCustomerSubmit(event)">
+                        {{ csrf_input() }}
 
                         <div class="row">
 
@@ -263,7 +262,7 @@
 
     <button
         type="submit"
-        class="btn btn-success">
+        class="btn btn-primary">
 
         <i class="bi bi-check-circle"></i>
 
@@ -279,6 +278,9 @@
 
     </div>
 
-</div>
+{% endblock %}
 
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/customer.js') }}"></script>
+<script src="{{ url_for('static', filename='js/location.js') }}"></script>
 {% endblock %}

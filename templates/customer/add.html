@@ -1,22 +1,17 @@
 {% extends "base.html" %}
+{% from "_macros.html" import csrf_input %}
+{% block title %}Add customer — VERA ERP{% endblock %}
+{% block page_title %}Customers{% endblock %}
 {% block content %}
 
-<div class="container mt-4">
-
-<div class="card shadow">
-
-<div class="card-header bg-primary text-white">
-
-<h4 class="mb-0">
-
-<i class="bi bi-people-fill"></i>
-
-Add Customer
-
-</h4>
-
+<div class="page-header">
+  <div>
+    <h1>Add customer</h1>
+    <p>Used on sales invoices. Code is generated automatically.</p>
+  </div>
 </div>
 
+<div class="page-card">
 <div class="card-body">
 
 <form
@@ -24,6 +19,7 @@ Add Customer
     id="customerForm"
     data-mode="add"
     onsubmit="confirmCustomerSubmit(event)">
+{{ csrf_input() }}
 
 <div class="row">
 
@@ -227,7 +223,7 @@ Cancel
 
 <button
 type="submit"
-class="btn btn-success">
+class="btn btn-primary">
 
 <i class="bi bi-check-circle"></i>
 
@@ -243,8 +239,11 @@ Save Customer
 
 </div>
 
-</div>
+{% endblock %}
 
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/customer.js') }}"></script>
+<script src="{{ url_for('static', filename='js/location.js') }}"></script>
 {% endblock %}
 
 

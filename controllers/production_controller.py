@@ -1,6 +1,9 @@
+from datetime import date
+
 from flask import Blueprint, render_template, request, redirect, url_for, flash
 from models import production_model, product_model
 from models import production_extra
+from utils.audit import write_audit
 
 
 production_bp = Blueprint("production", __name__)
@@ -53,17 +56,19 @@ def add_production():
 
     return render_template(
         "production/add.html",
-        products=products
+        products=products,
+        today=date.today().isoformat(),
     )
 
 
-@production_bp.route("/production/cancel/<int:id>")
+@production_bp.route("/production/cancel/<int:id>", methods=["POST"])
 def cancel_production(id):
     try:
         production_extra.cancel_production(id)
+        write_audit("CANCEL", "production", "batch", id)
         flash("Production batch cancelled.", "warning")
     except ValueError as e:
         flash(str(e), "warning")
-    except Exception as e:
-        flash(str(e), "danger")
+    except Exception:
+        flash("Could not cancel this batch.", "danger")
     return redirect(url_for("production.list_production"))
