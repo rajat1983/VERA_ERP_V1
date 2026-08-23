@@ -6,7 +6,7 @@ import time
 
 sys.path.append("/var/www/html")
 
-from flask import Flask, flash, redirect, render_template, request, session, url_for
+from flask import Flask, redirect, render_template, request, session, url_for
 
 from controllers.employee_controller import employee_bp
 from controllers.dashboard_controller import dashboard_bp
@@ -25,7 +25,7 @@ from controllers.settings_controller import settings_bp
 from controllers.user_controller import user_bp
 from genai.routes.ai_routes import ai_bp
 from models import user_model
-from utils.auth import auth_enabled, csrf_token, validate_csrf, safe_next, safe_referer
+from utils.auth import auth_enabled, csrf_token, validate_csrf, safe_next
 from utils.permissions import can, enforce_request
 from utils.schema import ensure_schema, ensure_roles_users
 
@@ -100,8 +100,7 @@ def healthz():
 def forbidden(_e):
     if request.path.startswith("/api/"):
         return {"error": "permission denied"}, 403
-    flash("You do not have permission for that action.", "permission")
-    return redirect(safe_referer(url_for("dashboard.dashboard")))
+    return render_template("errors/403_bounce.html"), 403
 
 
 @app.before_request
@@ -117,7 +116,8 @@ def _guard():
             return redirect(url_for("auth.login"))
         session["_last_seen"] = now
         session.permanent = True
-    if request.endpoint == "auth.login":
+    public = {"auth.login", "auth.register", "auth.activate", "auth.logout"}
+    if request.endpoint in public:
         if request.method == "POST":
             validate_csrf()
         return

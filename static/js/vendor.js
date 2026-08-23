@@ -249,6 +249,12 @@ async function searchVendor() {
 // ==========================================
 
 function confirmVendorDelete(id) {
+    if (window.veraPathAllowed && !window.veraPathAllowed("/vendors/delete/" + id, "GET")) {
+        if (window.veraShowDenied) {
+            window.veraShowDenied();
+        }
+        return;
+    }
 
     Swal.fire({
 

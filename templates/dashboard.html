@@ -11,14 +11,22 @@
     <div>
       <h1 class="dash-title">Overview</h1>
       <p class="dash-sub mb-0">
-        {% if session.get('username') %}Signed in as {{ session.get('username') }} · {% endif %}
-        Last 30 days of sales unless you change the dates.
+        {% if session.get('full_name') or session.get('username') %}
+        Signed in as {{ session.get('full_name') or session.get('username') }} ·
+        {% endif %}
+        Figures use the date range on the right.
       </p>
     </div>
     <form class="dash-filter" method="get">
-      <input type="date" name="from_date" class="form-control form-control-sm" value="{{ from_date }}" aria-label="From date">
-      <input type="date" name="to_date" class="form-control form-control-sm" value="{{ to_date }}" aria-label="To date">
-      <button class="btn btn-sm btn-primary">Apply</button>
+      <div class="dash-filter-field">
+        <label for="from_date">Start date</label>
+        <input type="date" id="from_date" name="from_date" class="form-control form-control-sm" value="{{ from_date }}" required>
+      </div>
+      <div class="dash-filter-field">
+        <label for="to_date">End date</label>
+        <input type="date" id="to_date" name="to_date" class="form-control form-control-sm" value="{{ to_date }}" required>
+      </div>
+      <button class="btn btn-sm btn-primary dash-filter-apply" type="submit">Apply</button>
     </form>
   </div>
 

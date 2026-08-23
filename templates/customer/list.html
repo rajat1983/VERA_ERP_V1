@@ -437,6 +437,13 @@ function searchCustomer() {
 
 function confirmCustomerDelete(id) {
 
+    if (window.veraPathAllowed && !window.veraPathAllowed("/customer/delete/" + id, "GET")) {
+        if (window.veraShowDenied) {
+            window.veraShowDenied();
+        }
+        return;
+    }
+
     Swal.fire({
 
         title: "Delete Customer?",

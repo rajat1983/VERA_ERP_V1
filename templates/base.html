@@ -76,8 +76,14 @@
         </button>
         <strong>{% block page_title %}VERA ERP{% endblock %}</strong>
       </div>
-      <div class="text-muted small">
-        {% if session.get('username') %}{{ session.get('username') }}{% if session.get('role') %} ({{ session.get('role') }}){% endif %} · {% endif %}
+      <div class="text-muted small d-flex align-items-center gap-2">
+        {% if session.get('username') %}
+        {% if session.get('photo') %}
+        <img class="user-avatar-sm" src="{{ url_for('static', filename='uploads/users/' + session.get('photo')) }}" alt="">
+        {% endif %}
+        <a href="{{ url_for('users.profile') }}" class="text-decoration-none">{{ session.get('full_name') or session.get('username') }}{% if session.get('role') %} ({{ session.get('role') }}){% endif %}</a>
+        <span>·</span>
+        {% endif %}
         <a href="{{ url_for('auth.logout') }}">Logout</a>
       </div>
     </header>
@@ -105,6 +111,7 @@
 
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
+  window.veraRole = {{ (session.get('role') or '')|tojson }};
   window.veraCan = {
     create: {{ can('create')|tojson }},
     edit: {{ can('edit')|tojson }},
@@ -115,7 +122,7 @@
     salesWrite: {{ can('create', 'sales')|tojson }}
   };
 </script>
-<script src="{{ url_for('static', filename='js/common.js') }}"></script>
+<script src="{{ url_for('static', filename='js/common.js') }}?v=perm2"></script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 {% if perm_notice.text %}
 <script>

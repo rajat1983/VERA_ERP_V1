@@ -45,33 +45,51 @@ def get_next_invoice_number():
         conn.close()
 
 
-def get_all_sales(search, limit, offset):
+def _sale_user_label():
+    return "IFNULL(NULLIF(TRIM(u.full_name), ''), u.username)"
+
+
+def _sale_filters(search, from_date, to_date, created_by):
+    where = ["(s.invoice_no LIKE %s OR c.name LIKE %s OR IFNULL(u.full_name,'') LIKE %s OR IFNULL(u.username,'') LIKE %s)"]
+    like = f"%{search or ''}%"
+    params = [like, like, like, like]
+    if from_date:
+        where.append("DATE(s.sale_date) >= %s")
+        params.append(from_date)
+    if to_date:
+        where.append("DATE(s.sale_date) <= %s")
+        params.append(to_date)
+    if created_by:
+        where.append("s.created_by = %s")
+        params.append(int(created_by))
+    return " AND ".join(where), params
+
+
+def get_all_sales(search, limit, offset, from_date=None, to_date=None, created_by=None):
     conn = get_db_connection()
     cur = conn.cursor()
-    like = f"%{search}%"
-
-    cur.execute("""
-        SELECT s.id,
-                s.invoice_no,
-                s.sale_status,
-               s.sale_date,
-                s.total_amount,
-                s.discount,
-                s.payment_status,
-                c.name AS customer_name
-         FROM sales s
-         JOIN customers c ON s.customer_id = c.id
-         WHERE s.invoice_no LIKE %s OR c.name LIKE %s
-         ORDER BY s.id DESC
+    where, params = _sale_filters(search, from_date, to_date, created_by)
+    params.extend([limit, offset])
+    cur.execute(
+        f"""
+        SELECT s.id, s.invoice_no, s.sale_status, s.sale_date, s.total_amount, s.discount,
+               s.payment_status, c.name AS customer_name,
+               s.created_by, {_sale_user_label()} AS generated_by
+        FROM sales s
+        JOIN customers c ON s.customer_id = c.id
+        LEFT JOIN users u ON u.id = s.created_by
+        WHERE {where}
+        ORDER BY s.id DESC
         LIMIT %s OFFSET %s
-    """, (like, like, limit, offset))
-
+        """,
+        params,
+    )
     data = cur.fetchall()
     cur.close()
     conn.close()
     return data
 
-def create_sale(customer_id, sale_date, remarks, discount, items):
+def create_sale(customer_id, sale_date, remarks, discount, items, created_by=None):
 
     conn = get_db_connection()
     cur = conn.cursor()
@@ -146,9 +164,10 @@ def create_sale(customer_id, sale_date, remarks, discount, items):
                 gst_amount,
                 total_amount,
                 sale_status,
-                payment_status
+                payment_status,
+                created_by
             )
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, 'Confirmed', 'Pending')
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, 'Confirmed', 'Pending', %s)
         """, (
             invoice_no,
             customer_id,
@@ -157,7 +176,8 @@ def create_sale(customer_id, sale_date, remarks, discount, items):
             totals["discount_percent"],
             totals["discount_amount"],
             totals["gst_amount"],
-            totals["grand_total"]
+            totals["grand_total"],
+            created_by,
         ))
 
         sale_id = cur.lastrowid
@@ -297,10 +317,12 @@ def get_sale_by_id(sale_id):
             c.gst_no AS customer_gstin,
             c.city AS customer_city,
             c.state AS customer_state,
-            c.pincode AS customer_pincode
+            c.pincode AS customer_pincode,
+            IFNULL(NULLIF(TRIM(u.full_name), ''), u.username) AS generated_by
         FROM sales s
         JOIN customers c
             ON s.customer_id = c.id
+        LEFT JOIN users u ON u.id = s.created_by
         WHERE s.id = %s
     """, (sale_id,))
 
@@ -582,18 +604,20 @@ def update_sale(sale_id, customer_id, discount, items):
         cur.close()
         conn.close()
 
-def get_sale_count(search):
+def get_sale_count(search, from_date=None, to_date=None, created_by=None):
     conn = get_db_connection()
     cur = conn.cursor()
-    like = f"%{search}%"
-
-    cur.execute("""
+    where, params = _sale_filters(search, from_date, to_date, created_by)
+    cur.execute(
+        f"""
         SELECT COUNT(*) AS total
         FROM sales s
         JOIN customers c ON c.id = s.customer_id
-        WHERE s.invoice_no LIKE %s OR c.name LIKE %s
-    """, (like, like))
-
+        LEFT JOIN users u ON u.id = s.created_by
+        WHERE {where}
+        """,
+        params,
+    )
     total = cur.fetchone()["total"]
     cur.close()
     conn.close()
@@ -772,57 +796,26 @@ def cancel_sale(sale_id):
         cur.close()
         conn.close()
 
-def get_sales_summary():
-
+def get_sales_summary(from_date=None, to_date=None, created_by=None, search=""):
     conn = get_db_connection()
     cur = conn.cursor()
-
     try:
-
-        cur.execute("""
+        where, params = _sale_filters(search, from_date, to_date, created_by)
+        cur.execute(
+            f"""
             SELECT
-
-                COUNT(
-                    CASE
-                        WHEN sale_status = 'Confirmed'
-                        THEN 1
-                    END
-                ) AS total_sales,
-
-                COUNT(
-                    CASE
-                        WHEN sale_status = 'Confirmed'
-                        AND DATE(sale_date) = CURDATE()
-                        THEN 1
-                    END
-                ) AS today_sales,
-
-                COALESCE(
-                    SUM(
-                        CASE
-                            WHEN sale_status = 'Confirmed'
-                            THEN total_amount
-                            ELSE 0
-                        END
-                    ),
-                    0
-                ) AS total_revenue,
-
-                COUNT(
-                    CASE
-                        WHEN sale_status = 'Cancelled'
-                        THEN 1
-                    END
-                ) AS cancelled_sales
-
-            FROM sales
-        """)
-
-        summary = cur.fetchone()
-
-        return summary
-
+                COUNT(CASE WHEN s.sale_status = 'Confirmed' THEN 1 END) AS total_sales,
+                COUNT(CASE WHEN s.sale_status = 'Confirmed' AND DATE(s.sale_date) = CURDATE() THEN 1 END) AS today_sales,
+                COALESCE(SUM(CASE WHEN s.sale_status = 'Confirmed' THEN s.total_amount ELSE 0 END), 0) AS total_revenue,
+                COUNT(CASE WHEN s.sale_status = 'Cancelled' THEN 1 END) AS cancelled_sales
+            FROM sales s
+            JOIN customers c ON c.id = s.customer_id
+            LEFT JOIN users u ON u.id = s.created_by
+            WHERE {where}
+            """,
+            params,
+        )
+        return cur.fetchone()
     finally:
-
         cur.close()
         conn.close()

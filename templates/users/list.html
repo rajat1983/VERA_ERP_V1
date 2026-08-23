@@ -1,11 +1,12 @@
 {% extends "base.html" %}
+{% from "_macros.html" import post_button %}
 {% block title %}Users — VERA ERP{% endblock %}
 {% block page_title %}Users{% endblock %}
 {% block content %}
 <div class="page-header">
   <div>
     <h1>Users and roles</h1>
-    <p>Admin full access. Manager create/edit (no delete). Staff view all and sales add/edit/print.</p>
+    <p>New registrations stay pending until you approve them. Approve activates the account immediately.</p>
   </div>
   <a class="btn btn-primary" href="{{ url_for('users.add_user') }}">New user</a>
 </div>
@@ -14,7 +15,11 @@
     <table class="table vera-table mb-0">
       <thead>
         <tr>
+          <th></th>
+          <th>Name</th>
           <th>Username</th>
+          <th>Email</th>
+          <th>Mobile</th>
           <th>Role</th>
           <th>Status</th>
           <th class="text-end">Action</th>
@@ -22,22 +27,42 @@
       </thead>
       <tbody>
         {% for u in users %}
+        {% set st = (u.status or 'active')|lower %}
         <tr>
-          <td>{{ u.username }}</td>
+          <td>
+            {% if u.photo %}
+            <img class="user-avatar" src="{{ url_for('static', filename='uploads/users/' + u.photo) }}" alt="">
+            {% else %}
+            <span class="user-avatar user-avatar-fallback">{{ (u.full_name or u.username)[0]|upper }}</span>
+            {% endif %}
+          </td>
+          <td>{{ u.full_name or '—' }}</td>
+          <td><a href="{{ url_for('users.view_user', id=u.id) }}">{{ u.username }}</a></td>
+          <td>{{ u.email or '—' }}</td>
+          <td>{{ u.mobile or '—' }}</td>
           <td>{{ u.role }}</td>
           <td>
-            {% if u.is_active %}
+            {% if st == 'pending' %}
+              <span class="badge text-bg-warning">Pending</span>
+            {% elif st == 'rejected' %}
+              <span class="badge text-bg-danger">Rejected</span>
+            {% elif u.is_active %}
               <span class="badge text-bg-success">Active</span>
             {% else %}
               <span class="badge text-bg-secondary">Inactive</span>
             {% endif %}
           </td>
-          <td class="text-end">
+          <td class="text-end table-actions">
+            {% if st == 'pending' %}
+            {{ post_button(url_for('users.approve_user', id=u.id), 'Approve and activate this user?', 'Approve', 'btn btn-sm btn-success', label='Approve') }}
+            {{ post_button(url_for('users.reject_user', id=u.id), 'Reject this registration?', 'Reject', 'btn btn-sm btn-outline-danger', label='Reject') }}
+            {% endif %}
+            <a class="btn btn-sm btn-outline-secondary" href="{{ url_for('users.view_user', id=u.id) }}">View</a>
             <a class="btn btn-sm btn-outline-primary" href="{{ url_for('users.edit_user', id=u.id) }}">Edit</a>
           </td>
         </tr>
         {% else %}
-        <tr><td colspan="4"><div class="empty-state">No users.</div></td></tr>
+        <tr><td colspan="8"><div class="empty-state">No users.</div></td></tr>
         {% endfor %}
       </tbody>
     </table>

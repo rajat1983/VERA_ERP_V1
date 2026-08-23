@@ -12,9 +12,11 @@ def sales_report(from_date, to_date):
     cur.execute(
         """
         SELECT s.invoice_no, s.sale_date, c.name AS customer_name,
-               s.discount, s.gst_amount, s.total_amount, s.sale_status, s.payment_status
+               s.discount, s.gst_amount, s.total_amount, s.sale_status, s.payment_status,
+               IFNULL(IFNULL(NULLIF(TRIM(u.full_name), ''), u.username), '—') AS generated_by
         FROM sales s
         JOIN customers c ON c.id = s.customer_id
+        LEFT JOIN users u ON u.id = s.created_by
         WHERE DATE(s.sale_date) BETWEEN %s AND %s
         ORDER BY s.id DESC
         """,
@@ -116,9 +118,11 @@ def receivables_aging():
                  WHEN DATEDIFF(CURDATE(), s.sale_date) <= 60 THEN '31-60'
                  WHEN DATEDIFF(CURDATE(), s.sale_date) <= 90 THEN '61-90'
                  ELSE '90+'
-               END AS bucket
+               END AS bucket,
+               IFNULL(IFNULL(NULLIF(TRIM(u.full_name), ''), u.username), '—') AS generated_by
         FROM sales s
         JOIN customers c ON c.id = s.customer_id
+        LEFT JOIN users u ON u.id = s.created_by
         WHERE s.sale_status='Confirmed'
           AND IFNULL(s.paid_amount,0) < s.total_amount
         ORDER BY s.sale_date

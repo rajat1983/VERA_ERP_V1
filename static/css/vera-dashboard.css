@@ -13,7 +13,7 @@ body{
 .dashboard-page .dash-header {
     display: flex;
     justify-content: space-between;
-    align-items: flex-end;
+    align-items: center;
     gap: 16px;
     flex-wrap: wrap;
     margin-bottom: 20px;
@@ -34,18 +34,59 @@ body{
 
 .dashboard-page .dash-filter {
     display: flex;
-    gap: 8px;
-    align-items: center;
-    flex-wrap: wrap;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    align-items: flex-end;
+    gap: 12px;
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 10px;
+    padding: 10px 12px;
 }
 
-@media (max-width: 390px) {
+.dashboard-page .dash-filter-field {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 0;
+}
+
+.dashboard-page .dash-filter-field label {
+    font-size: 0.72rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: #6b7280;
+    margin: 0;
+    white-space: nowrap;
+}
+
+.dashboard-page .dash-filter-field .form-control {
+    min-width: 150px;
+    width: 168px;
+}
+
+.dashboard-page .dash-filter-apply {
+    height: 31px;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+@media (max-width: 576px) {
     .dashboard-page .dash-filter {
         width: 100%;
+        flex-wrap: wrap;
     }
-    .dashboard-page .dash-filter .form-control,
-    .dashboard-page .dash-filter .btn {
+    .dashboard-page .dash-filter-field {
+        flex: 1 1 calc(50% - 12px);
+    }
+    .dashboard-page .dash-filter-field .form-control {
         width: 100%;
+        min-width: 0;
+    }
+    .dashboard-page .dash-filter-apply {
+        width: 100%;
+        height: 38px;
     }
     .dashboard-page .dash-kpi-value {
         font-size: 1rem;

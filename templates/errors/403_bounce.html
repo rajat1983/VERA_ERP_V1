@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Permission denied</title>
+</head>
+<body>
+<script>
+  sessionStorage.setItem("veraDenied", "1");
+  if (history.length > 1) {
+    history.back();
+  } else {
+    location.replace("/dashboard");
+  }
+</script>
+</body>
+</html>

@@ -240,6 +240,53 @@ html, body {
   margin-bottom: 16px;
 }
 
+.sale-filters {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  align-items: flex-end;
+  gap: 12px;
+}
+
+.sale-filter-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.sale-filter-field .form-label {
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--vera-muted);
+  margin: 0;
+  white-space: nowrap;
+}
+
+.sale-filter-search {
+  flex: 1 1 220px;
+}
+
+.sale-filter-field .form-control,
+.sale-filter-field .form-select {
+  min-width: 140px;
+}
+
+.sale-filter-actions {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+  padding-bottom: 1px;
+}
+
+@media (max-width: 992px) {
+  .sale-filters {
+    flex-wrap: wrap;
+  }
+}
+
 .page-card {
   background: var(--vera-surface);
   border: 1px solid var(--vera-border);
@@ -388,3 +435,22 @@ html {
 .doc-actions .btn {
   min-height: 40px;
 }
+
+.user-avatar,
+.user-avatar-sm,
+.user-avatar-lg {
+  object-fit: cover;
+  border-radius: 50%;
+  background: #e5e7eb;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  color: #1d4ed8;
+}
+
+.user-avatar { width: 40px; height: 40px; font-size: 0.9rem; }
+.user-avatar-sm { width: 28px; height: 28px; }
+.user-avatar-lg { width: 120px; height: 120px; font-size: 2rem; }
+.user-avatar-fallback { vertical-align: middle; }
+

@@ -1,10 +1,9 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
+from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, session
 from datetime import date
 from utils.audit import write_audit
-from models import sales_model, product_model, customer_model
+from models import sales_model, product_model, customer_model, company_model, user_model
 import traceback
 from num2words import num2words
-from models import company_model
 
 sales_bp = Blueprint("sales", __name__)
 
@@ -15,10 +14,10 @@ def list_sales():
         request.args.get("page", 1)
     )
 
-    search = request.args.get(
-        "q",
-        ""
-    )
+    search = request.args.get("q", "")
+    from_date = request.args.get("from_date", "")
+    to_date = request.args.get("to_date", "")
+    created_by = request.args.get("created_by", "")
 
     per_page = 10
 
@@ -33,11 +32,17 @@ def list_sales():
     sales = sales_model.get_all_sales(
         search,
         per_page,
-        offset
+        offset,
+        from_date or None,
+        to_date or None,
+        created_by or None,
     )
 
     total = sales_model.get_sale_count(
-        search
+        search,
+        from_date or None,
+        to_date or None,
+        created_by or None,
     )
 
     total_pages = (
@@ -48,13 +53,12 @@ def list_sales():
     # Sales KPI Summary
     # ==========================================
 
-    sales_summary = (
-        sales_model.get_sales_summary()
+    sales_summary = sales_model.get_sales_summary(
+        from_date or None,
+        to_date or None,
+        created_by or None,
+        search,
     )
-
-    # ==========================================
-    # Render Sales List
-    # ==========================================
 
     return render_template(
         "/sales/sale_list.html",
@@ -62,7 +66,11 @@ def list_sales():
         sales_summary=sales_summary,
         page=page,
         total_pages=total_pages,
-        q=search
+        q=search,
+        from_date=from_date,
+        to_date=to_date,
+        created_by=created_by,
+        users=user_model.list_users(),
     )
 
 @sales_bp.route("/sales/add", methods=["GET","POST"]) 
@@ -190,7 +198,8 @@ def add_sale():
                 sale_date,
                 remarks,
                 discount,
-                items
+                items,
+                session.get("user_id"),
             )
 
             # ==========================================

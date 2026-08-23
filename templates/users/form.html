@@ -9,11 +9,30 @@
   </div>
 </div>
 <div class="form-card" style="max-width:560px">
-  <form method="post">
+  <form method="post" enctype="multipart/form-data">
     {{ csrf_input() }}
     <div class="mb-3">
+      {% if user and user.photo %}
+      <img class="user-avatar-lg mb-2" src="{{ url_for('static', filename='uploads/users/' + user.photo) }}" alt="">
+      {% endif %}
+      <label class="form-label" for="photo">Profile photo</label>
+      <input id="photo" type="file" name="photo" class="form-control" accept=".jpg,.jpeg,.png,.webp">
+    </div>
+    <div class="mb-3">
+      <label class="form-label" for="full_name">Name</label>
+      <input id="full_name" name="full_name" class="form-control" value="{{ user.full_name if user else '' }}" required maxlength="120">
+    </div>
+    <div class="mb-3">
+      <label class="form-label" for="email">Email</label>
+      <input id="email" type="email" name="email" class="form-control" value="{{ user.email if user else '' }}" maxlength="120">
+    </div>
+    <div class="mb-3">
+      <label class="form-label" for="mobile">Mobile number</label>
+      <input id="mobile" name="mobile" class="form-control" value="{{ user.mobile if user else '' }}" maxlength="20" inputmode="tel">
+    </div>
+    <div class="mb-3">
       <label class="form-label" for="username">Username</label>
-      <input id="username" name="username" class="form-control" value="{{ user.username if user else '' }}" {% if user %}readonly{% endif %} required>
+      <input id="username" name="username" class="form-control" value="{{ user.username if user else '' }}" {% if user %}readonly{% endif %} required maxlength="80" autocomplete="username">
     </div>
     <div class="mb-3">
       <label class="form-label" for="password">Password{% if user %} (leave blank to keep){% endif %}</label>
@@ -36,7 +55,11 @@
     </div>
     <div class="doc-actions">
       <button class="btn btn-primary">Save</button>
+      {% if user %}
+      <a class="btn btn-outline-secondary" href="{{ url_for('users.view_user', id=user.id) }}">Cancel</a>
+      {% else %}
       <a class="btn btn-outline-secondary" href="{{ url_for('users.list_users') }}">Cancel</a>
+      {% endif %}
     </div>
   </form>
 </div>

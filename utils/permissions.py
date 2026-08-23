@@ -70,13 +70,16 @@ def _staff_form_blocked(path):
 def enforce_request():
     if not auth_enabled():
         return
-    if request.endpoint in (None, "static", "healthz", "auth.login", "auth.logout"):
+    if request.endpoint in (None, "static", "healthz", "auth.login", "auth.logout", "auth.register", "auth.activate"):
         return
     role = current_role()
     path = request.path if request.path != "/" else "/"
     method = request.method
 
     if role == "admin":
+        return
+
+    if path == "/profile" or path.startswith("/profile"):
         return
 
     if path.startswith("/admin") or path.startswith("/users") or path.startswith("/settings"):

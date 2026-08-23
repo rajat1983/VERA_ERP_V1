@@ -17,7 +17,8 @@ composer_version: "2"
 web_environment:
   - FLASK_DEBUG=1
   - SECRET_KEY=ddev-local-only-not-for-production
-  - VERA_SHOW_DEFAULT_LOGIN=1
+  - MAIL_SERVER=127.0.0.1
+  - MAIL_PORT=1025
 corepack_enable: false
 web_extra_exposed_ports:
     - name: flask

@@ -88,8 +88,15 @@ def _ensure_roles_users(cur):
                 id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
                 username VARCHAR(80) NOT NULL UNIQUE,
                 password_hash VARCHAR(255) NOT NULL,
+                full_name VARCHAR(120) DEFAULT NULL,
+                email VARCHAR(120) DEFAULT NULL,
+                mobile VARCHAR(20) DEFAULT NULL,
+                photo VARCHAR(255) DEFAULT NULL,
                 role_id INT NOT NULL,
                 is_active TINYINT(1) NOT NULL DEFAULT 1,
+                status VARCHAR(20) NOT NULL DEFAULT 'active',
+                activation_token VARCHAR(64) DEFAULT NULL,
+                activation_expires DATETIME DEFAULT NULL,
                 created_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP
             )
             """
@@ -98,6 +105,10 @@ def _ensure_roles_users(cur):
         _add_column(cur, "users", "is_active", "is_active TINYINT(1) NOT NULL DEFAULT 1")
         _add_column(cur, "users", "role_id", "role_id INT DEFAULT NULL")
         _add_column(cur, "users", "role", "role VARCHAR(20) DEFAULT NULL")
+        _add_column(cur, "users", "full_name", "full_name VARCHAR(120) DEFAULT NULL")
+        _add_column(cur, "users", "email", "email VARCHAR(120) DEFAULT NULL")
+        _add_column(cur, "users", "mobile", "mobile VARCHAR(20) DEFAULT NULL")
+        _add_column(cur, "users", "photo", "photo VARCHAR(255) DEFAULT NULL")
         cur.execute(
             """
             UPDATE users u
@@ -111,6 +122,16 @@ def _ensure_roles_users(cur):
         if admin_role:
             cur.execute("UPDATE users SET role_id=%s WHERE role_id IS NULL", (admin_role["id"],))
 
+    _add_column(cur, "users", "full_name", "full_name VARCHAR(120) DEFAULT NULL")
+    _add_column(cur, "users", "email", "email VARCHAR(120) DEFAULT NULL")
+    _add_column(cur, "users", "mobile", "mobile VARCHAR(20) DEFAULT NULL")
+    _add_column(cur, "users", "photo", "photo VARCHAR(255) DEFAULT NULL")
+    _add_column(cur, "users", "status", "status VARCHAR(20) NOT NULL DEFAULT 'active'")
+    _add_column(cur, "users", "activation_token", "activation_token VARCHAR(64) DEFAULT NULL")
+    _add_column(cur, "users", "activation_expires", "activation_expires DATETIME DEFAULT NULL")
+    cur.execute("UPDATE users SET status='active', is_active=1 WHERE status='approved'")
+    cur.execute("UPDATE users SET status='active' WHERE status IS NULL OR status=''")
+
 
 def ensure_schema():
     conn = get_db_connection()
@@ -122,6 +143,7 @@ def ensure_schema():
             _add_column(cur, "sales", "sale_status", "sale_status VARCHAR(20) NOT NULL DEFAULT 'Confirmed'")
             _add_column(cur, "sales", "payment_status", "payment_status VARCHAR(20) NOT NULL DEFAULT 'Pending'")
             _add_column(cur, "sales", "paid_amount", "paid_amount DECIMAL(12,2) NOT NULL DEFAULT 0")
+            _add_column(cur, "sales", "created_by", "created_by INT DEFAULT NULL")
             _ensure_status_varchar(cur, "sales", "sale_status", "Confirmed")
             _ensure_status_varchar(cur, "sales", "payment_status", "Pending")
 

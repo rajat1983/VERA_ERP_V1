@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+{% from "_macros.html" import csrf_input %}
+{% block title %}Profile — VERA ERP{% endblock %}
+{% block page_title %}Profile{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1>User profile</h1>
+    <p>Update your name, email and mobile. Username and role are set by an admin.</p>
+  </div>
+</div>
+<div class="row g-3">
+  <div class="col-lg-6">
+    <div class="form-card">
+      <h2 class="h5 mb-3">Details</h2>
+      <form method="post" enctype="multipart/form-data">
+        {{ csrf_input() }}
+        <input type="hidden" name="intent" value="details">
+        <div class="mb-3">
+          {% if user.photo %}
+          <img class="user-avatar-lg mb-2" src="{{ url_for('static', filename='uploads/users/' + user.photo) }}" alt="">
+          {% endif %}
+          <label class="form-label" for="photo">Profile photo</label>
+          <input id="photo" type="file" name="photo" class="form-control" accept=".jpg,.jpeg,.png,.webp">
+        </div>
+        <div class="mb-3">
+          <label class="form-label" for="username">Username</label>
+          <input id="username" class="form-control" value="{{ user.username }}" readonly>
+        </div>
+        <div class="mb-3">
+          <label class="form-label" for="full_name">Name</label>
+          <input id="full_name" name="full_name" class="form-control" value="{{ user.full_name or '' }}" required maxlength="120">
+        </div>
+        <div class="mb-3">
+          <label class="form-label" for="email">Email</label>
+          <input id="email" type="email" name="email" class="form-control" value="{{ user.email or '' }}" maxlength="120">
+        </div>
+        <div class="mb-3">
+          <label class="form-label" for="mobile">Mobile number</label>
+          <input id="mobile" name="mobile" class="form-control" value="{{ user.mobile or '' }}" maxlength="20" inputmode="tel">
+        </div>
+        <div class="mb-3">
+          <span class="form-label d-block">Role</span>
+          <strong>{{ user.role }}</strong>
+        </div>
+        <button class="btn btn-primary" type="submit">Save details</button>
+      </form>
+    </div>
+  </div>
+  <div class="col-lg-6">
+    <div class="form-card">
+      <h2 class="h5 mb-3">Change password</h2>
+      <form method="post" autocomplete="off">
+        {{ csrf_input() }}
+        <input type="hidden" name="intent" value="password">
+        <div class="mb-3">
+          <label class="form-label" for="current_password">Current password</label>
+          <input id="current_password" type="password" name="current_password" class="form-control" required autocomplete="current-password">
+        </div>
+        <div class="mb-3">
+          <label class="form-label" for="new_password">New password</label>
+          <input id="new_password" type="password" name="new_password" class="form-control" minlength="6" required autocomplete="new-password">
+        </div>
+        <div class="mb-3">
+          <label class="form-label" for="confirm_password">Confirm new password</label>
+          <input id="confirm_password" type="password" name="confirm_password" class="form-control" minlength="6" required autocomplete="new-password">
+        </div>
+        <button class="btn btn-primary" type="submit">Update password</button>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}
