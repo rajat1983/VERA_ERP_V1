@@ -73,7 +73,55 @@ def list_sales():
         users=user_model.list_users(),
     )
 
-@sales_bp.route("/sales/add", methods=["GET","POST"]) 
+
+@sales_bp.route("/sales/customer-search")
+def customer_search():
+    q = request.args.get("q", "")
+    return jsonify(customer_model.search_customers_for_sale(q))
+
+
+@sales_bp.route("/sales/quick-customer", methods=["POST"])
+def quick_customer():
+    data = request.get_json(silent=True) or request.form
+    if not data:
+        data = {}
+    name = (data.get("name") or "").strip()
+    phone = "".join(ch for ch in (data.get("phone") or "") if ch.isdigit())
+
+    if not name:
+        return jsonify(ok=False, error="Customer name is required."), 400
+    if len(phone) != 10:
+        return jsonify(ok=False, error="Enter a valid 10-digit mobile number."), 400
+
+    _email_exists, phone_exists = customer_model.check_duplicate_customer(None, phone)
+    if phone_exists:
+        return jsonify(ok=False, error="A customer with this mobile number already exists."), 409
+
+    try:
+        customer_id = customer_model.add_customer(
+            customer_model.generate_customer_code(),
+            name,
+            None,
+            phone,
+            None,
+            None,
+            None,
+            None,
+            None,
+            "Active",
+        )
+    except Exception as ex:
+        detail = str(ex)
+        if "phone" in detail.lower():
+            return jsonify(ok=False, error="A customer with this mobile number already exists."), 409
+        if "email" in detail.lower():
+            return jsonify(ok=False, error="A customer with this email already exists."), 409
+        return jsonify(ok=False, error="Could not save customer. Please try again."), 400
+
+    return jsonify(ok=True, id=customer_id, name=name, phone=phone)
+
+
+@sales_bp.route("/sales/add", methods=["GET","POST"])  
 
 def add_sale():
     from datetime import date
@@ -88,7 +136,9 @@ def add_sale():
             # 1. Get Sale Information
             # ==========================================
 
-            customer_id = request.form["customer_id"]
+            customer_id = (request.form.get("customer_id") or "").strip()
+            if not customer_id:
+                raise ValueError("Please select a customer.")
 
             sale_date = request.form["sale_date"]
 
@@ -235,13 +285,10 @@ def add_sale():
         # Reload Sale Page After Error
         # ==========================================
 
-        customers = customer_model.get_customers()
-
         products = product_model.get_products()
 
         return render_template(
             "sales/sale_create.html",
-            customers=customers,
             products=products,
             today=today
         )
@@ -250,13 +297,10 @@ def add_sale():
     # GET REQUEST
     # ==============================================
 
-    customers = customer_model.get_customers()
-
     products = product_model.get_products()
 
     return render_template(
         "sales/sale_create.html",
-        customers=customers,
         products=products,
         today=today
     )

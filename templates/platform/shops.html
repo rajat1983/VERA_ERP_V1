@@ -1,0 +1,62 @@
+{% extends "platform/layout.html" %}
+{% block title %}Shops — VERA Platform{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1>Shops</h1>
+    <p>Each shop is an isolated tenant. Shop code is required at ERP login.</p>
+  </div>
+  <a class="btn btn-primary" href="{{ url_for('platform.shop_add') }}">Add shop</a>
+</div>
+<form class="row g-2 mb-3" method="get">
+  <div class="col-md-4">
+    <input class="form-control" name="q" value="{{ q }}" placeholder="Search name or shop code">
+  </div>
+  <div class="col-md-3">
+    <select class="form-select" name="status">
+      <option value="">All statuses</option>
+      <option value="active" {% if status=='active' %}selected{% endif %}>Active</option>
+      <option value="suspended" {% if status=='suspended' %}selected{% endif %}>Suspended</option>
+    </select>
+  </div>
+  <div class="col-md-2">
+    <button class="btn btn-outline-secondary" type="submit">Filter</button>
+  </div>
+</form>
+<div class="page-card">
+  <div class="table-responsive">
+    <table class="table mb-0">
+      <thead>
+        <tr>
+          <th>Shop code</th>
+          <th>Name</th>
+          <th>Status</th>
+          <th>Users</th>
+          <th>Subscription</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for shop in shops %}
+        <tr>
+          <td><code>{{ shop.shop_code }}</code></td>
+          <td>{{ shop.name }}</td>
+          <td>
+            {% if shop.status == 'active' %}
+            <span class="badge text-bg-success">Active</span>
+            {% else %}
+            <span class="badge text-bg-secondary">Suspended</span>
+            {% endif %}
+          </td>
+          <td>{{ shop.user_count }}</td>
+          <td class="text-muted">Not configured</td>
+          <td class="text-end"><a href="{{ url_for('platform.shop_view', id=shop.id) }}">View</a></td>
+        </tr>
+        {% else %}
+        <tr><td colspan="6" class="text-muted">No shops match this filter.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

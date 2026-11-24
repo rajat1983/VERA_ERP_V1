@@ -9,25 +9,24 @@
 <div class="page-header">
   <div>
     <h1>New sale</h1>
-    <p>Customer and product dropdowns. Discount is percent. Server totals are saved.</p>
+    <p>Search customer by name or mobile. Discount is percent. Server totals are saved.</p>
   </div>
 </div>
 
 <form method="POST">
   <input type="hidden" name="csrf_token" value="{{ get_csrf_token() }}">
 
-  <div class="page-card mb-3">
+  <div class="page-card page-card-open mb-3">
     <div class="page-card-title">Header</div>
     <div class="card-body">
       <div class="row g-3">
         <div class="col-md-6">
-          <label class="form-label">Customer <span class="text-danger">*</span></label>
-          <select name="customer_id" class="form-select" required>
-            <option value="">-- Select Customer --</option>
-            {% for c in customers %}
-            <option value="{{ c.id }}">{{ c.name }}</option>
-            {% endfor %}
-          </select>
+          <label class="form-label" for="customer_search">Customer <span class="text-danger">*</span></label>
+          <div class="customer-combobox position-relative">
+            <input type="hidden" name="customer_id" id="customer_id" value="">
+            <input type="text" id="customer_search" class="form-control" placeholder="Search by name or mobile" autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="customer_results">
+            <div id="customer_results" class="customer-suggest" hidden role="listbox"></div>
+          </div>
         </div>
         <div class="col-md-4">
           <label class="form-label">Sale date <span class="text-danger">*</span></label>
@@ -121,9 +120,34 @@
     <a href="/sales" class="btn btn-outline-secondary" id="btnCancelSale">Cancel</a>
   </div>
 </form>
+
+<div class="modal fade" id="quickCustomerModal" tabindex="-1" aria-labelledby="quickCustomerTitle" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 class="modal-title fs-5" id="quickCustomerTitle">Add new customer</h2>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div class="mb-3">
+          <label class="form-label" for="quick_customer_name">Customer name <span class="text-danger">*</span></label>
+          <input type="text" id="quick_customer_name" class="form-control" maxlength="120">
+        </div>
+        <div class="mb-0">
+          <label class="form-label" for="quick_customer_phone">Mobile number <span class="text-danger">*</span></label>
+          <input type="text" id="quick_customer_phone" class="form-control" maxlength="10" inputmode="numeric" placeholder="10-digit mobile">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-primary" id="quickCustomerSave">Save customer</button>
+      </div>
+    </div>
+  </div>
+</div>
 {% endblock %}
 {% block extra_js %}
 <script src="https://unpkg.com/@popperjs/core@2"></script>
 <script src="https://unpkg.com/tippy.js@6"></script>
-<script src="{{ url_for('static', filename='js/sales.js') }}"></script>
+<script src="{{ url_for('static', filename='js/sales.js') }}?v=cust3"></script>
 {% endblock %}

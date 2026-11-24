@@ -3,6 +3,7 @@ from models import user_model
 from utils.audit import clear_failures, is_locked, record_failure, write_audit
 from utils.auth import safe_next
 from utils.mailer import send_email, ADMIN_EMAIL
+from utils.tenant import bind_shop_session
 from utils.uploads import save_user_photo
 
 auth_bp = Blueprint("auth", __name__)
@@ -26,6 +27,7 @@ def login():
             flash("Too many failed sign-in attempts. Try again in 15 minutes.", "danger")
             return render_template("auth/login.html", **_login_vars())
         user = user_model.authenticate(
+            request.form.get("shop_code", "").strip(),
             request.form.get("username", "").strip(),
             request.form.get("password", ""),
         )
@@ -35,13 +37,7 @@ def login():
             flash(blocked, "danger")
             return render_template("auth/login.html", **_login_vars())
         clear_failures()
-        session.clear()
-        session["user_id"] = user["id"]
-        session["username"] = user["username"]
-        session["full_name"] = user.get("full_name") or user["username"]
-        session["photo"] = user.get("photo")
-        session["role"] = user.get("role") or "staff"
-        session.permanent = True
+        bind_shop_session(user, user["tenant"])
         write_audit("LOGIN", "auth", "user", user["id"])
         nxt = safe_next(request.args.get("next") or request.form.get("next"), url_for("dashboard.dashboard"))
         return redirect(nxt)
@@ -57,6 +53,7 @@ def register():
         "email": request.form.get("email", ""),
         "mobile": request.form.get("mobile", ""),
         "username": request.form.get("username", ""),
+        "shop_code": request.form.get("shop_code", ""),
     }
     if request.method == "POST":
         try:
@@ -70,6 +67,7 @@ def register():
                 form["mobile"],
                 form["username"],
                 password,
+                form["shop_code"],
             )
             photo = save_user_photo(request.files.get("photo"), created["id"])
             if photo:

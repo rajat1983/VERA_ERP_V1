@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+{% from "_macros.html" import csrf_input %}
+{% block title %}{% if mode == 'edit' %}Edit service{% else %}Create Service{% endif %} — VERA ERP{% endblock %}
+{% block page_title %}Services{% endblock %}
+{% block content %}
+
+<div class="text-muted small mb-2">Services <span class="mx-1">›</span> {% if mode == 'edit' %}Edit{% else %}Create{% endif %}</div>
+<div class="page-header">
+  <div>
+    <h1>{% if mode == 'edit' %}Edit service{% else %}Create Service{% endif %}</h1>
+  </div>
+</div>
+
+<form method="post" class="page-card page-card-open">
+  {{ csrf_input() }}
+  <div class="card-body">
+    <div class="row g-3">
+      <div class="col-md-6">
+        <label class="form-label" for="name">Name <span class="text-danger">*</span></label>
+        <input id="name" name="name" class="form-control" required value="{{ service.name or '' }}" maxlength="160">
+        <div class="form-text">Include the size/type in the name, e.g. "Xerox A4 B/W", "Lamination A3".</div>
+      </div>
+      <div class="col-md-6">
+        <label class="form-label" for="category_search">Category</label>
+        <div class="customer-combobox position-relative">
+          <input type="hidden" name="category" id="category" value="{{ service.category or '' }}">
+          <input type="text" id="category_search" class="form-control" value="{{ service.category or '' }}" placeholder="Search or select a category" autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="category_results">
+          <div id="category_results" class="customer-suggest" hidden role="listbox"></div>
+        </div>
+        <div class="form-text">Choose an existing category, or add a new one if it is not in the list.</div>
+      </div>
+      <div class="col-md-6">
+        <label class="form-label" for="unit">Unit <span class="text-danger">*</span></label>
+        <select id="unit" name="unit" class="form-select" required>
+          <option value="">Select an option</option>
+          {% for u in units %}
+          <option value="{{ u }}" {% if service.unit == u %}selected{% endif %}>{{ u }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-6">
+        <label class="form-label" for="price">Default Price (₹) <span class="text-danger">*</span></label>
+        <input id="price" name="price" type="number" min="0" step="0.01" class="form-control" required value="{{ service.price }}">
+      </div>
+      <div class="col-12">
+        <div class="form-check form-switch">
+          <input class="form-check-input" type="checkbox" role="switch" id="is_active" name="is_active" value="1" {% if service.is_active %}checked{% endif %}>
+          <label class="form-check-label" for="is_active">Active</label>
+        </div>
+      </div>
+    </div>
+    <div class="d-flex flex-wrap gap-2 mt-4">
+      {% if mode == 'edit' %}
+      <button type="submit" class="btn btn-primary">Save</button>
+      {% else %}
+      <button type="submit" name="action" value="create" class="btn btn-primary">Create</button>
+      <button type="submit" name="action" value="another" class="btn btn-outline-primary">Create &amp; create another</button>
+      {% endif %}
+      <a href="{{ url_for('services.index') }}" class="btn btn-outline-secondary">Cancel</a>
+    </div>
+  </div>
+</form>
+
+<div class="modal fade" id="quickCategoryModal" tabindex="-1" aria-labelledby="quickCategoryTitle" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 class="modal-title fs-5" id="quickCategoryTitle">Add new category</h2>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <label class="form-label" for="quick_category_name">Category name <span class="text-danger">*</span></label>
+        <input type="text" id="quick_category_name" class="form-control" maxlength="80">
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-primary" id="quickCategorySave">Save category</button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/service-form.js') }}"></script>
+{% endblock %}

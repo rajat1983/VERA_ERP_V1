@@ -1,0 +1,44 @@
+{% extends "platform/layout.html" %}
+{% from "_macros.html" import csrf_input %}
+{% block title %}Add shop — VERA Platform{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1>Add shop</h1>
+    <p>Creates an isolated tenant, shop code, and the first shop admin user.</p>
+  </div>
+</div>
+<form method="post" class="page-card" style="max-width: 36rem;">
+  {{ csrf_input() }}
+  <div class="card-body">
+    <div class="mb-3">
+      <label class="form-label" for="name">Shop name</label>
+      <input class="form-control" id="name" name="name" required maxlength="160" value="{{ form.name }}">
+    </div>
+    <div class="mb-3">
+      <label class="form-label" for="shop_code">Shop code (optional)</label>
+      <input class="form-control" id="shop_code" name="shop_code" maxlength="16" value="{{ form.shop_code }}" placeholder="Leave blank to auto-generate SHOP0002…">
+    </div>
+    <hr>
+    <h2 class="h6">Shop admin</h2>
+    <div class="mb-3">
+      <label class="form-label" for="owner_name">Name</label>
+      <input class="form-control" id="owner_name" name="owner_name" required maxlength="120" value="{{ form.owner_name }}">
+    </div>
+    <div class="mb-3">
+      <label class="form-label" for="owner_email">Email</label>
+      <input class="form-control" id="owner_email" name="owner_email" type="email" required maxlength="120" value="{{ form.owner_email }}">
+    </div>
+    <div class="mb-3">
+      <label class="form-label" for="owner_username">Username</label>
+      <input class="form-control" id="owner_username" name="owner_username" required maxlength="80" value="{{ form.owner_username }}">
+    </div>
+    <div class="mb-3">
+      <label class="form-label" for="owner_password">Password</label>
+      <input class="form-control" id="owner_password" name="owner_password" type="password" required minlength="6">
+    </div>
+    <button class="btn btn-primary" type="submit">Create shop</button>
+    <a class="btn btn-outline-secondary" href="{{ url_for('platform.shops') }}">Cancel</a>
+  </div>
+</form>
+{% endblock %}

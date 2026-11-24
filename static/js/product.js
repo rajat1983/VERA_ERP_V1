@@ -120,7 +120,25 @@ function registerEvents() {
 
     if (saveButton) {
 
-        saveButton.addEventListener("click", validateSellingPrice);
+        saveButton.addEventListener("click", function () {
+            const action = document.getElementById("product_action");
+            if (action) {
+                action.value = "create";
+            }
+            validateSellingPrice();
+        });
+
+    }
+
+    if (continueButton) {
+
+        continueButton.addEventListener("click", function () {
+            const action = document.getElementById("product_action");
+            if (action) {
+                action.value = "another";
+            }
+            validateSellingPrice();
+        });
 
     }
 
@@ -253,6 +271,12 @@ function validateSellingPrice() {
 
         return;
 
+    }
+
+    const categoryField = document.getElementById("category");
+    if (categoryField && !categoryField.value.trim()) {
+        alert("Please select a Category.");
+        return;
     }
 
     const cost = parseFloat(costPrice.value) || 0;

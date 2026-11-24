@@ -21,6 +21,10 @@
     <input class="form-control" id="photo" type="file" name="photo" accept=".jpg,.jpeg,.png,.webp">
   </div>
   <div class="mb-3">
+    <label class="form-label" for="shop_code">Shop code</label>
+    <input class="form-control" id="shop_code" name="shop_code" value="{{ form.shop_code }}" required maxlength="16" placeholder="SHOP0001">
+  </div>
+  <div class="mb-3">
     <label class="form-label" for="username">Username</label>
     <input class="form-control" id="username" name="username" value="{{ form.username }}" required maxlength="80" autocomplete="username">
   </div>

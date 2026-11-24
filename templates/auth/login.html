@@ -8,7 +8,11 @@
   <input type="hidden" name="next" value="{{ request.args.get('next') }}">
   {% endif %}
   <div class="mb-3">
-    <label class="form-label" for="username">Username</label>
+    <label class="form-label" for="shop_code">Shop code</label>
+    <input class="form-control" id="shop_code" name="shop_code" autocomplete="organization" required maxlength="16" placeholder="SHOP0001">
+  </div>
+  <div class="mb-3">
+    <label class="form-label" for="username">Username or email</label>
     <input class="form-control" id="username" name="username" autocomplete="username" required>
   </div>
   <div class="mb-3">

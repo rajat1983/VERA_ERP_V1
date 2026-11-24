@@ -15,6 +15,8 @@ document.addEventListener("DOMContentLoaded", function () {
         btn.addEventListener("click", addRow);
     }
 
+    initCustomerCombobox();
+
 });
 
 function productTippyContent(option) {
@@ -449,6 +451,22 @@ if (saleForm) {
 
         });
 
+        const customerId = (document.getElementById("customer_id") || {}).value;
+
+        if (!customerId) {
+
+            e.preventDefault();
+
+            Swal.fire({
+                icon: "warning",
+                title: "Customer required",
+                text: "Search and select a customer, or add a new one."
+            });
+
+            return;
+
+        }
+
         if (incomplete || !valid) {
 
             e.preventDefault();
@@ -567,7 +585,7 @@ document.addEventListener("DOMContentLoaded", function () {
         // Check customer
         const customer =
             document.querySelector(
-                "select[name='customer_id']"
+                "[name='customer_id']"
             );
 
         if (customer && customer.value) {
@@ -628,3 +646,261 @@ document.addEventListener("DOMContentLoaded", function () {
     });
 
 });
+
+function escapeHtml(value) {
+    return String(value == null ? "" : value)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;");
+}
+
+function customerLabel(name, phone) {
+    if (phone) {
+        return name + " (" + phone + ")";
+    }
+    return name;
+}
+
+function csrfHeader() {
+    const meta = document.querySelector('meta[name="csrf-token"]');
+    return meta ? meta.content : "";
+}
+
+function initCustomerCombobox() {
+    const search = document.getElementById("customer_search");
+    const hidden = document.getElementById("customer_id");
+    const results = document.getElementById("customer_results");
+    const modalEl = document.getElementById("quickCustomerModal");
+    if (!search || !hidden || !results) {
+        return;
+    }
+
+    let debounceTimer = null;
+    let latestQuery = "";
+    let items = [];
+    let activeIndex = -1;
+    let selectedLock = false;
+
+    function hideResults() {
+        results.hidden = true;
+        results.innerHTML = "";
+        search.setAttribute("aria-expanded", "false");
+        activeIndex = -1;
+        items = [];
+    }
+
+    function highlight() {
+        const rows = results.querySelectorAll("[data-suggest-index]");
+        rows.forEach(function (row, i) {
+            row.classList.toggle("is-highlighted", i === activeIndex);
+        });
+    }
+
+    function selectCustomer(id, name, phone) {
+        hidden.value = String(id);
+        selectedLock = true;
+        search.value = customerLabel(name, phone);
+        hideResults();
+    }
+
+    function openAddModal(prefillName) {
+        hideResults();
+        const nameInput = document.getElementById("quick_customer_name");
+        const phoneInput = document.getElementById("quick_customer_phone");
+        if (nameInput) {
+            const digits = (prefillName || "").replace(/\D/g, "");
+            nameInput.value = digits.length === (prefillName || "").trim().length ? "" : (prefillName || "").trim();
+        }
+        if (phoneInput) {
+            const digits = (prefillName || "").replace(/\D/g, "");
+            phoneInput.value = digits.length >= 8 ? digits.slice(0, 10) : "";
+        }
+        if (modalEl && window.bootstrap) {
+            window.bootstrap.Modal.getOrCreateInstance(modalEl).show();
+            setTimeout(function () {
+                const focusEl = document.getElementById("quick_customer_name");
+                if (focusEl && !focusEl.value) {
+                    focusEl.focus();
+                } else if (document.getElementById("quick_customer_phone")) {
+                    document.getElementById("quick_customer_phone").focus();
+                }
+            }, 200);
+        }
+    }
+
+    function render(query, matches) {
+        results.innerHTML = "";
+        items = matches || [];
+        items.forEach(function (row, index) {
+            const btn = document.createElement("button");
+            btn.type = "button";
+            btn.className = "customer-suggest-item";
+            btn.setAttribute("data-suggest-index", String(index));
+            btn.innerHTML =
+                "<span>" + escapeHtml(row.name) + "</span>" +
+                "<small>" + escapeHtml(row.phone || "") + "</small>";
+            btn.addEventListener("mousedown", function (e) {
+                e.preventDefault();
+                selectCustomer(row.id, row.name, row.phone);
+            });
+            results.appendChild(btn);
+        });
+        const add = document.createElement("button");
+        add.type = "button";
+        add.className = "customer-suggest-item customer-suggest-add";
+        add.setAttribute("data-suggest-index", String(items.length));
+        add.textContent = "+ Add New Customer";
+        add.addEventListener("mousedown", function (e) {
+            e.preventDefault();
+            openAddModal(query);
+        });
+        results.appendChild(add);
+        items = items.concat([{ type: "add" }]);
+        results.hidden = false;
+        search.setAttribute("aria-expanded", "true");
+        activeIndex = matches && matches.length ? 0 : items.length - 1;
+        highlight();
+    }
+
+    function fetchMatches(query) {
+        latestQuery = query;
+        fetch("/sales/customer-search?q=" + encodeURIComponent(query), {
+            headers: { "Accept": "application/json" }
+        })
+            .then(function (res) { return res.json(); })
+            .then(function (data) {
+                if (query !== latestQuery) {
+                    return;
+                }
+                render(query, Array.isArray(data) ? data : []);
+            })
+            .catch(function () {
+                render(query, []);
+            });
+    }
+
+    search.addEventListener("input", function () {
+        hidden.value = "";
+        selectedLock = false;
+        const query = search.value.trim();
+        clearTimeout(debounceTimer);
+        if (!query) {
+            hideResults();
+            return;
+        }
+        debounceTimer = setTimeout(function () {
+            fetchMatches(query);
+        }, 200);
+    });
+
+    search.addEventListener("focus", function () {
+        if (selectedLock) {
+            return;
+        }
+        const query = search.value.trim();
+        if (query) {
+            fetchMatches(query);
+        }
+    });
+
+    search.addEventListener("keydown", function (e) {
+        if (results.hidden) {
+            return;
+        }
+        const max = items.length - 1;
+        if (e.key === "ArrowDown") {
+            e.preventDefault();
+            activeIndex = activeIndex < max ? activeIndex + 1 : 0;
+            highlight();
+        } else if (e.key === "ArrowUp") {
+            e.preventDefault();
+            activeIndex = activeIndex > 0 ? activeIndex - 1 : max;
+            highlight();
+        } else if (e.key === "Enter") {
+            if (activeIndex < 0) {
+                return;
+            }
+            e.preventDefault();
+            const chosen = items[activeIndex];
+            if (!chosen) {
+                return;
+            }
+            if (chosen.type === "add") {
+                openAddModal(search.value.trim());
+            } else {
+                selectCustomer(chosen.id, chosen.name, chosen.phone);
+            }
+        } else if (e.key === "Escape") {
+            hideResults();
+        }
+    });
+
+    search.addEventListener("blur", function () {
+        setTimeout(hideResults, 150);
+    });
+
+    const phoneInput = document.getElementById("quick_customer_phone");
+    if (phoneInput) {
+        phoneInput.addEventListener("input", function () {
+            this.value = this.value.replace(/\D/g, "").substring(0, 10);
+        });
+    }
+
+    const saveBtn = document.getElementById("quickCustomerSave");
+    if (saveBtn) {
+        saveBtn.addEventListener("click", function () {
+            const nameInput = document.getElementById("quick_customer_name");
+            const name = (nameInput && nameInput.value || "").trim();
+            const phone = (phoneInput && phoneInput.value || "").replace(/\D/g, "");
+            if (!name) {
+                Swal.fire({ icon: "warning", title: "Customer name is required." });
+                return;
+            }
+            if (phone.length !== 10) {
+                Swal.fire({ icon: "warning", title: "Enter a valid 10-digit mobile number." });
+                return;
+            }
+            saveBtn.disabled = true;
+            fetch("/sales/quick-customer", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Accept": "application/json",
+                    "X-CSRF-Token": csrfHeader()
+                },
+                body: JSON.stringify({ name: name, phone: phone, csrf_token: csrfHeader() })
+            })
+                .then(function (res) {
+                    return res.text().then(function (raw) {
+                        var body = {};
+                        try {
+                            body = raw ? JSON.parse(raw) : {};
+                        } catch (err) {
+                            body = { error: res.status === 400 ? "Session expired. Refresh the page and try again." : "Could not save customer." };
+                        }
+                        return { ok: res.ok, body: body };
+                    });
+                })
+                .then(function (payload) {
+                    saveBtn.disabled = false;
+                    if (!payload.body || !payload.body.ok) {
+                        Swal.fire({
+                            icon: "error",
+                            title: "Could not save customer",
+                            text: (payload.body && payload.body.error) || "Please try again."
+                        });
+                        return;
+                    }
+                    if (modalEl && window.bootstrap) {
+                        window.bootstrap.Modal.getOrCreateInstance(modalEl).hide();
+                    }
+                    selectCustomer(payload.body.id, payload.body.name, payload.body.phone);
+                })
+                .catch(function () {
+                    saveBtn.disabled = false;
+                    Swal.fire({ icon: "error", title: "Could not save customer", text: "Please try again." });
+                });
+        });
+    }
+}

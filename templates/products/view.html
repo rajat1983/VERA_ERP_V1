@@ -54,10 +54,25 @@ style="max-height:220px;">
                             <th>Product Name</th>
                             <td>{{ product.name }}</td>
                         </tr>
-
+                        <tr>
+                            <th>Short name</th>
+                            <td>{{ product.short_name or '—' }}</td>
+                        </tr>
+                        <tr>
+                            <th>Brand</th>
+                            <td>{{ product.brand or '—' }}</td>
+                        </tr>
+                        <tr>
+                            <th>Category</th>
+                            <td>{{ product.category or '—' }}</td>
+                        </tr>
                         <tr>
                             <th>SKU</th>
                             <td>{{ product.sku }}</td>
+                        </tr>
+                        <tr>
+                            <th>Barcode</th>
+                            <td>{{ product.barcode or '—' }}</td>
                         </tr>
 
                         <tr>
@@ -104,6 +119,10 @@ style="max-height:220px;">
                             <th>Selling Price</th>
                             <td>₹ {{ "%.2f"|format(product.selling_price) }}</td>
                         </tr>
+                        <tr>
+                            <th>MRP</th>
+                            <td>{% if product.mrp is not none %}₹ {{ "%.2f"|format(product.mrp) }}{% else %}—{% endif %}</td>
+                        </tr>
 
                         <tr>
                             <th>Current Stock</th>
@@ -135,6 +154,22 @@ style="max-height:220px;">
                         <tr>
                             <th>Reorder Level</th>
                             <td>{{ product.reorder_level }}</td>
+                        </tr>
+                        <tr>
+                            <th>Minimum Stock</th>
+                            <td>{{ product.low_stock_threshold or 0 }}</td>
+                        </tr>
+                        <tr>
+                            <th>Unit</th>
+                            <td>{{ product.unit or 'pcs' }}</td>
+                        </tr>
+                        <tr>
+                            <th>Description</th>
+                            <td>{{ product.description or '—' }}</td>
+                        </tr>
+                        <tr>
+                            <th>Notes</th>
+                            <td>{{ product.notes or '—' }}</td>
                         </tr>
 
                     </table>

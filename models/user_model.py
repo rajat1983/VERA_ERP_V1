@@ -12,34 +12,8 @@ def _role_id(cur, name):
 
 
 def ensure_default_admin():
-    conn = get_db_connection()
-    cur = conn.cursor()
-    try:
-        seeds = (
-            ("admin", "admin123", "admin"),
-            ("manager", "manager123", "manager"),
-            ("staff", "staff123", "staff"),
-        )
-        for username, password, role_name in seeds:
-            cur.execute("SELECT id FROM users WHERE username=%s", (username,))
-            if cur.fetchone():
-                continue
-            rid = _role_id(cur, role_name)
-            if not rid:
-                continue
-            cur.execute(
-                """
-                INSERT INTO users (username, password_hash, role_id, is_active, status)
-                VALUES (%s, %s, %s, 1, 'active')
-                """,
-                (username, generate_password_hash(password), rid),
-            )
-            if _has_role_col(cur):
-                cur.execute("UPDATE users SET role=%s WHERE username=%s", (role_name, username))
-        conn.commit()
-    finally:
-        cur.close()
-        conn.close()
+    """Do not insert hardcoded passwords. Existing users are left unchanged."""
+    return
 
 
 def _has_role_col(cur):
@@ -68,11 +42,14 @@ def _clean_profile(full_name, email, mobile, require_email=False):
     return full_name, email or None, mobile or None
 
 
-def _assert_unique_email(cur, email, exclude_id=None):
+def _assert_unique_email(cur, email, exclude_id=None, tenant_id=None):
     if not email:
         return
     sql = "SELECT id FROM users WHERE email=%s"
     params = [email]
+    if tenant_id is not None:
+        sql += " AND tenant_id=%s"
+        params.append(tenant_id)
     if exclude_id:
         sql += " AND id <> %s"
         params.append(exclude_id)
@@ -81,19 +58,36 @@ def _assert_unique_email(cur, email, exclude_id=None):
         raise ValueError("That email is already in use.")
 
 
-def authenticate(username, password):
+def _tenant_id_or_session(tenant_id=None):
+    if tenant_id is not None:
+        return int(tenant_id)
+    from utils.tenant import current_tenant_id
+    return current_tenant_id()
+
+
+def authenticate(shop_code, identifier, password):
+    from models.tenant_model import get_by_shop_code
+
+    identifier = (identifier or "").strip()
+    tenant = get_by_shop_code(shop_code)
+    if not tenant or (tenant.get("status") or "").lower() != "active":
+        return None
+    if not identifier or not password:
+        return None
     conn = get_db_connection()
     cur = conn.cursor()
     try:
         cur.execute(
             """
             SELECT u.id, u.username, u.password_hash, u.is_active, u.role_id, u.status,
-                   u.full_name, u.email, u.mobile, u.photo, r.name AS role
+                   u.full_name, u.email, u.mobile, u.photo, u.tenant_id, r.name AS role
             FROM users u
             LEFT JOIN roles r ON r.id = u.role_id
-            WHERE u.username=%s
+            WHERE u.tenant_id=%s
+              AND (u.username=%s OR (u.email IS NOT NULL AND u.email=%s))
+            LIMIT 1
             """,
-            (username,),
+            (tenant["id"], identifier, identifier.lower()),
         )
         user = cur.fetchone()
         if not user:
@@ -102,6 +96,7 @@ def authenticate(username, password):
             return None
         user["role"] = (user.get("role") or "staff").lower()
         user["status"] = (user.get("status") or "active").lower()
+        user["tenant"] = tenant
         return user
     finally:
         cur.close()
@@ -111,14 +106,17 @@ def authenticate(username, password):
 def list_users():
     conn = get_db_connection()
     cur = conn.cursor()
+    tenant_id = _tenant_id_or_session()
     cur.execute(
         """
         SELECT u.id, u.username, u.is_active, u.status, u.role_id, u.full_name, u.email, u.mobile, u.photo,
                r.name AS role, r.description AS role_description
         FROM users u
         LEFT JOIN roles r ON r.id = u.role_id
+        WHERE u.tenant_id=%s
         ORDER BY FIELD(u.status, 'pending', 'approved', 'active', 'rejected'), u.id
-        """
+        """,
+        (tenant_id,),
     )
     rows = cur.fetchall()
     cur.close()
@@ -142,7 +140,7 @@ def get_user(user_id):
     cur.execute(
         """
         SELECT u.id, u.username, u.is_active, u.status, u.role_id, u.full_name, u.email, u.mobile, u.photo,
-               r.name AS role
+               u.tenant_id, r.name AS role
         FROM users u
         LEFT JOIN roles r ON r.id = u.role_id
         WHERE u.id=%s
@@ -175,7 +173,7 @@ def count_active_admins(exclude_id=None):
     return int(total)
 
 
-def create_user(username, password, role_id, is_active=1, full_name="", email="", mobile=""):
+def create_user(username, password, role_id, is_active=1, full_name="", email="", mobile="", tenant_id=None):
     username = (username or "").strip()
     if not username or not password:
         raise ValueError("Username and password are required.")
@@ -183,20 +181,25 @@ def create_user(username, password, role_id, is_active=1, full_name="", email=""
     conn = get_db_connection()
     cur = conn.cursor()
     try:
-        cur.execute("SELECT id FROM users WHERE username=%s", (username,))
+        tenant_id = int(tenant_id) if tenant_id is not None else _tenant_id_or_session()
+        cur.execute(
+            "SELECT id FROM users WHERE tenant_id=%s AND username=%s",
+            (tenant_id, username),
+        )
         if cur.fetchone():
             raise ValueError("Username already exists.")
-        _assert_unique_email(cur, email)
+        _assert_unique_email(cur, email, tenant_id=tenant_id)
         cur.execute("SELECT name FROM roles WHERE id=%s", (role_id,))
         role = cur.fetchone()
         if not role:
             raise ValueError("Invalid role.")
         cur.execute(
             """
-            INSERT INTO users (username, password_hash, role_id, is_active, status, full_name, email, mobile)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+            INSERT INTO users (tenant_id, username, password_hash, role_id, is_active, status, full_name, email, mobile)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
             """,
             (
+                tenant_id,
                 username,
                 generate_password_hash(password),
                 role_id,
@@ -208,10 +211,16 @@ def create_user(username, password, role_id, is_active=1, full_name="", email=""
             ),
         )
         if _has_role_col(cur):
-            cur.execute("UPDATE users SET role=%s WHERE username=%s", (role["name"], username))
+            cur.execute(
+                "UPDATE users SET role=%s WHERE tenant_id=%s AND username=%s",
+                (role["name"], tenant_id, username),
+            )
         user_id = cur.lastrowid
         if not user_id:
-            cur.execute("SELECT id FROM users WHERE username=%s", (username,))
+            cur.execute(
+                "SELECT id FROM users WHERE tenant_id=%s AND username=%s",
+                (tenant_id, username),
+            )
             user_id = cur.fetchone()["id"]
         conn.commit()
         return user_id
@@ -234,7 +243,7 @@ def update_user(user_id, role_id, is_active, password=None, full_name="", email=
     conn = get_db_connection()
     cur = conn.cursor()
     try:
-        _assert_unique_email(cur, email, exclude_id=user_id)
+        _assert_unique_email(cur, email, exclude_id=user_id, tenant_id=existing.get("tenant_id"))
         cur.execute("SELECT name FROM roles WHERE id=%s", (role_id,))
         role = cur.fetchone()
         if not role:
@@ -278,7 +287,8 @@ def update_own_profile(user_id, full_name, email, mobile):
     conn = get_db_connection()
     cur = conn.cursor()
     try:
-        _assert_unique_email(cur, email, exclude_id=user_id)
+        existing = get_user(user_id)
+        _assert_unique_email(cur, email, exclude_id=user_id, tenant_id=(existing or {}).get("tenant_id"))
         cur.execute(
             "UPDATE users SET full_name=%s, email=%s, mobile=%s WHERE id=%s",
             (full_name, email, mobile, user_id),
@@ -335,7 +345,7 @@ def change_own_password(user_id, current_password, new_password):
 
 def login_blocked_reason(user):
     if not user:
-        return "Invalid username or password."
+        return "Invalid shop code, username, or password."
     status = (user.get("status") or "active").lower()
     if status == "pending":
         return "Your account is pending admin approval."
@@ -346,34 +356,48 @@ def login_blocked_reason(user):
     return None
 
 
-def register_user(full_name, email, mobile, username, password):
+def register_user(full_name, email, mobile, username, password, shop_code):
+    from models.tenant_model import get_by_shop_code
+
     username = (username or "").strip()
     if not username or not password:
         raise ValueError("Username and password are required.")
     if len(password) < 6:
         raise ValueError("Password must be at least 6 characters.")
+    tenant = get_by_shop_code(shop_code)
+    if not tenant or (tenant.get("status") or "").lower() != "active":
+        raise ValueError("Enter a valid shop code.")
     full_name, email, mobile = _clean_profile(full_name, email, mobile, require_email=True)
     conn = get_db_connection()
     cur = conn.cursor()
     try:
-        cur.execute("SELECT id FROM users WHERE username=%s", (username,))
+        cur.execute(
+            "SELECT id FROM users WHERE tenant_id=%s AND username=%s",
+            (tenant["id"], username),
+        )
         if cur.fetchone():
             raise ValueError("Username already exists.")
-        _assert_unique_email(cur, email)
+        _assert_unique_email(cur, email, tenant_id=tenant["id"])
         rid = _role_id(cur, "staff")
         if not rid:
             raise ValueError("Staff role is not set up.")
         cur.execute(
             """
-            INSERT INTO users (username, password_hash, role_id, is_active, status, full_name, email, mobile)
-            VALUES (%s, %s, %s, 0, 'pending', %s, %s, %s)
+            INSERT INTO users (tenant_id, username, password_hash, role_id, is_active, status, full_name, email, mobile)
+            VALUES (%s, %s, %s, %s, 0, 'pending', %s, %s, %s)
             """,
-            (username, generate_password_hash(password), rid, full_name, email, mobile),
+            (tenant["id"], username, generate_password_hash(password), rid, full_name, email, mobile),
         )
         if _has_role_col(cur):
-            cur.execute("UPDATE users SET role='staff' WHERE username=%s", (username,))
+            cur.execute(
+                "UPDATE users SET role='staff' WHERE tenant_id=%s AND username=%s",
+                (tenant["id"], username),
+            )
         conn.commit()
-        cur.execute("SELECT id FROM users WHERE username=%s", (username,))
+        cur.execute(
+            "SELECT id FROM users WHERE tenant_id=%s AND username=%s",
+            (tenant["id"], username),
+        )
         row = cur.fetchone()
         return {
             "id": row["id"],

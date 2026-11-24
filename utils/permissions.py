@@ -37,6 +37,10 @@ def can(action, module="*"):
 def _staff_write_allowed(path):
     if path == "/sales/add":
         return True
+    if path == "/sales/quick-customer":
+        return True
+    if path in ("/pos/complete", "/pos/session/start"):
+        return True
     if re.fullmatch(r"/sales/\d+/update", path):
         return True
     return False
@@ -54,6 +58,8 @@ def _staff_form_blocked(path):
         "/vendors/edit",
         "/products/add",
         "/products/edit",
+        "/services/add",
+        "/services/",
         "/purchases/add",
         "/purchases/edit",
         "/production/add",
@@ -70,7 +76,17 @@ def _staff_form_blocked(path):
 def enforce_request():
     if not auth_enabled():
         return
-    if request.endpoint in (None, "static", "healthz", "auth.login", "auth.logout", "auth.register", "auth.activate"):
+    if request.endpoint in (
+        None,
+        "static",
+        "healthz",
+        "auth.login",
+        "auth.logout",
+        "auth.register",
+        "auth.activate",
+        "platform.login",
+        "platform.logout",
+    ):
         return
     role = current_role()
     path = request.path if request.path != "/" else "/"

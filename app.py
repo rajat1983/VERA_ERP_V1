@@ -6,7 +6,7 @@ import time
 
 sys.path.append("/var/www/html")
 
-from flask import Flask, redirect, render_template, request, session, url_for
+from flask import Flask, g, redirect, render_template, request, session, url_for
 
 from controllers.employee_controller import employee_bp
 from controllers.dashboard_controller import dashboard_bp
@@ -23,8 +23,11 @@ from controllers.payment_controller import payment_bp
 from controllers.report_controller import report_bp
 from controllers.settings_controller import settings_bp
 from controllers.user_controller import user_bp
+from controllers.pos_controller import pos_bp
+from controllers.service_controller import service_bp
 from genai.routes.ai_routes import ai_bp
-from models import user_model
+from controllers.platform_controller import platform_bp
+from models import platform_user_model, user_model
 from utils.auth import auth_enabled, csrf_token, validate_csrf, safe_next
 from utils.permissions import can, enforce_request
 from utils.schema import ensure_schema, ensure_roles_users
@@ -63,6 +66,7 @@ except Exception as exc:
 try:
     ensure_roles_users()
     user_model.ensure_default_admin()
+    platform_user_model.bootstrap_from_env()
 except Exception as exc:
     print("Users/roles bootstrap failed:", exc)
 
@@ -82,6 +86,9 @@ app.register_blueprint(payment_bp)
 app.register_blueprint(report_bp)
 app.register_blueprint(settings_bp)
 app.register_blueprint(user_bp)
+app.register_blueprint(pos_bp)
+app.register_blueprint(service_bp)
+app.register_blueprint(platform_bp)
 
 
 def _safe_next(path):
@@ -108,21 +115,43 @@ def _guard():
     if request.endpoint in (None, "static", "healthz") or request.path.startswith("/static"):
         return
     idle = int(os.environ.get("VERA_IDLE_SECONDS", "28800"))
-    if session.get("user_id"):
+    if session.get("user_id") or session.get("platform_user_id"):
         last = session.get("_last_seen")
         now = time.time()
         if last and now - float(last) > idle:
             session.clear()
+            if request.path.startswith("/platform"):
+                return redirect(url_for("platform.login"))
             return redirect(url_for("auth.login"))
         session["_last_seen"] = now
         session.permanent = True
-    public = {"auth.login", "auth.register", "auth.activate", "auth.logout"}
+    public = {
+        "auth.login",
+        "auth.register",
+        "auth.activate",
+        "auth.logout",
+        "platform.login",
+        "platform.logout",
+    }
     if request.endpoint in public:
         if request.method == "POST":
             validate_csrf()
         return
+    if request.path.startswith("/platform"):
+        if auth_enabled() and not session.get("platform_user_id"):
+            return redirect(url_for("platform.login", next=request.path))
+        if request.method in ("POST", "PUT", "PATCH", "DELETE") and auth_enabled():
+            validate_csrf()
+        return
+    if session.get("platform_user_id") and not session.get("user_id"):
+        from flask import abort
+        abort(403)
     if auth_enabled() and not session.get("user_id"):
         return redirect(url_for("auth.login", next=request.path))
+    if auth_enabled() and not session.get("tenant_id"):
+        session.clear()
+        return redirect(url_for("auth.login", next=request.path))
+    g.tenant_id = int(session.get("tenant_id"))
     if request.method in ("POST", "PUT", "PATCH", "DELETE") and auth_enabled():
         validate_csrf()
     enforce_request()

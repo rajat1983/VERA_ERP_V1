@@ -30,6 +30,8 @@ def csrf_token():
 def validate_csrf():
     if request.method in ("POST", "PUT", "PATCH", "DELETE"):
         sent = request.form.get("csrf_token") or request.headers.get("X-CSRF-Token")
+        if not sent and request.is_json:
+            sent = (request.get_json(silent=True) or {}).get("csrf_token")
         if not sent or sent != session.get("_csrf"):
             abort(400)
 

@@ -101,6 +101,10 @@ def generate_customer_code():
 # Check Duplicate Customer
 # ==========================================
 
+def _digits_only(value):
+    return "".join(ch for ch in (value or "") if ch.isdigit())
+
+
 def check_duplicate_customer(
     email,
     phone,
@@ -110,21 +114,11 @@ def check_duplicate_customer(
     conn = get_db_connection()
     cur = conn.cursor()
 
-    query = """
-        SELECT
-            email,
-            phone
-        FROM customers
-        WHERE
-            (email=%s OR phone=%s)
-    """
-
-    params = [email, phone]
+    query = "SELECT email, phone FROM customers"
+    params = []
 
     if exclude_id is not None:
-
-        query += " AND id<>%s"
-
+        query += " WHERE id<>%s"
         params.append(exclude_id)
 
     cur.execute(query, tuple(params))
@@ -134,18 +128,28 @@ def check_duplicate_customer(
     cur.close()
     conn.close()
 
+    email_norm = (email or "").strip().lower()
+    phone_digits = _digits_only(phone)
+
     email_exists = False
     phone_exists = False
 
     for row in rows:
-
-        if row["email"] == email:
+        row_email = (row.get("email") or "").strip().lower()
+        if email_norm and row_email and row_email == email_norm:
             email_exists = True
-
-        if row["phone"] == phone:
+        if phone_digits and _digits_only(row.get("phone")) == phone_digits:
             phone_exists = True
 
     return email_exists, phone_exists
+
+def _empty_to_none(value):
+    if value is None:
+        return None
+    if isinstance(value, str) and not value.strip():
+        return None
+    return value
+
 
 def add_customer(customer_code, name, email, phone, gst_no, address, city,state, pincode,  status):
     conn = get_db_connection()
@@ -157,10 +161,23 @@ INSERT INTO customers
 
 VALUES(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
 
-""", (customer_code,name,email,phone,gst_no,address,city,state,pincode,status))
+""", (
+        customer_code,
+        name,
+        _empty_to_none(email),
+        _empty_to_none(phone),
+        _empty_to_none(gst_no),
+        _empty_to_none(address),
+        _empty_to_none(city),
+        _empty_to_none(state),
+        _empty_to_none(pincode),
+        status or "Active",
+    ))
     conn.commit()
+    customer_id = cur.lastrowid
     cur.close()
     conn.close()
+    return customer_id
 
 
 def get_customer_by_id(cid):
@@ -241,6 +258,30 @@ def search_customers(q):
         SELECT * FROM customers
         WHERE name LIKE %s OR email LIKE %s OR phone LIKE %s
     """, (f"%{q}%", f"%{q}%", f"%{q}%"))
+    rows = cur.fetchall()
+    cur.close()
+    conn.close()
+    return rows
+
+
+def search_customers_for_sale(q, limit=12):
+    q = (q or "").strip()
+    if not q:
+        return []
+    conn = get_db_connection()
+    cur = conn.cursor()
+    like = f"%{q}%"
+    cur.execute(
+        """
+        SELECT id, name, phone
+        FROM customers
+        WHERE LOWER(IFNULL(status, 'active')) = 'active'
+          AND (name LIKE %s OR phone LIKE %s OR IFNULL(customer_code, '') LIKE %s)
+        ORDER BY name
+        LIMIT %s
+        """,
+        (like, like, like, int(limit)),
+    )
     rows = cur.fetchall()
     cur.close()
     conn.close()

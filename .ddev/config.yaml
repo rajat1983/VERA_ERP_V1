@@ -19,6 +19,8 @@ web_environment:
   - SECRET_KEY=ddev-local-only-not-for-production
   - MAIL_SERVER=127.0.0.1
   - MAIL_PORT=1025
+  - PLATFORM_BOOTSTRAP_EMAIL=platform@vera-erp.local
+  - PLATFORM_BOOTSTRAP_PASSWORD=platform123
 corepack_enable: false
 web_extra_exposed_ports:
     - name: flask

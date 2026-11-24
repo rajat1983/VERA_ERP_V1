@@ -1,0 +1,38 @@
+{% extends "platform/layout.html" %}
+{% block title %}Platform overview — VERA{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1>Platform overview</h1>
+    <p>Shops on this VERA ERP instance. Subscription billing is not enabled yet (Phase 3).</p>
+  </div>
+  <a class="btn btn-primary" href="{{ url_for('platform.shop_add') }}">Add shop</a>
+</div>
+<div class="row g-3 mb-4">
+  <div class="col-md-4">
+    <div class="page-card">
+      <div class="card-body">
+        <div class="text-muted small">Total shops</div>
+        <div class="fs-3">{{ counts.total }}</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="page-card">
+      <div class="card-body">
+        <div class="text-muted small">Active</div>
+        <div class="fs-3">{{ counts.active }}</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="page-card">
+      <div class="card-body">
+        <div class="text-muted small">Suspended</div>
+        <div class="fs-3">{{ counts.suspended }}</div>
+      </div>
+    </div>
+  </div>
+</div>
+<p class="mb-0"><a href="{{ url_for('platform.shops') }}">View all shops</a></p>
+{% endblock %}

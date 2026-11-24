@@ -4,6 +4,32 @@ import os
 from werkzeug.utils import secure_filename
 
 product_bp = Blueprint("product", __name__)
+
+
+def _product_form_data(image_name):
+    return {
+        "vendor_id": request.form.get("vendor_id"),
+        "name": request.form.get("name"),
+        "short_name": request.form.get("short_name"),
+        "brand": request.form.get("brand"),
+        "sku": request.form.get("sku"),
+        "barcode": request.form.get("barcode"),
+        "image": image_name,
+        "cost_price": request.form.get("cost_price"),
+        "selling_price": request.form.get("selling_price"),
+        "mrp": request.form.get("mrp"),
+        "stock_qty": request.form.get("stock_qty"),
+        "reorder_level": request.form.get("reorder_level"),
+        "low_stock_threshold": request.form.get("low_stock_threshold") or 0,
+        "tax_rate": request.form.get("tax_rate") or 0,
+        "hsn_code": request.form.get("hsn_code"),
+        "unit": request.form.get("unit") or "pcs",
+        "product_type": request.form.get("product_type") or "finished_goods",
+        "category": request.form.get("category"),
+        "description": request.form.get("description"),
+        "notes": request.form.get("notes"),
+        "status": request.form.get("status"),
+    }
 @product_bp.route("/products")
 def index():
     page = int(request.args.get("page", 1))
@@ -63,21 +89,7 @@ def add_product():
             # -----------------------------
             # Prepare Data
             # -----------------------------
-            data = {
-                "vendor_id": request.form.get("vendor_id"),
-                "name": request.form.get("name"),
-                "sku": request.form.get("sku"),
-                "image": image_name,
-                "cost_price": request.form.get("cost_price"),
-                "selling_price": request.form.get("selling_price"),
-                "stock_qty": request.form.get("stock_qty"),
-                "reorder_level": request.form.get("reorder_level"),
-                "tax_rate": request.form.get("tax_rate") or 0,
-                "hsn_code": request.form.get("hsn_code"),
-                "unit": request.form.get("unit") or "pcs",
-                "product_type": request.form.get("product_type") or "finished_goods",
-                "status": request.form.get("status")
-            }
+            data = _product_form_data(image_name)
 
             # -----------------------------
             # Duplicate Validation
@@ -89,7 +101,8 @@ def add_product():
                 return render_template(
                     "products/add.html",
                     vendors=vendors,
-                    product_code=product_code
+                    product_code=product_code,
+                    units=product_model.UNITS,
                 )
 
             # -----------------------------
@@ -98,6 +111,9 @@ def add_product():
             product_model.add_product(data)
 
             flash("Product Added Successfully.", "success")
+
+            if request.form.get("action") == "another":
+                return redirect(url_for("product.add_product"))
 
             return redirect(url_for("product.index"))
 
@@ -110,14 +126,16 @@ def add_product():
             return render_template(
                 "products/add.html",
                 vendors=vendors,
-                product_code=product_code
+                product_code=product_code,
+                units=product_model.UNITS,
             )
 
     # GET Request
     return render_template(
         "products/add.html",
         vendors=vendors,
-        product_code=product_code
+        product_code=product_code,
+        units=product_model.UNITS,
     )
 
 @product_bp.route("/products/edit/<int:id>", methods=["GET", "POST"])
@@ -125,6 +143,10 @@ def edit_product(id):
 
     product = product_model.get_product_by_id(id)
     vendors = product_model.get_vendors()
+
+    if not product:
+        flash("Product not found.", "danger")
+        return redirect(url_for("product.index"))
 
     if request.method == "POST":
 
@@ -149,23 +171,7 @@ def edit_product(id):
                 os.path.join(upload_path, image_name)
             )
 
-        data = {
-
-            "vendor_id": request.form["vendor_id"],
-            "name": request.form["name"],
-            "sku": request.form["sku"],
-            "image": image_name,
-            "cost_price": request.form["cost_price"],
-            "selling_price": request.form["selling_price"],
-            "stock_qty": request.form["stock_qty"],
-            "reorder_level": request.form["reorder_level"],
-            "tax_rate": request.form.get("tax_rate") or 0,
-            "hsn_code": request.form.get("hsn_code"),
-            "unit": request.form.get("unit") or "pcs",
-            "product_type": request.form.get("product_type") or "finished_goods",
-            "status": request.form["status"]
-
-        }
+        data = _product_form_data(image_name)
 
         # Duplicate Product Name Validation
         if product_model.product_name_exists(data["name"], id):
@@ -175,7 +181,8 @@ def edit_product(id):
             return render_template(
                 "products/edit.html",
                 product=product,
-                vendors=vendors
+                vendors=vendors,
+                units=product_model.UNITS,
             )
 
         product_model.update_product(id, data)
@@ -187,8 +194,26 @@ def edit_product(id):
     return render_template(
         "products/edit.html",
         product=product,
-        vendors=vendors
+        vendors=vendors,
+        units=product_model.UNITS,
     )
+
+
+@product_bp.route("/products/categories")
+def categories():
+    q = request.args.get("q", "")
+    return jsonify(product_model.search_categories(q))
+
+
+@product_bp.route("/products/categories/quick-add", methods=["POST"])
+def quick_add_category():
+    data = request.get_json(silent=True) or request.form
+    name = (data.get("name") or "").strip()
+    try:
+        row = product_model.add_category(name)
+    except ValueError as ex:
+        return jsonify(ok=False, error=str(ex)), 400
+    return jsonify(ok=True, id=row["id"], name=row["name"])
 
 @product_bp.route("/products/delete/<int:id>")
 def delete(id):
@@ -223,7 +248,6 @@ def _safe_return_path(value, default="/products"):
 def view_product(id):
 
     product = product_model.get_product_by_id(id)
-
     if not product:
         flash("Product not found.", "danger")
         return redirect(url_for("product.index"))

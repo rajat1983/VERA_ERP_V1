@@ -1,0 +1,132 @@
+{% extends "base.html" %}
+{% block title %}Point Of Sale — VERA ERP{% endblock %}
+{% block page_title %}Point Of Sale{% endblock %}
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/vera-pos.css') }}">
+{% endblock %}
+{% block content %}
+<div class="pos-page" id="posApp"
+     data-csrf="{{ get_csrf_token() }}"
+     data-shop="{{ (company.company_name if company else '') or 'Shop' }}"
+     data-user="{{ session.get('full_name') or session.get('username') or '' }}"
+     data-role="{{ session.get('role') or '' }}"
+     data-session='{{ session_info|tojson if session_info else "null" }}'
+     data-categories='{{ categories|tojson }}'>
+
+  <div class="pos-main">
+    <div class="pos-head">
+      <h1>Point of Sale</h1>
+      <div class="pos-search-wrap">
+        <i class="bi bi-search"></i>
+        <input type="search" id="posSearch" class="form-control" placeholder="Search products by name or SKU" autocomplete="off">
+      </div>
+      <button type="button" id="posDayBtn" class="pos-day-btn"></button>
+    </div>
+
+    <div class="pos-cats" id="posCats"></div>
+
+    <div class="pos-modes">
+      <button type="button" class="pos-mode is-on" data-kind="product"><i class="bi bi-box-seam"></i> Products</button>
+      <button type="button" class="pos-mode" data-kind="service"><i class="bi bi-briefcase"></i> Services</button>
+      <button type="button" class="pos-mode pos-mode-quick" data-kind="quick"><i class="bi bi-lightning-charge"></i> Quick Sale</button>
+    </div>
+
+    <div id="posGrid" class="pos-grid"></div>
+
+    <div id="posQuick" class="pos-quick" hidden>
+      <div class="pos-quick-card">
+        <h2>Quick Sale</h2>
+        <p>Add a custom item that is not in the catalog.</p>
+        <div class="row g-2">
+          <div class="col-md-6">
+            <label class="form-label" for="quickName">Item name</label>
+            <input id="quickName" class="form-control" placeholder="Item description">
+          </div>
+          <div class="col-md-3">
+            <label class="form-label" for="quickPrice">Price</label>
+            <input id="quickPrice" class="form-control" type="number" min="0" step="0.01" value="0">
+          </div>
+          <div class="col-md-3">
+            <label class="form-label" for="quickQty">Qty</label>
+            <input id="quickQty" class="form-control" type="number" min="1" step="1" value="1">
+          </div>
+        </div>
+        <button type="button" class="btn btn-primary mt-3" id="quickAdd">Add to cart</button>
+      </div>
+    </div>
+  </div>
+
+  <aside class="pos-cart">
+    <div class="pos-cart-head">
+      <div>
+        <strong>Current Cart</strong>
+        <div class="pos-cart-count" id="posCartCount">0 items</div>
+      </div>
+      <button type="button" class="pos-clear" id="posClear">Clear Cart</button>
+    </div>
+    <div class="pos-cart-lines" id="posCartLines"></div>
+    <div class="pos-cart-foot">
+      <div class="pos-row"><span>Subtotal</span><span id="posSubtotal">₹ 0.00</span></div>
+      <div class="pos-row pos-discount-row">
+        <label for="posDiscount">Discount ₹</label>
+        <input id="posDiscount" type="number" min="0" step="0.01" value="0">
+      </div>
+      <div class="pos-row"><span>Tax</span><span id="posTax">₹ 0.00</span></div>
+      <div class="pos-grand"><span>Grand Total</span><strong id="posGrand">₹ 0.00</strong></div>
+
+      <div class="pos-customer">
+        <label class="form-label">Customer (Optional)</label>
+        <div class="pos-customer-row">
+          <div class="customer-combobox position-relative flex-grow-1">
+            <input type="hidden" id="customer_id" value="">
+            <input type="text" id="customer_search" class="form-control" placeholder="Walk-in customer" autocomplete="off">
+            <div id="customer_results" class="customer-suggest" hidden role="listbox"></div>
+          </div>
+          <button type="button" class="btn btn-outline-primary" id="posAddCustomer">+ Add Customer</button>
+        </div>
+      </div>
+
+      <div class="pos-pay-label">Payment Method</div>
+      <div class="pos-pay-modes">
+        <button type="button" class="pos-pay is-on" data-mode="cash"><i class="bi bi-cash-stack"></i> Cash</button>
+        <button type="button" class="pos-pay" data-mode="upi"><i class="bi bi-phone"></i> UPI</button>
+      </div>
+      <button type="button" class="pos-split" id="posSplit">Split payment</button>
+      <div id="posSplitBox" class="pos-split-box" hidden>
+        <div class="pos-row"><label for="splitCash">Cash</label><input id="splitCash" type="number" min="0" step="0.01" value="0"></div>
+        <div class="pos-row"><label for="splitUpi">UPI</label><input id="splitUpi" type="number" min="0" step="0.01" value="0"></div>
+      </div>
+      <p class="pos-hint" id="posHint">Start the business day first.</p>
+      <button type="button" class="pos-complete" id="posComplete">Complete Sale</button>
+    </div>
+  </aside>
+</div>
+
+<div class="modal fade" id="quickCustomerModal" tabindex="-1" aria-labelledby="quickCustomerTitle" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 class="modal-title fs-5" id="quickCustomerTitle">Add new customer</h2>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div class="mb-3">
+          <label class="form-label" for="quick_customer_name">Customer name <span class="text-danger">*</span></label>
+          <input type="text" id="quick_customer_name" class="form-control" maxlength="120">
+        </div>
+        <div class="mb-0">
+          <label class="form-label" for="quick_customer_phone">Mobile number <span class="text-danger">*</span></label>
+          <input type="text" id="quick_customer_phone" class="form-control" maxlength="10" inputmode="numeric">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-primary" id="quickCustomerSave">Save customer</button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/pos.js') }}"></script>
+{% endblock %}

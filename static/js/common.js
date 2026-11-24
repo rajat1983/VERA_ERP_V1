@@ -64,6 +64,9 @@ function veraPathAllowed(path, method) {
         if (path === "/add" || path === "/create" || path === "/update" || path.indexOf("/edit/") === 0) {
             return false;
         }
+        if (/^\/services\/\d+\/edit$/.test(path)) {
+            return false;
+        }
         const blocked = [
             "/customer/add",
             "/customer/edit",
@@ -71,6 +74,7 @@ function veraPathAllowed(path, method) {
             "/vendors/edit",
             "/products/add",
             "/products/edit",
+            "/services/add",
             "/purchases/add",
             "/purchases/edit",
             "/production/add",
@@ -86,7 +90,7 @@ function veraPathAllowed(path, method) {
         }
         return true;
     }
-    if (method === "POST" && (path === "/sales/add" || /^\/sales\/\d+\/update$/.test(path))) {
+    if (method === "POST" && (path === "/sales/add" || path === "/sales/quick-customer" || path === "/pos/complete" || path === "/pos/session/start" || /^\/sales\/\d+\/update$/.test(path))) {
         return true;
     }
     return false;
