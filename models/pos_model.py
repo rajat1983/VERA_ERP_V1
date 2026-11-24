@@ -2,6 +2,7 @@ from datetime import date, datetime
 
 from db import get_db_connection
 from models import service_model
+from utils.ownership import require_customer
 from utils.tenant import tid
 from utils.totals import calculate_document_totals
 
@@ -167,7 +168,7 @@ def start_session(user_id):
 
 def _next_bill_no(cur):
     year = datetime.now().strftime("%Y")
-    lock_name = f"vera_pos_bill_{year}"
+    lock_name = f"vera_pos_bill_{tid()}_{year}"
     cur.execute("SELECT GET_LOCK(%s, 10) AS locked", (lock_name,))
     lock = cur.fetchone()
     if not lock or not int(lock["locked"]):
@@ -259,6 +260,8 @@ def complete_sale(user_id, customer_id, items, discount_amount, payment_mode, pa
     cur = conn.cursor()
     lock_name = None
     try:
+        if customer_id:
+            require_customer(cur, customer_id)
         for item in prepared:
             if item["item_type"] != "product" or not item["product_id"]:
                 continue

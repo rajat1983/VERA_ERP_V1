@@ -1,4 +1,4 @@
-from flask import Blueprint, flash, g, redirect, render_template, request, session, url_for
+from flask import Blueprint, abort, flash, g, redirect, render_template, request, session, url_for
 
 from models import user_model
 from utils.audit import write_audit
@@ -84,8 +84,7 @@ def list_users():
 def view_user(id):
     user = user_model.get_user(id)
     if not user:
-        flash("User not found.", "warning")
-        return redirect(url_for("users.list_users"))
+        abort(404)
     return render_template("users/view.html", user=user)
 
 
@@ -125,8 +124,7 @@ def add_user():
 def edit_user(id):
     user = user_model.get_user(id)
     if not user:
-        flash("User not found.", "warning")
-        return redirect(url_for("users.list_users"))
+        abort(404)
     if request.method == "POST":
         try:
             if int(session.get("user_id") or 0) == id and request.form.get("is_active") != "1":
@@ -143,7 +141,7 @@ def edit_user(id):
             if int(session.get("user_id") or 0) == id:
                 session["full_name"] = (request.form.get("full_name") or "").strip()
             _maybe_save_photo(id)
-            write_audit("UPDATE", "users", "user", id)
+            write_audit("UPDATE", "users", "user", id, critical=True)
             flash("User updated.", "success")
             return redirect(url_for("users.view_user", id=id))
         except ValueError as e:

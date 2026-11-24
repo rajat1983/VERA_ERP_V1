@@ -344,7 +344,7 @@ def cancel_sale(sale_id):
 
     try:
         sales_model.cancel_sale(sale_id)
-        write_audit("CANCEL", "sales", "sale", sale_id)
+        write_audit("CANCEL", "sales", "sale", sale_id, critical=True)
         flash("Sale cancelled successfully.", "warning")
 
     except ValueError as ex:

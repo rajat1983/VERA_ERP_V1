@@ -1,4 +1,5 @@
 from db import get_db_connection
+from utils.ownership import bump_stock, record_movement, require_product, require_vendor
 from utils.tenant import tid
 from utils.totals import calculate_document_totals
 
@@ -16,12 +17,9 @@ def create_purchase(
 
     try:
 
+        require_vendor(cur, vendor_id)
         for item in items:
-            cur.execute(
-                "SELECT tax_rate FROM products WHERE id=%s",
-                (item["product_id"],),
-            )
-            prod = cur.fetchone()
+            prod = require_product(cur, item["product_id"])
             item["tax_rate"] = float(prod["tax_rate"] if prod else 0)
 
         totals = calculate_document_totals(items, discount)
@@ -90,40 +88,11 @@ def create_purchase(
                 item["line_total"]
             ))
 
-        # Update Stock
         for item in items:
-
-            cur.execute("""
-                UPDATE products
-                SET stock_qty = stock_qty + %s
-                WHERE id=%s
-            """, (
-                item["qty"],
-                item["product_id"]
-            ))
-
-            cur.execute("""
-                INSERT INTO stock_movements
-                (
-                    product_id,
-                    movement_type,
-                    quantity,
-                    reference_id,
-                    reference_type
-                )
-                VALUES
-                (
-                    %s,
-                    'purchase',
-                    %s,
-                    %s,
-                    'purchase'
-                )
-            """, (
-                item["product_id"],
-                item["qty"],
-                purchase_id
-            ))
+            bump_stock(cur, item["product_id"], item["qty"])
+            record_movement(
+                cur, item["product_id"], "purchase", item["qty"], purchase_id, "purchase"
+            )
 
         conn.commit()
 
@@ -149,7 +118,7 @@ def get_all_purchases(search="", limit=10, offset=0):
         SELECT p.*,
                v.name AS vendor_name
         FROM purchases p
-        JOIN vendors v ON p.vendor_id = v.id
+        JOIN vendors v ON p.vendor_id = v.id AND v.tenant_id = p.tenant_id
         WHERE p.tenant_id=%s
           AND (p.purchase_no LIKE %s
            OR p.vendor_invoice_no LIKE %s
@@ -173,7 +142,7 @@ def get_purchase_count(search=""):
     cur.execute("""
         SELECT COUNT(*) AS total
         FROM purchases p
-        JOIN vendors v ON p.vendor_id = v.id
+        JOIN vendors v ON p.vendor_id = v.id AND v.tenant_id = p.tenant_id
         WHERE p.tenant_id=%s
           AND (p.purchase_no LIKE %s
            OR p.vendor_invoice_no LIKE %s
@@ -194,7 +163,7 @@ def get_purchase_by_id(purchase_id):
     cur.execute("""
         SELECT p.*, v.name AS vendor_name
         FROM purchases p
-        JOIN vendors v ON p.vendor_id = v.id
+        JOIN vendors v ON p.vendor_id = v.id AND v.tenant_id = p.tenant_id
         WHERE p.id = %s AND p.tenant_id = %s
     """, (purchase_id, tid()))
 
@@ -204,9 +173,9 @@ def get_purchase_by_id(purchase_id):
     cur.execute("""
         SELECT pi.*, pr.name AS product_name
         FROM purchase_items pi
-        JOIN products pr ON pi.product_id = pr.id
-        WHERE pi.purchase_id = %s
-    """, (purchase_id,))
+        JOIN products pr ON pi.product_id = pr.id AND pr.tenant_id = pi.tenant_id
+        WHERE pi.purchase_id = %s AND pi.tenant_id = %s
+    """, (purchase_id, tid()))
 
     items = cur.fetchall()
 
@@ -220,39 +189,42 @@ def delete_purchase(purchase_id):
     cur = conn.cursor()
 
     try:
-        # 1️⃣ Get items
-        cur.execute("""
+        cur.execute(
+            "SELECT id, status FROM purchases WHERE id=%s AND tenant_id=%s FOR UPDATE",
+            (purchase_id, tid()),
+        )
+        purchase = cur.fetchone()
+        if not purchase:
+            raise ValueError("Purchase not found.")
+
+        cur.execute(
+            """
             SELECT product_id, quantity
             FROM purchase_items
-            WHERE purchase_id = %s
-        """, (purchase_id,))
-
+            WHERE purchase_id = %s AND tenant_id = %s
+            """,
+            (purchase_id, tid()),
+        )
         items = cur.fetchall()
 
-        # 2️⃣ Reverse stock
         for item in items:
-
-            cur.execute("""
-                UPDATE products
-                SET stock_qty = stock_qty - %s
-                WHERE id = %s
-            """, (item["quantity"], item["product_id"]))
-
-            cur.execute("""
-                INSERT INTO stock_movements
-                (product_id, movement_type, quantity, reference_id, reference_type)
-                VALUES (%s,'adjustment',-%s,%s,'purchase_delete')
-            """, (
+            bump_stock(cur, item["product_id"], -item["quantity"])
+            record_movement(
+                cur,
                 item["product_id"],
-                item["quantity"],
-                purchase_id
-            ))
+                "adjustment",
+                -item["quantity"],
+                purchase_id,
+                "purchase_delete",
+            )
 
-        # 3️⃣ Delete items
-        cur.execute("DELETE FROM purchase_items WHERE purchase_id = %s", (purchase_id,))
-
-        # 4️⃣ Delete purchase
+        cur.execute(
+            "DELETE FROM purchase_items WHERE purchase_id = %s AND tenant_id = %s",
+            (purchase_id, tid()),
+        )
         cur.execute("DELETE FROM purchases WHERE id = %s AND tenant_id = %s", (purchase_id, tid()))
+        if cur.rowcount == 0:
+            raise ValueError("Purchase not found.")
 
         conn.commit()
 
@@ -353,52 +325,36 @@ def update_purchase(
 
     try:
 
-        cur.execute("SELECT status FROM purchases WHERE id=%s AND tenant_id=%s", (purchase_id, tid()))
+        cur.execute(
+            "SELECT status FROM purchases WHERE id=%s AND tenant_id=%s FOR UPDATE",
+            (purchase_id, tid()),
+        )
         existing = cur.fetchone()
         if not existing:
             raise ValueError("Purchase not found.")
         if str(existing["status"]).lower() == "cancelled":
             raise ValueError("Cancelled purchase cannot be edited.")
 
-        subtotal = 0
-
-        # -----------------------------------------
-        # Reverse Previous Stock
-        # -----------------------------------------
+        require_vendor(cur, vendor_id)
 
         cur.execute("""
             SELECT
                 product_id,
                 quantity
             FROM purchase_items
-            WHERE purchase_id = %s
-        """, (purchase_id,))
+            WHERE purchase_id = %s AND tenant_id = %s
+        """, (purchase_id, tid()))
 
         old_items = cur.fetchall()
 
         for item in old_items:
-
-            cur.execute("""
-                UPDATE products
-                SET stock_qty = stock_qty - %s
-                WHERE id = %s
-            """, (
-                item["quantity"],
-                item["product_id"]
-            ))
-
-        # -----------------------------------------
-        # Delete Old Purchase Items
-        # -----------------------------------------
+            bump_stock(cur, item["product_id"], -item["quantity"])
 
         cur.execute("""
             DELETE
             FROM purchase_items
-            WHERE purchase_id = %s
-        """, (purchase_id,))
-                # -----------------------------------------
-        # Update Purchase Header
-        # -----------------------------------------
+            WHERE purchase_id = %s AND tenant_id = %s
+        """, (purchase_id, tid()))
 
         cur.execute("""
             UPDATE purchases
@@ -406,12 +362,13 @@ def update_purchase(
                 vendor_id = %s,
                 vendor_invoice_no = %s,
                 purchase_date = %s
-            WHERE id = %s
+            WHERE id = %s AND tenant_id = %s
         """, (
             vendor_id,
             vendor_invoice_no,
             purchase_date,
-            purchase_id
+            purchase_id,
+            tid(),
         ))
 
         # -----------------------------------------
@@ -424,11 +381,7 @@ def update_purchase(
 
             item["line_total"] = line_total
 
-            cur.execute(
-                "SELECT tax_rate FROM products WHERE id=%s",
-                (item["product_id"],),
-            )
-            prod = cur.fetchone()
+            prod = require_product(cur, item["product_id"])
             item["tax_rate"] = float(prod["tax_rate"] if prod else 0)
 
             cur.execute("""
@@ -463,41 +416,10 @@ def update_purchase(
             # Increase Stock Again
             # -----------------------------------------
 
-            cur.execute("""
-                UPDATE products
-                SET stock_qty = stock_qty + %s
-                WHERE id = %s
-            """, (
-                item["qty"],
-                item["product_id"]
-            ))
-
-            # -----------------------------------------
-            # Stock Movement
-            # -----------------------------------------
-
-            cur.execute("""
-                INSERT INTO stock_movements
-                (
-                    product_id,
-                    movement_type,
-                    quantity,
-                    reference_id,
-                    reference_type
-                )
-                VALUES
-                (
-                    %s,
-                    'purchase_edit',
-                    %s,
-                    %s,
-                    'purchase'
-                )
-            """, (
-                item["product_id"],
-                item["qty"],
-                purchase_id
-            ))
+            bump_stock(cur, item["product_id"], item["qty"])
+            record_movement(
+                cur, item["product_id"], "purchase_edit", item["qty"], purchase_id, "purchase"
+            )
 
         # -----------------------------------------
         # Update Purchase Total
@@ -513,14 +435,15 @@ def update_purchase(
                 discount_amount = %s,
                 gst_amount = %s,
                 total_amount = %s
-            WHERE id = %s
+            WHERE id = %s AND tenant_id = %s
         """, (
             totals["subtotal"],
             totals["discount_percent"],
             totals["discount_amount"],
             totals["gst_amount"],
             totals["grand_total"],
-            purchase_id
+            purchase_id,
+            tid(),
         ))
 
         conn.commit()

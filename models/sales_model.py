@@ -1,12 +1,13 @@
 from db import get_db_connection
 from datetime import datetime
+from utils.ownership import require_customer
 from utils.tenant import tid
 from utils.totals import calculate_document_totals
 
 
 def _next_invoice_number(cur):
     year = datetime.now().strftime("%Y")
-    lock_name = f"vera_invoice_{year}"
+    lock_name = f"vera_invoice_{tid()}_{year}"
     cur.execute("SELECT GET_LOCK(%s, 10) AS locked", (lock_name,))
     lock = cur.fetchone()
     if not lock or not int(lock["locked"]):
@@ -80,7 +81,7 @@ def get_all_sales(search, limit, offset, from_date=None, to_date=None, created_b
                s.payment_status, c.name AS customer_name,
                s.created_by, {_sale_user_label()} AS generated_by
         FROM sales s
-        JOIN customers c ON s.customer_id = c.id
+        JOIN customers c ON s.customer_id = c.id AND c.tenant_id = s.tenant_id
         LEFT JOIN users u ON u.id = s.created_by
         WHERE {where}
         ORDER BY s.id DESC
@@ -118,6 +119,8 @@ def create_sale(customer_id, sale_date, remarks, discount, items, created_by=Non
                 )
 
             product_ids.add(product_id)
+
+        require_customer(cur, customer_id)
 
         # ==========================================
         # 1. Validate Stock + attach tax rate
@@ -334,7 +337,7 @@ def get_sale_by_id(sale_id):
             IFNULL(NULLIF(TRIM(u.full_name), ''), u.username) AS generated_by
         FROM sales s
         JOIN customers c
-            ON s.customer_id = c.id
+            ON s.customer_id = c.id AND c.tenant_id = s.tenant_id
         LEFT JOIN users u ON u.id = s.created_by
         WHERE s.id = %s AND s.tenant_id = %s
     """, (sale_id, tid()))
@@ -354,9 +357,9 @@ def get_sale_by_id(sale_id):
             p.unit
         FROM sale_items si
         JOIN products p
-            ON si.product_id = p.id
-        WHERE si.sale_id = %s
-    """, (sale_id,))
+            ON si.product_id = p.id AND p.tenant_id = si.tenant_id
+        WHERE si.sale_id = %s AND si.tenant_id = %s
+    """, (sale_id, tid()))
 
     items = cur.fetchall()
 
@@ -372,9 +375,9 @@ def get_sale_items(sale_id):
     cur.execute("""
         SELECT si.*, p.name AS product_name
         FROM sale_items si
-        JOIN products p ON p.id = si.product_id
-        WHERE sale_id=%s
-    """, (sale_id,))
+        JOIN products p ON p.id = si.product_id AND p.tenant_id = si.tenant_id
+        WHERE sale_id=%s AND si.tenant_id=%s
+    """, (sale_id, tid()))
 
     rows = cur.fetchall()
     cur.close()
@@ -394,6 +397,8 @@ def update_sale(sale_id, customer_id, discount, items):
             raise ValueError("Sale not found.")
         if existing["sale_status"] == "Cancelled":
             raise ValueError("Cancelled sale cannot be edited.")
+
+        require_customer(cur, customer_id)
 
         # ==========================================
         # Validate Duplicate Products
@@ -637,7 +642,7 @@ def get_sale_count(search, from_date=None, to_date=None, created_by=None):
         f"""
         SELECT COUNT(*) AS total
         FROM sales s
-        JOIN customers c ON c.id = s.customer_id
+        JOIN customers c ON c.id = s.customer_id AND c.tenant_id = s.tenant_id
         LEFT JOIN users u ON u.id = s.created_by
         WHERE {where}
         """,
@@ -832,7 +837,7 @@ def get_sales_summary(from_date=None, to_date=None, created_by=None, search=""):
                 COALESCE(SUM(CASE WHEN s.sale_status = 'Confirmed' THEN s.total_amount ELSE 0 END), 0) AS total_revenue,
                 COUNT(CASE WHEN s.sale_status = 'Cancelled' THEN 1 END) AS cancelled_sales
             FROM sales s
-            JOIN customers c ON c.id = s.customer_id
+            JOIN customers c ON c.id = s.customer_id AND c.tenant_id = s.tenant_id
             LEFT JOIN users u ON u.id = s.created_by
             WHERE {where}
             """,

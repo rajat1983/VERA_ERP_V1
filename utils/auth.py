@@ -37,6 +37,10 @@ def validate_csrf():
 
 
 def auth_enabled():
+    from utils.security import is_production
+
+    if is_production():
+        return True
     return os.environ.get("VERA_AUTH", "1") != "0"
 
 

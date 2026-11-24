@@ -61,7 +61,7 @@ def get_payments(sale_id=None):
             SELECT p.*, s.invoice_no, c.name AS customer_name
             FROM payments p
             JOIN sales s ON s.id = p.sale_id
-            JOIN customers c ON c.id = s.customer_id
+            JOIN customers c ON c.id = s.customer_id AND c.tenant_id = s.tenant_id
             WHERE p.sale_id=%s AND s.tenant_id=%s
             ORDER BY p.id DESC
             """,
@@ -73,7 +73,7 @@ def get_payments(sale_id=None):
             SELECT p.*, s.invoice_no, c.name AS customer_name
             FROM payments p
             JOIN sales s ON s.id = p.sale_id
-            JOIN customers c ON c.id = s.customer_id
+            JOIN customers c ON c.id = s.customer_id AND c.tenant_id = s.tenant_id
             WHERE s.tenant_id=%s
             ORDER BY p.id DESC
             LIMIT 200
@@ -93,7 +93,7 @@ def get_unpaid_sales():
         """
         SELECT s.id, s.invoice_no, s.total_amount, s.paid_amount, s.payment_status, c.name AS customer_name
         FROM sales s
-        JOIN customers c ON c.id = s.customer_id
+        JOIN customers c ON c.id = s.customer_id AND c.tenant_id = s.tenant_id
         WHERE s.tenant_id=%s
           AND s.sale_status='Confirmed'
           AND IFNULL(s.paid_amount,0) < s.total_amount
@@ -160,7 +160,7 @@ def get_vendor_payments():
         SELECT vp.*, p.purchase_no, v.name AS vendor_name
         FROM vendor_payments vp
         JOIN purchases p ON p.id = vp.purchase_id
-        JOIN vendors v ON v.id = p.vendor_id
+        JOIN vendors v ON v.id = p.vendor_id AND v.tenant_id = p.tenant_id
         WHERE p.tenant_id=%s
         ORDER BY vp.id DESC
         LIMIT 200
@@ -181,7 +181,7 @@ def get_unpaid_purchases():
         SELECT p.id, p.purchase_no, p.total_amount, IFNULL(p.paid_amount,0) AS paid_amount,
                p.payment_status, v.name AS vendor_name
         FROM purchases p
-        JOIN vendors v ON v.id = p.vendor_id
+        JOIN vendors v ON v.id = p.vendor_id AND v.tenant_id = p.tenant_id
         WHERE p.tenant_id=%s
           AND LOWER(p.status) = 'confirmed'
           AND IFNULL(p.paid_amount,0) < p.total_amount

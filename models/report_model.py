@@ -21,7 +21,7 @@ def sales_report(from_date, to_date):
                CONVERT(IFNULL(IFNULL(NULLIF(TRIM(u.full_name), ''), u.username), '—') USING utf8mb4)
                  COLLATE utf8mb4_unicode_ci AS generated_by
         FROM sales s
-        JOIN customers c ON c.id = s.customer_id
+        JOIN customers c ON c.id = s.customer_id AND c.tenant_id = s.tenant_id
         LEFT JOIN users u ON u.id = s.created_by
         WHERE s.tenant_id=%s AND DATE(s.sale_date) BETWEEN %s AND %s
           AND IFNULL(s.sale_status, 'Confirmed') <> 'Cancelled'
@@ -35,7 +35,7 @@ def sales_report(from_date, to_date):
                CONVERT(IFNULL(IFNULL(NULLIF(TRIM(u.full_name), ''), u.username), '—') USING utf8mb4)
                  COLLATE utf8mb4_unicode_ci AS generated_by
         FROM pos_sales ps
-        LEFT JOIN customers c ON c.id = ps.customer_id
+        LEFT JOIN customers c ON c.id = ps.customer_id AND c.tenant_id = ps.tenant_id
         LEFT JOIN users u ON u.id = ps.created_by
         WHERE ps.tenant_id=%s AND DATE(ps.sale_date) BETWEEN %s AND %s
         ORDER BY sale_date DESC, invoice_no DESC
@@ -118,7 +118,7 @@ def payment_report(from_date, to_date):
                CONVERT(c.name USING utf8mb4) COLLATE utf8mb4_unicode_ci AS customer_name
         FROM payments p
         JOIN sales s ON s.id = p.sale_id
-        JOIN customers c ON c.id = s.customer_id
+        JOIN customers c ON c.id = s.customer_id AND c.tenant_id = s.tenant_id
         WHERE s.tenant_id=%s AND DATE(p.payment_date) BETWEEN %s AND %s
         UNION ALL
         SELECT DATE(ps.sale_date) AS payment_date, pp.amount,
@@ -128,7 +128,7 @@ def payment_report(from_date, to_date):
                CONVERT(IFNULL(c.name, 'Walk-in') USING utf8mb4) COLLATE utf8mb4_unicode_ci AS customer_name
         FROM pos_payments pp
         JOIN pos_sales ps ON ps.id = pp.pos_sale_id
-        LEFT JOIN customers c ON c.id = ps.customer_id
+        LEFT JOIN customers c ON c.id = ps.customer_id AND c.tenant_id = ps.tenant_id
         WHERE ps.tenant_id=%s AND DATE(ps.sale_date) BETWEEN %s AND %s
         ORDER BY payment_date DESC
         """,
@@ -157,7 +157,7 @@ def receivables_aging():
                END AS bucket,
                IFNULL(IFNULL(NULLIF(TRIM(u.full_name), ''), u.username), '—') AS generated_by
         FROM sales s
-        JOIN customers c ON c.id = s.customer_id
+        JOIN customers c ON c.id = s.customer_id AND c.tenant_id = s.tenant_id
         LEFT JOIN users u ON u.id = s.created_by
         WHERE s.tenant_id=%s AND s.sale_status='Confirmed'
           AND IFNULL(s.paid_amount,0) < s.total_amount

@@ -507,6 +507,7 @@ def _ensure_tenants(cur):
 
     if _has_table(cur, "audit_log"):
         _add_column(cur, "audit_log", "tenant_id", "tenant_id INT DEFAULT NULL")
+        _add_column(cur, "audit_log", "actor_type", "actor_type VARCHAR(20) NOT NULL DEFAULT 'shop'")
         cur.execute("UPDATE audit_log SET tenant_id=%s WHERE tenant_id IS NULL", (default_id,))
         _ensure_index(cur, "audit_log", "idx_audit_log_tenant", ("tenant_id",))
 
@@ -602,7 +603,77 @@ def _ensure_tenants(cur):
                     _drop_index(cur, "vendors", idx["INDEX_NAME"])
         _ensure_unique(cur, "vendors", "uq_vendors_tenant_code", ("tenant_id", "vendor_code"))
 
+    _ensure_safe_tenant_uniques(cur)
     _ensure_billing(cur)
+
+
+def _duplicate_groups(cur, table, columns):
+    cols = ", ".join(f"`{c}`" for c in columns)
+    cur.execute(
+        f"""
+        SELECT COUNT(*) AS c FROM (
+            SELECT {cols}, COUNT(*) AS n
+            FROM `{table}`
+            GROUP BY {cols}
+            HAVING n > 1
+        ) d
+        """
+    )
+    return int(cur.fetchone()["c"] or 0)
+
+
+def _ensure_unique_if_clean(cur, table, index_name, columns):
+    if _index_exists(cur, table, index_name):
+        return True
+    if not _has_table(cur, table):
+        return False
+    for col in columns:
+        if not _has_column(cur, table, col):
+            return False
+    if _duplicate_groups(cur, table, columns):
+        return False
+    _ensure_unique(cur, table, index_name, columns)
+    return True
+
+
+def _drop_single_column_uniques(cur, table, column, keep):
+    if not _has_table(cur, table) or not _has_column(cur, table, column):
+        return
+    for idx in _indexes_on_column(cur, table, column):
+        if idx["NON_UNIQUE"] != 0:
+            continue
+        if idx["INDEX_NAME"] in keep or idx["INDEX_NAME"] == "PRIMARY":
+            continue
+        cur.execute(
+            """
+            SELECT COUNT(DISTINCT COLUMN_NAME) AS c FROM information_schema.STATISTICS
+            WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME=%s AND INDEX_NAME=%s
+            """,
+            (table, idx["INDEX_NAME"]),
+        )
+        if cur.fetchone()["c"] == 1:
+            _drop_index(cur, table, idx["INDEX_NAME"])
+
+
+def _ensure_safe_tenant_uniques(cur):
+    pairs = (
+        ("sales", "invoice_no", "uq_sales_tenant_invoice"),
+        ("purchases", "purchase_no", "uq_purchases_tenant_no"),
+        ("pos_sales", "bill_no", "uq_pos_sales_tenant_bill"),
+        ("users", "email", "uq_users_tenant_email"),
+        ("products", "barcode", "uq_products_tenant_barcode"),
+    )
+    for table, column, index_name in pairs:
+        _drop_single_column_uniques(cur, table, column, {index_name})
+        _ensure_unique_if_clean(cur, table, index_name, ("tenant_id", column))
+    if _has_table(cur, "purchase_items"):
+        _ensure_index(cur, "purchase_items", "idx_purchase_items_parent", ("tenant_id", "purchase_id"))
+    if _has_table(cur, "sale_items"):
+        _ensure_index(cur, "sale_items", "idx_sale_items_parent", ("tenant_id", "sale_id"))
+    if _has_table(cur, "stock_movements"):
+        _ensure_index(
+            cur, "stock_movements", "idx_stock_movements_ref", ("tenant_id", "reference_type", "reference_id")
+        )
 
 
 def _ensure_billing(cur):

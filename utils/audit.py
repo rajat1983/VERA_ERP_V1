@@ -41,18 +41,25 @@ def clear_failures():
     _FAILS.pop(_fail_key(), None)
 
 
-def write_audit(action, module, entity=None, entity_id=None, detail=None):
+def write_audit(action, module, entity=None, entity_id=None, detail=None, critical=False):
+    tenant_id = session.get("tenant_id")
+    actor_type = "platform" if session.get("platform_user_id") and not session.get("user_id") else "shop"
+    user_id = session.get("user_id") or session.get("platform_user_id")
+    username = session.get("username") or session.get("platform_email")
     try:
         conn = get_db_connection()
         cur = conn.cursor()
         cur.execute(
             """
-            INSERT INTO audit_log (user_id, username, action, module, entity, entity_id, detail, ip)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+            INSERT INTO audit_log
+                (tenant_id, user_id, username, actor_type, action, module, entity, entity_id, detail, ip)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             """,
             (
-                session.get("user_id"),
-                session.get("username"),
+                tenant_id,
+                user_id,
+                username,
+                actor_type,
                 action,
                 module,
                 entity,
@@ -65,4 +72,5 @@ def write_audit(action, module, entity=None, entity_id=None, detail=None):
         cur.close()
         conn.close()
     except Exception:
-        pass
+        if critical:
+            raise

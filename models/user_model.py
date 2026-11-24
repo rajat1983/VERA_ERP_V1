@@ -134,18 +134,19 @@ def list_roles():
     return rows
 
 
-def get_user(user_id):
+def get_user(user_id, tenant_id=None):
     conn = get_db_connection()
     cur = conn.cursor()
+    tenant_id = _tenant_id_or_session(tenant_id)
     cur.execute(
         """
         SELECT u.id, u.username, u.is_active, u.status, u.role_id, u.full_name, u.email, u.mobile, u.photo,
                u.tenant_id, r.name AS role
         FROM users u
         LEFT JOIN roles r ON r.id = u.role_id
-        WHERE u.id=%s
+        WHERE u.id=%s AND u.tenant_id=%s
         """,
-        (user_id,),
+        (user_id, tenant_id),
     )
     row = cur.fetchone()
     cur.close()
@@ -198,7 +199,8 @@ def assert_seat_available(tenant_id, extra=1):
         )
 
 
-def count_active_admins(exclude_id=None):
+def count_active_admins(exclude_id=None, tenant_id=None):
+    tenant_id = _tenant_id_or_session(tenant_id)
     conn = get_db_connection()
     cur = conn.cursor()
     sql = """
@@ -206,8 +208,9 @@ def count_active_admins(exclude_id=None):
         FROM users u
         JOIN roles r ON r.id = u.role_id
         WHERE r.name='admin' AND u.is_active=1 AND IFNULL(u.status, 'active')='active'
+          AND u.tenant_id=%s
     """
-    params = []
+    params = [tenant_id]
     if exclude_id:
         sql += " AND u.id <> %s"
         params.append(exclude_id)
@@ -218,6 +221,16 @@ def count_active_admins(exclude_id=None):
     return int(total)
 
 
+def _bind_create_tenant(tenant_id=None):
+    from flask import has_request_context, session
+
+    if has_request_context() and session.get("user_id") and session.get("tenant_id"):
+        return int(session["tenant_id"])
+    if tenant_id is not None:
+        return int(tenant_id)
+    return _tenant_id_or_session()
+
+
 def create_user(username, password, role_id, is_active=1, full_name="", email="", mobile="", tenant_id=None):
     username = (username or "").strip()
     if not username or not password:
@@ -226,7 +239,7 @@ def create_user(username, password, role_id, is_active=1, full_name="", email=""
     conn = get_db_connection()
     cur = conn.cursor()
     try:
-        tenant_id = int(tenant_id) if tenant_id is not None else _tenant_id_or_session()
+        tenant_id = _bind_create_tenant(tenant_id)
         assert_seat_available(tenant_id)
         cur.execute(
             "SELECT id FROM users WHERE tenant_id=%s AND username=%s",
@@ -237,7 +250,7 @@ def create_user(username, password, role_id, is_active=1, full_name="", email=""
         _assert_unique_email(cur, email, tenant_id=tenant_id)
         cur.execute("SELECT name FROM roles WHERE id=%s", (role_id,))
         role = cur.fetchone()
-        if not role:
+        if not role or role["name"] not in ("admin", "manager", "staff"):
             raise ValueError("Invalid role.")
         cur.execute(
             """
@@ -289,32 +302,36 @@ def update_user(user_id, role_id, is_active, password=None, full_name="", email=
     conn = get_db_connection()
     cur = conn.cursor()
     try:
-        _assert_unique_email(cur, email, exclude_id=user_id, tenant_id=existing.get("tenant_id"))
+        tenant_id = existing.get("tenant_id") or _tenant_id_or_session()
+        _assert_unique_email(cur, email, exclude_id=user_id, tenant_id=tenant_id)
         cur.execute("SELECT name FROM roles WHERE id=%s", (role_id,))
         role = cur.fetchone()
-        if not role:
+        if not role or role["name"] not in ("admin", "manager", "staff"):
             raise ValueError("Invalid role.")
         becoming_non_admin = role["name"] != "admin" or not is_active
         if is_active and not _occupies_seat(existing):
-            assert_seat_available(existing.get("tenant_id") or _tenant_id_or_session())
+            assert_seat_available(tenant_id)
         if existing.get("role") == "admin" and becoming_non_admin:
-            if count_active_admins(exclude_id=user_id) < 1:
+            if count_active_admins(exclude_id=user_id, tenant_id=tenant_id) < 1:
                 raise ValueError("Keep at least one active admin.")
         status = "active" if is_active else (existing.get("status") or "pending")
         cur.execute(
             """
             UPDATE users
             SET role_id=%s, is_active=%s, status=%s, full_name=%s, email=%s, mobile=%s
-            WHERE id=%s
+            WHERE id=%s AND tenant_id=%s
             """,
-            (role_id, 1 if is_active else 0, status, full_name, email, mobile, user_id),
+            (role_id, 1 if is_active else 0, status, full_name, email, mobile, user_id, tenant_id),
         )
         if _has_role_col(cur):
-            cur.execute("UPDATE users SET role=%s WHERE id=%s", (role["name"], user_id))
+            cur.execute(
+                "UPDATE users SET role=%s WHERE id=%s AND tenant_id=%s",
+                (role["name"], user_id, tenant_id),
+            )
         if password:
             cur.execute(
-                "UPDATE users SET password_hash=%s WHERE id=%s",
-                (generate_password_hash(password), user_id),
+                "UPDATE users SET password_hash=%s WHERE id=%s AND tenant_id=%s",
+                (generate_password_hash(password), user_id, tenant_id),
             )
         conn.commit()
     except ValueError:
@@ -338,8 +355,8 @@ def update_own_profile(user_id, full_name, email, mobile):
         existing = get_user(user_id)
         _assert_unique_email(cur, email, exclude_id=user_id, tenant_id=(existing or {}).get("tenant_id"))
         cur.execute(
-            "UPDATE users SET full_name=%s, email=%s, mobile=%s WHERE id=%s",
-            (full_name, email, mobile, user_id),
+            "UPDATE users SET full_name=%s, email=%s, mobile=%s WHERE id=%s AND tenant_id=%s",
+            (full_name, email, mobile, user_id, existing.get("tenant_id")),
         )
         conn.commit()
     except ValueError:
@@ -358,7 +375,10 @@ def set_user_photo(user_id, filename):
     conn = get_db_connection()
     cur = conn.cursor()
     try:
-        cur.execute("UPDATE users SET photo=%s WHERE id=%s", (filename, user_id))
+        cur.execute(
+            "UPDATE users SET photo=%s WHERE id=%s AND tenant_id=%s",
+            (filename, user_id, _tenant_id_or_session()),
+        )
         conn.commit()
     finally:
         cur.close()
@@ -372,15 +392,18 @@ def change_own_password(user_id, current_password, new_password):
     conn = get_db_connection()
     cur = conn.cursor()
     try:
-        cur.execute("SELECT id, password_hash FROM users WHERE id=%s", (user_id,))
+        cur.execute(
+            "SELECT id, password_hash FROM users WHERE id=%s AND tenant_id=%s",
+            (user_id, _tenant_id_or_session()),
+        )
         user = cur.fetchone()
         if not user:
             raise ValueError("User not found.")
         if not check_password_hash(user["password_hash"], current_password or ""):
             raise ValueError("Current password is incorrect.")
         cur.execute(
-            "UPDATE users SET password_hash=%s WHERE id=%s",
-            (generate_password_hash(new_password), user_id),
+            "UPDATE users SET password_hash=%s WHERE id=%s AND tenant_id=%s",
+            (generate_password_hash(new_password), user_id, _tenant_id_or_session()),
         )
         conn.commit()
     except Exception:
@@ -478,15 +501,15 @@ def approve_registration(user_id):
             """
             UPDATE users
             SET status='active', is_active=1, activation_token=NULL, activation_expires=NULL
-            WHERE id=%s
+            WHERE id=%s AND tenant_id=%s
             """,
-            (user_id,),
+            (user_id, user["tenant_id"]),
         )
         conn.commit()
     finally:
         cur.close()
         conn.close()
-    return get_user(user_id)
+    return get_user(user_id, user["tenant_id"])
 
 
 def reject_registration(user_id):
@@ -502,9 +525,9 @@ def reject_registration(user_id):
             """
             UPDATE users
             SET status='rejected', is_active=0, activation_token=NULL, activation_expires=NULL
-            WHERE id=%s
+            WHERE id=%s AND tenant_id=%s
             """,
-            (user_id,),
+            (user_id, user["tenant_id"]),
         )
         conn.commit()
     finally:

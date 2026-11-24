@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash
+from flask import Blueprint, abort, render_template, request, redirect, url_for, flash
 from models import purchase_model
 from models import vendor_model
 from models import product_model
@@ -152,6 +152,8 @@ def add_purchase():
 def view_purchase(id):
 
     purchase, items = purchase_model.get_purchase_by_id(id)
+    if not purchase:
+        abort(404)
 
     return render_template(
         "purchases/view.html",
@@ -163,7 +165,7 @@ def delete_purchase(id):
 
     try:
         cancel_purchase(id)
-        write_audit("CANCEL", "purchase", "purchase", id)
+        write_audit("CANCEL", "purchase", "purchase", id, critical=True)
         flash("Purchase cancelled and stock reversed successfully", "warning")
     except ValueError as e:
         flash(str(e), "warning")
@@ -176,7 +178,7 @@ def cancel_purchase_route(id):
 
     try:
         cancel_purchase(id)
-        write_audit("CANCEL", "purchase", "purchase", id)
+        write_audit("CANCEL", "purchase", "purchase", id, critical=True)
         flash("Purchase cancelled and stock reversed successfully", "warning")
     except ValueError as e:
         flash(str(e), "warning")
@@ -192,6 +194,8 @@ def edit_purchase(id):
     products = product_model.get_products()
 
     purchase, purchase_items = purchase_model.get_purchase_by_id(id)
+    if not purchase:
+        abort(404)
 
     if request.method == "POST":
 

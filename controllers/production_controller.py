@@ -65,7 +65,7 @@ def add_production():
 def cancel_production(id):
     try:
         production_extra.cancel_production(id)
-        write_audit("CANCEL", "production", "batch", id)
+        write_audit("CANCEL", "production", "batch", id, critical=True)
         flash("Production batch cancelled.", "warning")
     except ValueError as e:
         flash(str(e), "warning")

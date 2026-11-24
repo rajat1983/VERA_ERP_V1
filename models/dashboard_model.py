@@ -227,7 +227,7 @@ def get_top_customers():
             SUM(s.total_amount) AS total_spent
         FROM sales s
         JOIN customers c
-            ON c.id=s.customer_id
+            ON c.id=s.customer_id AND c.tenant_id=s.tenant_id
         WHERE s.tenant_id=%s AND IFNULL(s.sale_status, 'Confirmed') <> 'Cancelled'
         GROUP BY c.id
         ORDER BY total_spent DESC
@@ -300,7 +300,7 @@ def get_business_insights():
                SUM(s.total_amount) amount
         FROM sales s
         JOIN customers c
-          ON c.id=s.customer_id
+          ON c.id=s.customer_id AND c.tenant_id=s.tenant_id
         WHERE s.tenant_id=%s AND IFNULL(s.sale_status, 'Confirmed') <> 'Cancelled'
         GROUP BY c.id
         ORDER BY amount DESC
@@ -315,7 +315,7 @@ def get_business_insights():
                COUNT(*) total_purchase
         FROM purchases p
         JOIN vendors v
-          ON v.id=p.vendor_id
+          ON v.id=p.vendor_id AND v.tenant_id=p.tenant_id
         WHERE p.tenant_id=%s
         GROUP BY v.id
         ORDER BY total_purchase DESC
@@ -530,7 +530,7 @@ def get_outstanding_invoices(limit=8):
             s.payment_status,
             c.name AS customer_name
         FROM sales s
-        JOIN customers c ON c.id = s.customer_id
+        JOIN customers c ON c.id = s.customer_id AND c.tenant_id = s.tenant_id
         WHERE s.tenant_id=%s AND s.sale_status = 'Confirmed'
           AND IFNULL(s.paid_amount, 0) < s.total_amount
         ORDER BY s.sale_date ASC, s.id ASC
@@ -572,7 +572,7 @@ def get_recent_payments(limit=8):
             c.name AS customer_name
         FROM payments p
         JOIN sales s ON s.id = p.sale_id
-        JOIN customers c ON c.id = s.customer_id
+        JOIN customers c ON c.id = s.customer_id AND c.tenant_id = s.tenant_id
         WHERE s.tenant_id=%s
         ORDER BY p.id DESC
         LIMIT %s

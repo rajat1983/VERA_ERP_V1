@@ -35,13 +35,16 @@ from utils.auth import auth_enabled, csrf_token, validate_csrf, safe_next
 from utils.entitlements import feature_for_path, from_access
 from utils.permissions import can, enforce_request
 from utils.schema import ensure_schema, ensure_roles_users
+from utils.security import assert_production_safe, is_production
+
+assert_production_safe()
 
 
 def _secret_key():
     key = os.environ.get("SECRET_KEY")
     if key:
         return key
-    if os.environ.get("VERA_ENV", "").lower() == "production":
+    if is_production():
         raise SystemExit("SECRET_KEY must be set when VERA_ENV=production.")
     print("WARNING: SECRET_KEY is not set. Set it in the environment before production.")
     return "insecure-dev-key"
@@ -135,9 +138,34 @@ def forbidden(_e):
     return render_template("errors/403_bounce.html"), 403
 
 
+def _guard_upload_path():
+    from flask import abort
+    import re
+
+    path = request.path or ""
+    if not path.startswith("/static/uploads/"):
+        return
+    if session.get("platform_user_id") and not session.get("user_id"):
+        return
+    if not session.get("user_id") or not session.get("tenant_id"):
+        abort(404)
+    tenant_id = int(session["tenant_id"])
+    name = path.rsplit("/", 1)[-1]
+    if f"/t{tenant_id}/" in path or name.startswith("t%s_" % tenant_id):
+        return
+    match = re.match(r"user_(\d+)_", name)
+    if match:
+        owner = user_model.get_user(int(match.group(1)))
+        if owner and int(owner.get("tenant_id") or 0) == tenant_id:
+            return
+    abort(404)
+
+
 @app.before_request
 def _guard():
-    if request.endpoint in (None, "static", "healthz") or request.path.startswith("/static"):
+    if request.endpoint == "static" or request.path.startswith("/static"):
+        return _guard_upload_path()
+    if request.endpoint in (None, "healthz"):
         return
     if request.path.startswith("/legal"):
         return
@@ -181,10 +209,20 @@ def _guard():
         abort(403)
     if auth_enabled() and not session.get("user_id"):
         return redirect(url_for("auth.login", next=request.path))
-    if auth_enabled() and not session.get("tenant_id"):
+    if not session.get("tenant_id"):
         session.clear()
-        return redirect(url_for("auth.login", next=request.path))
-    g.tenant_id = int(session.get("tenant_id"))
+        if auth_enabled():
+            return redirect(url_for("auth.login", next=request.path))
+        from flask import abort
+        abort(403)
+    from models import tenant_model
+
+    tenant = tenant_model.get_by_id(int(session["tenant_id"]))
+    if not tenant:
+        session.clear()
+        return redirect(url_for("auth.login"))
+    g.tenant_id = int(tenant["id"])
+    session["tenant_id"] = g.tenant_id
     billing_ok = {
         "billing.expired",
         "billing.home",
@@ -193,16 +231,18 @@ def _guard():
         "auth.logout",
         "users.profile",
     }
-    if auth_enabled() and session.get("user_id"):
+    tenant_ok = (tenant.get("status") or "").lower() == "active"
+    if session.get("user_id"):
         access = subscription_model.access(g.tenant_id)
         g.subscription = access
         g.entitlements = from_access(access)
-        if not access.get("allowed") and request.endpoint not in billing_ok:
+        allowed = bool(access.get("allowed")) and tenant_ok
+        if not allowed and request.endpoint not in billing_ok:
             if request.method in ("POST", "PUT", "PATCH", "DELETE"):
                 validate_csrf()
             return redirect(url_for("billing.expired"))
         locked = feature_for_path(request.path)
-        if locked and not g.entitlements.get(locked, True):
+        if allowed and locked and not g.entitlements.get(locked, True):
             flash(
                 "Your plan does not include this module. Open Billing or ask Super Admin to enable it.",
                 "warning",
@@ -214,4 +254,5 @@ def _guard():
 
 
 if __name__ == "__main__":
-    app.run(debug=os.environ.get("FLASK_DEBUG", "0") == "1", host="0.0.0.0", port=5000)
+    debug = os.environ.get("FLASK_DEBUG", "0") == "1" and not is_production()
+    app.run(debug=debug, host="0.0.0.0", port=5000)

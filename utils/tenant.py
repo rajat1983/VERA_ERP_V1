@@ -4,7 +4,7 @@ from flask import g, has_app_context, has_request_context, session
 def is_platform_user():
     if not has_request_context():
         return False
-    return bool(session.get("platform_user_id"))
+    return bool(session.get("platform_user_id")) and not session.get("user_id")
 
 
 def current_tenant_id():
@@ -19,8 +19,9 @@ def current_tenant_id():
 
 
 def tid(explicit=None):
+    """Shop tenant from request context only. Request payloads are ignored."""
     if explicit is not None:
-        return int(explicit)
+        raise RuntimeError("Explicit tenant_id is not accepted; use session context.")
     return current_tenant_id()
 
 

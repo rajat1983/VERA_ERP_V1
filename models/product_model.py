@@ -3,8 +3,6 @@ from utils.tenant import current_tenant_id
 
 
 def _tid(explicit=None):
-    if explicit is not None:
-        return int(explicit)
     return current_tenant_id()
 
 UNITS = (
@@ -240,7 +238,7 @@ def get_product_by_id(id):
     cur.execute("""
         SELECT p.*, v.name AS vendor_name
         FROM products p
-        LEFT JOIN vendors v ON p.vendor_id = v.id
+        LEFT JOIN vendors v ON p.vendor_id = v.id AND v.tenant_id = p.tenant_id
         WHERE p.id=%s AND p.tenant_id=%s
     """, (id, _tid()))
 

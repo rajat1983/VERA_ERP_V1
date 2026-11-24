@@ -19,6 +19,16 @@ rebuild.log
 
 # DDEV
 .ddev.zip
+.ddev/traefik/certs/*.key
+*.pem
+*.key
+!*.crt
+
+# Runtime uploads and local secrets
+static/uploads/
+.env
+.env.*
+!.env.example
 
 # OS Files
 .DS_Store

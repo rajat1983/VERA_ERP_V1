@@ -378,6 +378,9 @@ def access(tenant_id):
     conn = get_db_connection()
     cur = conn.cursor()
     try:
+        cur.execute("SELECT status FROM tenants WHERE id=%s", (tenant_id,))
+        tenant = cur.fetchone()
+        tenant_status = ((tenant or {}).get("status") or "active").lower()
         cur.execute(
             """
             SELECT s.*, p.code AS plan_code, p.name AS plan_name, p.duration_days,
@@ -406,6 +409,7 @@ def access(tenant_id):
                 "allow_production": True,
                 "allow_services": True,
                 "message": "No subscription. Ask Super Admin to activate a plan.",
+                "tenant_status": tenant_status,
             }
         today = date.today()
         ends = sub.get("ends_on")
@@ -429,9 +433,12 @@ def access(tenant_id):
             sub.get("extra_user_price_paise"),
             sub.get("plan_extra_user_price_paise"),
         )
+        if tenant_status != "active":
+            allowed = False
         return {
             "allowed": allowed,
             "status": status,
+            "tenant_status": tenant_status,
             "plan_name": sub.get("plan_name"),
             "plan_code": sub.get("plan_code"),
             "starts_on": sub.get("starts_on"),

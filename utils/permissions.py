@@ -14,7 +14,9 @@ def can(action, module="*"):
     manager: view/create/edit/print/pay/adjust; no delete/cancel/admin/users
     staff: view all + sales create/edit/print
     """
-    if not auth_enabled():
+    from utils.security import is_production
+
+    if not is_production() and not auth_enabled():
         return True
     role = current_role()
     action = (action or "").lower()
@@ -74,7 +76,9 @@ def _staff_form_blocked(path):
 
 
 def enforce_request():
-    if not auth_enabled():
+    from utils.security import is_production
+
+    if not auth_enabled() and not is_production():
         return
     if request.endpoint in (
         None,

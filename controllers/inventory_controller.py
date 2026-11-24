@@ -49,6 +49,7 @@ def adjust_stock():
                 "product",
                 int(request.form["product_id"]),
                 request.form.get("reason", "")[:200],
+                critical=True,
             )
             flash("Stock adjustment saved.", "success")
             return redirect(url_for("inventory.stock_on_hand"))
