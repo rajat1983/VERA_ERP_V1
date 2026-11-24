@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "_macros.html" import post_button %}
 {% block content %}
 
 <h3>Vendors</h3>
@@ -43,7 +44,7 @@
         <a href="/vendors/edit/{{ v.id }}" class="btn btn-warning btn-sm">Edit</a>
         {% endif %}
         {% if can('delete') %}
-        <a href="/vendors/delete/{{ v.id }}" class="btn btn-danger btn-sm">Delete</a>
+        {{ post_button(url_for('vendor.delete_vendor', id=v.id), 'Delete this vendor?', 'Delete', 'btn btn-danger btn-sm', label='Delete') }}
         {% endif %}
       </td>
     </tr>

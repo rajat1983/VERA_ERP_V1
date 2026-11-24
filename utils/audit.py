@@ -10,9 +10,10 @@ LOCK_SECONDS = 15 * 60
 
 
 def _fail_key():
-    ip = (request.headers.get("X-Forwarded-For") or request.remote_addr or "unknown").split(",")[0].strip()
+    ip = (request.remote_addr or "unknown").strip()
+    shop = (request.form.get("shop_code") or "").strip().upper()
     user = (request.form.get("username") or "").strip().lower()
-    return f"{ip}:{user}"
+    return f"{ip}:{shop}:{user}"
 
 
 def is_locked():

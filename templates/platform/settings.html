@@ -1,0 +1,42 @@
+{% extends "platform/layout.html" %}
+{% from "_macros.html" import csrf_input %}
+{% block title %}Platform settings — VERA{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1>Platform settings</h1>
+    <p>Razorpay keys stay on this server. Leave secret fields blank to keep the current value.</p>
+  </div>
+</div>
+<form method="post" class="page-card" style="max-width: 36rem;">
+  {{ csrf_input() }}
+  <div class="card-body">
+    <div class="mb-3">
+      <label class="form-label" for="default_grace_days">Grace days after expiry</label>
+      <input class="form-control" id="default_grace_days" name="default_grace_days" type="number" min="0" value="{{ settings.default_grace_days }}">
+    </div>
+    <div class="mb-3">
+      <label class="form-label" for="platform_gstin">Platform GSTIN</label>
+      <input class="form-control" id="platform_gstin" name="platform_gstin" value="{{ settings.platform_gstin }}">
+    </div>
+    <div class="mb-3">
+      <label class="form-label" for="support_email">Support email</label>
+      <input class="form-control" id="support_email" type="email" name="support_email" value="{{ settings.support_email }}">
+    </div>
+    <div class="mb-3">
+      <label class="form-label" for="razorpay_key_id">Razorpay key id</label>
+      <input class="form-control" id="razorpay_key_id" name="razorpay_key_id" value="{{ settings.razorpay_key_id }}" autocomplete="off">
+    </div>
+    <div class="mb-3">
+      <label class="form-label" for="razorpay_key_secret">Razorpay key secret</label>
+      <input class="form-control" id="razorpay_key_secret" name="razorpay_key_secret" type="password" value="" placeholder="{{ 'Saved' if settings.razorpay_key_secret else 'Not set' }}" autocomplete="new-password">
+    </div>
+    <div class="mb-3">
+      <label class="form-label" for="razorpay_webhook_secret">Razorpay webhook secret</label>
+      <input class="form-control" id="razorpay_webhook_secret" name="razorpay_webhook_secret" type="password" value="" placeholder="{{ 'Saved' if settings.razorpay_webhook_secret else 'Not set' }}" autocomplete="new-password">
+    </div>
+    <p class="form-text">Webhook URL: <code>/billing/razorpay/webhook</code></p>
+    <button class="btn btn-primary" type="submit">Save</button>
+  </div>
+</form>
+{% endblock %}

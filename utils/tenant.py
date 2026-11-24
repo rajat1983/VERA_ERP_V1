@@ -9,13 +9,19 @@ def is_platform_user():
 
 def current_tenant_id():
     if has_request_context():
-        tid = getattr(g, "tenant_id", None)
-        if tid:
-            return int(tid)
-        tid = session.get("tenant_id")
-        if tid:
-            return int(tid)
+        value = getattr(g, "tenant_id", None)
+        if value:
+            return int(value)
+        value = session.get("tenant_id")
+        if value:
+            return int(value)
     raise RuntimeError("No tenant in session.")
+
+
+def tid(explicit=None):
+    if explicit is not None:
+        return int(explicit)
+    return current_tenant_id()
 
 
 def bind_shop_session(user, tenant):

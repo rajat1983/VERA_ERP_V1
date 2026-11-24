@@ -6,7 +6,7 @@ import time
 
 sys.path.append("/var/www/html")
 
-from flask import Flask, g, redirect, render_template, request, session, url_for
+from flask import Flask, flash, g, redirect, render_template, request, session, url_for
 
 from controllers.employee_controller import employee_bp
 from controllers.dashboard_controller import dashboard_bp
@@ -27,8 +27,12 @@ from controllers.pos_controller import pos_bp
 from controllers.service_controller import service_bp
 from genai.routes.ai_routes import ai_bp
 from controllers.platform_controller import platform_bp
-from models import platform_user_model, user_model
+from controllers.billing_controller import billing_bp
+from controllers.legal_controller import legal_bp
+from db import get_db_connection
+from models import platform_user_model, subscription_model, user_model
 from utils.auth import auth_enabled, csrf_token, validate_csrf, safe_next
+from utils.entitlements import feature_for_path, from_access
 from utils.permissions import can, enforce_request
 from utils.schema import ensure_schema, ensure_roles_users
 
@@ -37,6 +41,8 @@ def _secret_key():
     key = os.environ.get("SECRET_KEY")
     if key:
         return key
+    if os.environ.get("VERA_ENV", "").lower() == "production":
+        raise SystemExit("SECRET_KEY must be set when VERA_ENV=production.")
     print("WARNING: SECRET_KEY is not set. Set it in the environment before production.")
     return "insecure-dev-key"
 
@@ -49,8 +55,16 @@ app.config.update(
     SESSION_COOKIE_SECURE=os.environ.get("VERA_COOKIE_SECURE", "0") == "1",
     PERMANENT_SESSION_LIFETIME=timedelta(hours=int(os.environ.get("VERA_SESSION_HOURS", "8"))),
 )
+def plan_allows(feature):
+    ents = getattr(g, "entitlements", None)
+    if ents is None:
+        return True
+    return bool(ents.get(feature, True))
+
+
 app.jinja_env.globals["get_csrf_token"] = csrf_token
 app.jinja_env.globals["can"] = can
+app.jinja_env.globals["plan_allows"] = plan_allows
 
 logging.basicConfig(
     level=os.environ.get("VERA_LOG_LEVEL", "INFO"),
@@ -89,6 +103,8 @@ app.register_blueprint(user_bp)
 app.register_blueprint(pos_bp)
 app.register_blueprint(service_bp)
 app.register_blueprint(platform_bp)
+app.register_blueprint(billing_bp)
+app.register_blueprint(legal_bp)
 
 
 def _safe_next(path):
@@ -100,7 +116,16 @@ app.jinja_env.globals["safe_next"] = _safe_next
 
 @app.route("/healthz")
 def healthz():
-    return {"status": "ok"}, 200
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute("SELECT 1 AS ok")
+        cur.fetchone()
+        cur.close()
+        conn.close()
+        return {"status": "ok", "db": "up"}, 200
+    except Exception:
+        return {"status": "degraded", "db": "down"}, 503
 
 
 @app.errorhandler(403)
@@ -113,6 +138,10 @@ def forbidden(_e):
 @app.before_request
 def _guard():
     if request.endpoint in (None, "static", "healthz") or request.path.startswith("/static"):
+        return
+    if request.path.startswith("/legal"):
+        return
+    if request.path == "/billing/razorpay/webhook":
         return
     idle = int(os.environ.get("VERA_IDLE_SECONDS", "28800"))
     if session.get("user_id") or session.get("platform_user_id"):
@@ -128,10 +157,14 @@ def _guard():
     public = {
         "auth.login",
         "auth.register",
+        "auth.signup",
         "auth.activate",
         "auth.logout",
         "platform.login",
         "platform.logout",
+        "legal.terms",
+        "legal.privacy",
+        "legal.refund",
     }
     if request.endpoint in public:
         if request.method == "POST":
@@ -152,6 +185,29 @@ def _guard():
         session.clear()
         return redirect(url_for("auth.login", next=request.path))
     g.tenant_id = int(session.get("tenant_id"))
+    billing_ok = {
+        "billing.expired",
+        "billing.home",
+        "billing.create_order",
+        "billing.verify",
+        "auth.logout",
+        "users.profile",
+    }
+    if auth_enabled() and session.get("user_id"):
+        access = subscription_model.access(g.tenant_id)
+        g.subscription = access
+        g.entitlements = from_access(access)
+        if not access.get("allowed") and request.endpoint not in billing_ok:
+            if request.method in ("POST", "PUT", "PATCH", "DELETE"):
+                validate_csrf()
+            return redirect(url_for("billing.expired"))
+        locked = feature_for_path(request.path)
+        if locked and not g.entitlements.get(locked, True):
+            flash(
+                "Your plan does not include this module. Open Billing or ask Super Admin to enable it.",
+                "warning",
+            )
+            return redirect(url_for("dashboard.dashboard"))
     if request.method in ("POST", "PUT", "PATCH", "DELETE") and auth_enabled():
         validate_csrf()
     enforce_request()

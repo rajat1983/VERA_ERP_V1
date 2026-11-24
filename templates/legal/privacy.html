@@ -1,0 +1,13 @@
+{% extends "legal/layout.html" %}
+{% block title %}Privacy policy — VERA ERP{% endblock %}
+{% block heading %}Privacy policy{% endblock %}
+{% block content %}
+<p>{{ platform_name }} stores shop master data, invoices, and user accounts so you can run your business.</p>
+<ul>
+  <li>Shop data is isolated by tenant. Super Admin sees shop metadata and billing, not shop invoice lines.</li>
+  <li>We use your email to send account, billing, and expiry messages.</li>
+  <li>Payment card data is handled by Razorpay, not stored in VERA.</li>
+  <li>You may request export or deletion of a shop after any statutory retention period.</li>
+</ul>
+<p>Contact: <a href="mailto:{{ support_email }}">{{ support_email }}</a>.</p>
+{% endblock %}

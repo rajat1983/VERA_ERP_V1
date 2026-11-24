@@ -1,4 +1,4 @@
-from flask import Blueprint, flash, redirect, render_template, request, session, url_for
+from flask import Blueprint, flash, g, redirect, render_template, request, session, url_for
 
 from models import user_model
 from utils.audit import write_audit
@@ -62,7 +62,21 @@ def profile():
 @user_bp.route("/users")
 @admin_required
 def list_users():
-    return render_template("users/list.html", users=user_model.list_users(), roles=user_model.list_roles())
+    from models import subscription_model
+
+    tenant_id = session.get("tenant_id")
+    access = getattr(g, "subscription", None) or subscription_model.access(tenant_id)
+    seats_used = user_model.count_seat_users(tenant_id)
+    max_users = int(access.get("max_users") or 5)
+    return render_template(
+        "users/list.html",
+        users=user_model.list_users(),
+        roles=user_model.list_roles(),
+        seats_used=seats_used,
+        max_users=max_users,
+        seats_full=seats_used >= max_users,
+        access=access,
+    )
 
 
 @user_bp.route("/users/<int:id>")
@@ -78,6 +92,12 @@ def view_user(id):
 @user_bp.route("/users/add", methods=["GET", "POST"])
 @admin_required
 def add_user():
+    tenant_id = session.get("tenant_id")
+    try:
+        user_model.assert_seat_available(tenant_id)
+    except ValueError as e:
+        flash(str(e), "warning")
+        return redirect(url_for("users.list_users"))
     if request.method == "POST":
         try:
             user_id = user_model.create_user(

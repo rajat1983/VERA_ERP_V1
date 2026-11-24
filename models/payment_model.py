@@ -1,4 +1,5 @@
 from db import get_db_connection
+from utils.tenant import tid
 
 
 def add_payment(sale_id, payment_date, amount, payment_mode, reference_no, notes):
@@ -6,8 +7,8 @@ def add_payment(sale_id, payment_date, amount, payment_mode, reference_no, notes
     cur = conn.cursor()
     try:
         cur.execute(
-            "SELECT id, total_amount, paid_amount, sale_status FROM sales WHERE id=%s",
-            (sale_id,),
+            "SELECT id, total_amount, paid_amount, sale_status FROM sales WHERE id=%s AND tenant_id=%s",
+            (sale_id, tid()),
         )
         sale = cur.fetchone()
         if not sale:
@@ -27,10 +28,10 @@ def add_payment(sale_id, payment_date, amount, payment_mode, reference_no, notes
         cur.execute(
             """
             INSERT INTO payments
-            (sale_id, payment_date, amount, payment_mode, reference_no, notes)
-            VALUES (%s, %s, %s, %s, %s, %s)
+            (tenant_id, sale_id, payment_date, amount, payment_mode, reference_no, notes)
+            VALUES (%s, %s, %s, %s, %s, %s, %s)
             """,
-            (sale_id, payment_date, amount, payment_mode, reference_no, notes),
+            (tid(), sale_id, payment_date, amount, payment_mode, reference_no, notes),
         )
 
         if paid >= total - 0.01:
@@ -39,8 +40,8 @@ def add_payment(sale_id, payment_date, amount, payment_mode, reference_no, notes
             status = "Partial"
 
         cur.execute(
-            "UPDATE sales SET paid_amount=%s, payment_status=%s WHERE id=%s",
-            (paid, status, sale_id),
+            "UPDATE sales SET paid_amount=%s, payment_status=%s WHERE id=%s AND tenant_id=%s",
+            (paid, status, sale_id, tid()),
         )
         conn.commit()
     except Exception:
@@ -61,10 +62,10 @@ def get_payments(sale_id=None):
             FROM payments p
             JOIN sales s ON s.id = p.sale_id
             JOIN customers c ON c.id = s.customer_id
-            WHERE p.sale_id=%s
+            WHERE p.sale_id=%s AND s.tenant_id=%s
             ORDER BY p.id DESC
             """,
-            (sale_id,),
+            (sale_id, tid()),
         )
     else:
         cur.execute(
@@ -73,9 +74,11 @@ def get_payments(sale_id=None):
             FROM payments p
             JOIN sales s ON s.id = p.sale_id
             JOIN customers c ON c.id = s.customer_id
+            WHERE s.tenant_id=%s
             ORDER BY p.id DESC
             LIMIT 200
-            """
+            """,
+            (tid(),),
         )
     rows = cur.fetchall()
     cur.close()
@@ -91,10 +94,12 @@ def get_unpaid_sales():
         SELECT s.id, s.invoice_no, s.total_amount, s.paid_amount, s.payment_status, c.name AS customer_name
         FROM sales s
         JOIN customers c ON c.id = s.customer_id
-        WHERE s.sale_status='Confirmed'
+        WHERE s.tenant_id=%s
+          AND s.sale_status='Confirmed'
           AND IFNULL(s.paid_amount,0) < s.total_amount
         ORDER BY s.id DESC
-        """
+        """,
+        (tid(),),
     )
     rows = cur.fetchall()
     cur.close()
@@ -107,8 +112,11 @@ def add_vendor_payment(purchase_id, payment_date, amount, payment_mode, referenc
     cur = conn.cursor()
     try:
         cur.execute(
-            "SELECT id, total_amount, IFNULL(paid_amount,0) AS paid_amount, status FROM purchases WHERE id=%s",
-            (purchase_id,),
+            """
+            SELECT id, total_amount, IFNULL(paid_amount,0) AS paid_amount, status
+            FROM purchases WHERE id=%s AND tenant_id=%s
+            """,
+            (purchase_id, tid()),
         )
         purchase = cur.fetchone()
         if not purchase:
@@ -125,15 +133,15 @@ def add_vendor_payment(purchase_id, payment_date, amount, payment_mode, referenc
         cur.execute(
             """
             INSERT INTO vendor_payments
-            (purchase_id, payment_date, amount, payment_mode, reference_no, notes)
-            VALUES (%s, %s, %s, %s, %s, %s)
+            (tenant_id, purchase_id, payment_date, amount, payment_mode, reference_no, notes)
+            VALUES (%s, %s, %s, %s, %s, %s, %s)
             """,
-            (purchase_id, payment_date, amount, payment_mode, reference_no, notes),
+            (tid(), purchase_id, payment_date, amount, payment_mode, reference_no, notes),
         )
         status = "Paid" if paid >= total - 0.01 else "Partial"
         cur.execute(
-            "UPDATE purchases SET paid_amount=%s, payment_status=%s WHERE id=%s",
-            (paid, status, purchase_id),
+            "UPDATE purchases SET paid_amount=%s, payment_status=%s WHERE id=%s AND tenant_id=%s",
+            (paid, status, purchase_id, tid()),
         )
         conn.commit()
     except Exception:
@@ -153,9 +161,11 @@ def get_vendor_payments():
         FROM vendor_payments vp
         JOIN purchases p ON p.id = vp.purchase_id
         JOIN vendors v ON v.id = p.vendor_id
+        WHERE p.tenant_id=%s
         ORDER BY vp.id DESC
         LIMIT 200
-        """
+        """,
+        (tid(),),
     )
     rows = cur.fetchall()
     cur.close()
@@ -172,10 +182,12 @@ def get_unpaid_purchases():
                p.payment_status, v.name AS vendor_name
         FROM purchases p
         JOIN vendors v ON v.id = p.vendor_id
-        WHERE LOWER(p.status) = 'confirmed'
+        WHERE p.tenant_id=%s
+          AND LOWER(p.status) = 'confirmed'
           AND IFNULL(p.paid_amount,0) < p.total_amount
         ORDER BY p.id DESC
-        """
+        """,
+        (tid(),),
     )
     rows = cur.fetchall()
     cur.close()
@@ -190,9 +202,11 @@ def payables_outstanding():
         """
         SELECT IFNULL(SUM(total_amount - IFNULL(paid_amount,0)), 0) AS outstanding
         FROM purchases
-        WHERE LOWER(status)='confirmed'
+        WHERE tenant_id=%s
+          AND LOWER(status)='confirmed'
           AND IFNULL(paid_amount,0) < total_amount
-        """
+        """,
+        (tid(),),
     )
     total = float(cur.fetchone()["outstanding"])
     cur.close()

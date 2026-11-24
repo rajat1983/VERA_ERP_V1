@@ -1,4 +1,5 @@
 from db import get_db_connection
+from utils.tenant import tid
 from decimal import Decimal
 
 
@@ -16,50 +17,67 @@ def get_dashboard_kpi():
     conn = get_db_connection()
     cur = conn.cursor()
 
-    # Today's Sales
-    cur.execute("""
+    tenant_id = tid()
+    cur.execute(
+        """
         SELECT IFNULL(SUM(total_amount),0) AS total
         FROM sales
-        WHERE DATE(sale_date)=CURDATE()
-    """)
+        WHERE tenant_id=%s AND DATE(sale_date)=CURDATE()
+          AND IFNULL(sale_status, 'Confirmed') <> 'Cancelled'
+        """,
+        (tenant_id,),
+    )
     today_sales = float(cur.fetchone()["total"])
+    cur.execute(
+        """
+        SELECT IFNULL(SUM(total_amount),0) AS total
+        FROM pos_sales
+        WHERE tenant_id=%s AND DATE(sale_date)=CURDATE()
+        """,
+        (tenant_id,),
+    )
+    today_sales += float(cur.fetchone()["total"])
 
-    # Today's Purchase
-    cur.execute("""
+    cur.execute(
+        """
         SELECT IFNULL(SUM(total_amount),0) AS total
         FROM purchases
-        WHERE DATE(purchase_date)=CURDATE()
-    """)
+        WHERE tenant_id=%s AND DATE(purchase_date)=CURDATE()
+        """,
+        (tenant_id,),
+    )
     today_purchase = float(cur.fetchone()["total"])
 
-    # Total Products
-    cur.execute("SELECT COUNT(*) AS total FROM products")
+    cur.execute("SELECT COUNT(*) AS total FROM products WHERE tenant_id=%s", (tenant_id,))
     total_products = cur.fetchone()["total"]
 
-    # Total Customers
-    cur.execute("SELECT COUNT(*) AS total FROM customers")
+    cur.execute("SELECT COUNT(*) AS total FROM customers WHERE tenant_id=%s", (tenant_id,))
     total_customers = cur.fetchone()["total"]
 
-    # Total Suppliers
-    cur.execute("SELECT COUNT(*) AS total FROM vendors ")
+    cur.execute("SELECT COUNT(*) AS total FROM vendors WHERE tenant_id=%s", (tenant_id,))
     total_vendors = cur.fetchone()["total"]
 
-    # Low Stock Products
-    cur.execute("""
+    cur.execute(
+        """
         SELECT COUNT(*) AS total
         FROM products
-        WHERE stock_qty <= low_stock_threshold
-    """)
+        WHERE tenant_id=%s AND stock_qty <= low_stock_threshold
+        """,
+        (tenant_id,),
+    )
     low_stock = cur.fetchone()["total"]
 
-    # Inventory Value
-    cur.execute("""
+    cur.execute(
+        """
         SELECT IFNULL(SUM(stock_qty * cost_price),0) AS total
         FROM products
-    """)
+        WHERE tenant_id=%s
+        """,
+        (tenant_id,),
+    )
     inventory_value = float(cur.fetchone()["total"])
-        # Today's Gross Profit
-    cur.execute("""
+    cur.execute(
+        """
         SELECT
             IFNULL(SUM((si.price - p.cost_price) * si.qty), 0) AS profit
         FROM sale_items si
@@ -67,10 +85,28 @@ def get_dashboard_kpi():
             ON s.id = si.sale_id
         INNER JOIN products p
             ON p.id = si.product_id
-        WHERE DATE(s.sale_date) = CURDATE()
-    """)
+        WHERE s.tenant_id=%s AND DATE(s.sale_date) = CURDATE()
+          AND IFNULL(s.sale_status, 'Confirmed') <> 'Cancelled'
+        """,
+        (tenant_id,),
+    )
 
     today_profit = float(cur.fetchone()["profit"])
+    cur.execute(
+        """
+        SELECT
+            IFNULL(SUM((psi.price - p.cost_price) * psi.qty), 0) AS profit
+        FROM pos_sale_items psi
+        INNER JOIN pos_sales ps
+            ON ps.id = psi.pos_sale_id
+        INNER JOIN products p
+            ON p.id = psi.product_id
+        WHERE ps.tenant_id=%s AND DATE(ps.sale_date) = CURDATE()
+          AND psi.item_type = 'product'
+        """,
+        (tenant_id,),
+    )
+    today_profit += float(cur.fetchone()["profit"])
     #"today_profit": today_profit,
 
     conn.close()
@@ -95,14 +131,29 @@ def get_sales_by_date(from_date=None, to_date=None):
     cur = conn.cursor()
 
     cur.execute("""
-        SELECT DATE(sale_date) AS date,
-               SUM(total_amount) AS total
-        FROM sales
-        WHERE (%s IS NULL OR DATE(sale_date) >= %s)
-          AND (%s IS NULL OR DATE(sale_date) <= %s)
-        GROUP BY DATE(sale_date)
+        SELECT date, SUM(total) AS total
+        FROM (
+            SELECT DATE(sale_date) AS date, SUM(total_amount) AS total
+            FROM sales
+            WHERE tenant_id=%s
+              AND IFNULL(sale_status, 'Confirmed') <> 'Cancelled'
+              AND (%s IS NULL OR DATE(sale_date) >= %s)
+              AND (%s IS NULL OR DATE(sale_date) <= %s)
+            GROUP BY DATE(sale_date)
+            UNION ALL
+            SELECT DATE(sale_date) AS date, SUM(total_amount) AS total
+            FROM pos_sales
+            WHERE tenant_id=%s
+              AND (%s IS NULL OR DATE(sale_date) >= %s)
+              AND (%s IS NULL OR DATE(sale_date) <= %s)
+            GROUP BY DATE(sale_date)
+        ) combined
+        GROUP BY date
         ORDER BY date ASC
-    """, (from_date, from_date, to_date, to_date))
+    """, (
+        tid(), from_date, from_date, to_date, to_date,
+        tid(), from_date, from_date, to_date, to_date,
+    ))
 
     rows = cur.fetchall()
     conn.close()
@@ -125,16 +176,30 @@ def get_top_products():
     cur = conn.cursor()
 
     cur.execute("""
-        SELECT
-            p.name,
-            SUM(i.qty) AS total_qty
-        FROM sale_items i
-        JOIN products p
-            ON p.id=i.product_id
-        GROUP BY p.id
+        SELECT name, SUM(total_qty) AS total_qty
+        FROM (
+            SELECT p.id,
+                   CONVERT(p.name USING utf8mb4) COLLATE utf8mb4_unicode_ci AS name,
+                   SUM(i.qty) AS total_qty
+            FROM sale_items i
+            JOIN products p ON p.id=i.product_id
+            JOIN sales s ON s.id=i.sale_id
+            WHERE p.tenant_id=%s AND IFNULL(s.sale_status, 'Confirmed') <> 'Cancelled'
+            GROUP BY p.id, CONVERT(p.name USING utf8mb4) COLLATE utf8mb4_unicode_ci
+            UNION ALL
+            SELECT p.id,
+                   CONVERT(p.name USING utf8mb4) COLLATE utf8mb4_unicode_ci AS name,
+                   SUM(psi.qty) AS total_qty
+            FROM pos_sale_items psi
+            JOIN products p ON p.id=psi.product_id
+            JOIN pos_sales ps ON ps.id=psi.pos_sale_id
+            WHERE p.tenant_id=%s AND psi.item_type='product'
+            GROUP BY p.id, CONVERT(p.name USING utf8mb4) COLLATE utf8mb4_unicode_ci
+        ) x
+        GROUP BY id, name
         ORDER BY total_qty DESC
         LIMIT 5
-    """)
+    """, (tid(), tid()))
 
     rows = cur.fetchall()
     conn.close()
@@ -163,10 +228,11 @@ def get_top_customers():
         FROM sales s
         JOIN customers c
             ON c.id=s.customer_id
+        WHERE s.tenant_id=%s AND IFNULL(s.sale_status, 'Confirmed') <> 'Cancelled'
         GROUP BY c.id
         ORDER BY total_spent DESC
         LIMIT 5
-    """)
+    """, (tid(),))
 
     rows = cur.fetchall()
     conn.close()
@@ -193,9 +259,10 @@ def get_stock_levels():
             name,
             stock_qty
         FROM products
+        WHERE tenant_id=%s
         ORDER BY stock_qty ASC
         LIMIT 10
-    """)
+    """, (tid(),))
 
     rows = cur.fetchall()
     conn.close()
@@ -219,10 +286,11 @@ def get_business_insights():
         FROM sale_items si
         JOIN products p
           ON p.id=si.product_id
+        WHERE p.tenant_id=%s
         GROUP BY p.id
         ORDER BY qty DESC
         LIMIT 1
-    """)
+    """, (tid(),))
 
     top_product = cur.fetchone()
 
@@ -233,10 +301,11 @@ def get_business_insights():
         FROM sales s
         JOIN customers c
           ON c.id=s.customer_id
+        WHERE s.tenant_id=%s AND IFNULL(s.sale_status, 'Confirmed') <> 'Cancelled'
         GROUP BY c.id
         ORDER BY amount DESC
         LIMIT 1
-    """)
+    """, (tid(),))
 
     top_customer = cur.fetchone()
 
@@ -247,10 +316,11 @@ def get_business_insights():
         FROM purchases p
         JOIN vendors v
           ON v.id=p.vendor_id
+        WHERE p.tenant_id=%s
         GROUP BY v.id
         ORDER BY total_purchase DESC
         LIMIT 1
-    """)
+    """, (tid(),))
 
     top_vendor = cur.fetchone()
 
@@ -270,11 +340,26 @@ def get_recent_transactions():
         (
             SELECT
                 sale_date      AS trans_date,
-                invoice_no     AS number,
+                CONVERT(invoice_no USING utf8mb4) COLLATE utf8mb4_unicode_ci AS number,
                 customer_id,
                 total_amount   AS amount,
-                'Sale'         AS module
+                CONVERT('Sale' USING utf8mb4) COLLATE utf8mb4_unicode_ci AS module
             FROM sales
+            WHERE tenant_id=%s
+              AND IFNULL(sale_status, 'Confirmed') <> 'Cancelled'
+        )
+
+        UNION ALL
+
+        (
+            SELECT
+                sale_date,
+                CONVERT(bill_no USING utf8mb4) COLLATE utf8mb4_unicode_ci,
+                customer_id,
+                total_amount,
+                CONVERT('POS' USING utf8mb4) COLLATE utf8mb4_unicode_ci
+            FROM pos_sales
+            WHERE tenant_id=%s
         )
 
         UNION ALL
@@ -282,16 +367,17 @@ def get_recent_transactions():
         (
             SELECT
                 purchase_date,
-                vendor_invoice_no,
+                CONVERT(vendor_invoice_no USING utf8mb4) COLLATE utf8mb4_unicode_ci,
                 vendor_id,
                 total_amount,
-                'Purchase'
+                CONVERT('Purchase' USING utf8mb4) COLLATE utf8mb4_unicode_ci
             FROM purchases
+            WHERE tenant_id=%s
         )
 
         ORDER BY trans_date DESC
         LIMIT 10
-    """)
+    """, (tid(), tid(), tid()))
 
     rows = cur.fetchall()
     conn.close()
@@ -309,9 +395,9 @@ def get_low_stock_products():
             stock_qty,
             low_stock_threshold
         FROM products
-        WHERE stock_qty <= low_stock_threshold
+        WHERE tenant_id=%s AND stock_qty <= low_stock_threshold
         ORDER BY stock_qty ASC
-    """)
+    """, (tid(),))
 
     rows = cur.fetchall()
     conn.close()
@@ -328,8 +414,8 @@ def get_dashboard_alerts():
     cur.execute("""
         SELECT COUNT(*) total
         FROM products
-        WHERE stock_qty <= low_stock_threshold
-    """)
+        WHERE tenant_id=%s AND stock_qty <= low_stock_threshold
+    """, (tid(),))
 
     low_stock = cur.fetchone()["total"]
 
@@ -344,9 +430,9 @@ def get_dashboard_alerts():
     cur.execute("""
         SELECT COUNT(*) total
         FROM sales
-        WHERE sale_status='Confirmed'
+        WHERE tenant_id=%s AND sale_status='Confirmed'
           AND payment_status IN ('Pending', 'Partial')
-    """)
+    """, (tid(),))
 
     pending = cur.fetchone()["total"]
 
@@ -369,26 +455,43 @@ def get_payment_overview():
     cur.execute("""
         SELECT IFNULL(SUM(amount), 0) AS total
         FROM payments
-        WHERE payment_date = CURDATE()
-    """)
+        WHERE tenant_id=%s AND payment_date = CURDATE()
+    """, (tid(),))
     collected_today = float(cur.fetchone()["total"])
+    cur.execute("""
+        SELECT IFNULL(SUM(amount), 0) AS total
+        FROM pos_payments pp
+        JOIN pos_sales ps ON ps.id = pp.pos_sale_id
+        WHERE ps.tenant_id=%s AND DATE(ps.sale_date) = CURDATE()
+    """, (tid(),))
+    collected_today += float(cur.fetchone()["total"])
 
     cur.execute("""
         SELECT IFNULL(SUM(amount), 0) AS total
         FROM payments
-        WHERE YEAR(payment_date) = YEAR(CURDATE())
+        WHERE tenant_id=%s
+          AND YEAR(payment_date) = YEAR(CURDATE())
           AND MONTH(payment_date) = MONTH(CURDATE())
-    """)
+    """, (tid(),))
     collected_month = float(cur.fetchone()["total"])
+    cur.execute("""
+        SELECT IFNULL(SUM(amount), 0) AS total
+        FROM pos_payments pp
+        JOIN pos_sales ps ON ps.id = pp.pos_sale_id
+        WHERE ps.tenant_id=%s
+          AND YEAR(ps.sale_date) = YEAR(CURDATE())
+          AND MONTH(ps.sale_date) = MONTH(CURDATE())
+    """, (tid(),))
+    collected_month += float(cur.fetchone()["total"])
 
     cur.execute("""
         SELECT
             COUNT(*) AS invoice_count,
             IFNULL(SUM(total_amount - IFNULL(paid_amount, 0)), 0) AS outstanding
         FROM sales
-        WHERE sale_status = 'Confirmed'
+        WHERE tenant_id=%s AND sale_status = 'Confirmed'
           AND IFNULL(paid_amount, 0) < total_amount
-    """)
+    """, (tid(),))
     due = cur.fetchone()
 
     cur.execute("""
@@ -397,8 +500,8 @@ def get_payment_overview():
             IFNULL(SUM(payment_status = 'Partial'), 0) AS partial,
             IFNULL(SUM(payment_status = 'Paid'), 0) AS paid
         FROM sales
-        WHERE sale_status = 'Confirmed'
-    """)
+        WHERE tenant_id=%s AND sale_status = 'Confirmed'
+    """, (tid(),))
     status = cur.fetchone()
 
     conn.close()
@@ -428,12 +531,12 @@ def get_outstanding_invoices(limit=8):
             c.name AS customer_name
         FROM sales s
         JOIN customers c ON c.id = s.customer_id
-        WHERE s.sale_status = 'Confirmed'
+        WHERE s.tenant_id=%s AND s.sale_status = 'Confirmed'
           AND IFNULL(s.paid_amount, 0) < s.total_amount
         ORDER BY s.sale_date ASC, s.id ASC
         LIMIT %s
         """,
-        (limit,),
+        (tid(), limit),
     )
     rows = cur.fetchall()
     conn.close()
@@ -470,10 +573,11 @@ def get_recent_payments(limit=8):
         FROM payments p
         JOIN sales s ON s.id = p.sale_id
         JOIN customers c ON c.id = s.customer_id
+        WHERE s.tenant_id=%s
         ORDER BY p.id DESC
         LIMIT %s
         """,
-        (limit,),
+        (tid(), limit),
     )
     rows = cur.fetchall()
     conn.close()

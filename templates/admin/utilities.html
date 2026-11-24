@@ -7,19 +7,19 @@
 <div class="page-header">
   <div>
     <h1>Admin utilities</h1>
-    <p>Destructive actions. These cannot be undone.</p>
+    <p>These actions affect <strong>this shop only</strong>. Other shops on the platform are not changed. They cannot be undone.</p>
   </div>
 </div>
 
 <div class="page-card" style="max-width:560px">
   <div class="card-body d-flex flex-wrap gap-2">
-    <form method="post" action="{{ url_for('admin.clear_transactions') }}" onsubmit="return confirm('Clear all transaction data? This cannot be undone.')">
+    <form method="post" action="{{ url_for('admin.clear_transactions') }}" onsubmit="return confirm('Clear this shop sales, purchases, POS and stock movements? Other shops are not affected.')">
       {{ csrf_input() }}
-      <button type="submit" class="btn btn-warning">Clear transactions</button>
+      <button type="submit" class="btn btn-warning">Clear this shop's transactions</button>
     </form>
-    <form method="post" action="{{ url_for('admin.reset_database') }}" onsubmit="return confirm('Reset the entire database? All records will be deleted.')">
+    <form method="post" action="{{ url_for('admin.reset_database') }}" onsubmit="return confirm('Delete this shop products, customers, vendors and transactions? Other shops are not affected.')">
       {{ csrf_input() }}
-      <button type="submit" class="btn btn-danger">Reset database</button>
+      <button type="submit" class="btn btn-danger">Reset this shop's data</button>
     </form>
   </div>
 </div>

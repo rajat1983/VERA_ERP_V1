@@ -1,4 +1,5 @@
 from db import get_db_connection
+from utils.tenant import tid
 
 def get_all_vendors(search, limit, offset):
 
@@ -13,7 +14,7 @@ def get_all_vendors(search, limit, offset):
 
         FROM vendors
 
-        WHERE
+        WHERE tenant_id=%s AND (
 
             vendor_code LIKE %s
 
@@ -27,12 +28,15 @@ def get_all_vendors(search, limit, offset):
 
             OR city LIKE %s
 
+        )
+
         ORDER BY id DESC
 
         LIMIT %s OFFSET %s
 
     """, (
 
+        tid(),
         like,
         like,
         like,
@@ -65,7 +69,7 @@ def get_vendor_count(search):
 
         FROM vendors
 
-        WHERE
+        WHERE tenant_id=%s AND (
 
             vendor_code LIKE %s
 
@@ -79,8 +83,11 @@ def get_vendor_count(search):
 
             OR city LIKE %s
 
+        )
+
     """, (
 
+        tid(),
         like,
         like,
         like,
@@ -120,7 +127,7 @@ def vendor_search(q):
 
         FROM vendors
 
-        WHERE
+        WHERE tenant_id=%s AND (
 
             vendor_code LIKE %s
 
@@ -134,10 +141,13 @@ def vendor_search(q):
 
             OR city LIKE %s
 
+        )
+
         ORDER BY id DESC
 
     """, (
 
+        tid(),
         like,
         like,
         like,
@@ -157,7 +167,7 @@ def vendor_search(q):
 def get_vendor(id):
     conn = get_db_connection()
     cur = conn.cursor()
-    cur.execute("SELECT * FROM vendors WHERE id=%s", (id,))
+    cur.execute("SELECT * FROM vendors WHERE id=%s AND tenant_id=%s", (id, tid()))
     row = cur.fetchone()
     cur.close()
     conn.close()
@@ -185,6 +195,7 @@ def add_vendor(
         INSERT INTO vendors
         (
 
+            tenant_id,
             vendor_code,
             name,
             email,
@@ -201,12 +212,13 @@ def add_vendor(
         VALUES
         (
 
-            %s,%s,%s,%s,%s,%s,%s,%s,%s,%s
+            %s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s
 
         )
 
     """, (
 
+        tid(),
         vendor_code,
         name,
         email,
@@ -263,7 +275,7 @@ def update_vendor(
             status = %s,
             updated_at = NOW()
 
-        WHERE id = %s
+        WHERE id = %s AND tenant_id = %s
 
     """, (
 
@@ -276,7 +288,8 @@ def update_vendor(
         state,
         pincode,
         status,
-        id
+        id,
+        tid(),
 
     ))
 
@@ -286,10 +299,36 @@ def update_vendor(
     conn.close()
 
 
+def can_delete_vendor(id):
+    row = get_vendor_by_id(id)
+    if not row:
+        return False, "Vendor not found."
+    conn = get_db_connection()
+    cur = conn.cursor()
+    tenant_id = tid()
+    try:
+        cur.execute(
+            "SELECT COUNT(*) AS c FROM purchases WHERE tenant_id=%s AND vendor_id=%s",
+            (tenant_id, id),
+        )
+        if cur.fetchone()["c"]:
+            return False, "Cannot delete: this vendor has purchase orders."
+        cur.execute(
+            "SELECT COUNT(*) AS c FROM products WHERE tenant_id=%s AND vendor_id=%s",
+            (tenant_id, id),
+        )
+        if cur.fetchone()["c"]:
+            return False, "Cannot delete: products are linked to this vendor."
+    finally:
+        cur.close()
+        conn.close()
+    return True, ""
+
+
 def delete_vendor(id):
     conn = get_db_connection()
     cur = conn.cursor()
-    cur.execute("DELETE FROM vendors WHERE id=%s", (id,))
+    cur.execute("DELETE FROM vendors WHERE id=%s AND tenant_id=%s", (id, tid()))
     conn.commit()
     cur.close()
     conn.close()
@@ -306,12 +345,13 @@ def search_vendors(q):
             vendor_code,
             name
         FROM vendors
-        WHERE
+        WHERE tenant_id=%s AND (
             LOWER(name) LIKE %s
             OR LOWER(vendor_code) LIKE %s
+        )
         ORDER BY name
         LIMIT 10
-    """, (like, like))
+    """, (tid(), like, like))
 
     vendors = cur.fetchall()
 
@@ -324,9 +364,9 @@ def create_vendor(name, phone="", email="", address=""):
     cur = conn.cursor()
 
     cur.execute("""
-        INSERT INTO vendors (name, phone, email, address)
-        VALUES (%s, %s, %s, %s)
-    """, (name, phone, email, address))
+        INSERT INTO vendors (tenant_id, name, phone, email, address)
+        VALUES (%s, %s, %s, %s, %s)
+    """, (tid(), name, phone, email, address))
     conn.commit()
     vendor_id = cur.lastrowid
     cur.close()
@@ -337,7 +377,7 @@ def get_vendor_email(vendor_id):
     conn = get_db_connection()
     cur = conn.cursor()
 
-    cur.execute("SELECT email FROM vendors WHERE id=%s", (vendor_id,))
+    cur.execute("SELECT email FROM vendors WHERE id=%s AND tenant_id=%s", (vendor_id, tid()))
     row = cur.fetchone()
 
     cur.close()
@@ -358,8 +398,9 @@ def generate_vendor_code():
         SELECT MAX(id) AS max_id
 
         FROM vendors
+        WHERE tenant_id=%s
 
-    """)
+    """, (tid(),))
 
     row = cur.fetchone()
 
@@ -387,9 +428,9 @@ def get_vendor_by_id(id):
 
         FROM vendors
 
-        WHERE id=%s
+        WHERE id=%s AND tenant_id=%s
 
-    """, (id,))
+    """, (id, tid()))
 
     vendor = cur.fetchone()
 
@@ -410,136 +451,23 @@ def check_duplicate_vendor(
 
     conn = get_db_connection()
     cur = conn.cursor()
+    tenant_id = tid()
 
-    # -----------------------------
-    # Check Email
-    # -----------------------------
-
-    if exclude_id:
-
-        cur.execute("""
-
-            SELECT id
-
-            FROM vendors
-
-            WHERE email=%s
-              AND id<>%s
-            LIMIT 1
-
-        """, (
-
-            email,
-            exclude_id
-
-        ))
-
-    else:
-
-        cur.execute("""
-
-            SELECT id
-
-            FROM vendors
-
-            WHERE email=%s
-            LIMIT 1
-
-        """, (
-
-            email,
-
-        ))
-
-    email_exists = cur.fetchone() is not None
-
-    # -----------------------------
-    # Check Mobile
-    # -----------------------------
-
-    if exclude_id:
-
-        cur.execute("""
-
-            SELECT id
-
-            FROM vendors
-
-            WHERE phone=%s
-              AND id<>%s
-            LIMIT 1
-
-        """, (
-
-            phone,
-            exclude_id
-
-        ))
-
-    else:
-
-        cur.execute("""
-
-            SELECT id
-
-            FROM vendors
-
-            WHERE phone=%s
-            LIMIT 1
-
-        """, (
-
-            phone,
-
-        ))
-
-    phone_exists = cur.fetchone() is not None
-
-    # -----------------------------
-    # Check GST
-    # -----------------------------
-
-    gst_exists = False
-
-    if gst_number:
-
+    def exists(column, value):
+        if not value:
+            return False
+        sql = f"SELECT id FROM vendors WHERE tenant_id=%s AND {column}=%s"
+        params = [tenant_id, value]
         if exclude_id:
+            sql += " AND id<>%s"
+            params.append(exclude_id)
+        sql += " LIMIT 1"
+        cur.execute(sql, params)
+        return cur.fetchone() is not None
 
-            cur.execute("""
-
-                SELECT id
-
-                FROM vendors
-
-                WHERE gst_number=%s
-                  AND id<>%s
-                LIMIT 1
-
-            """, (
-
-                gst_number,
-                exclude_id
-
-            ))
-
-        else:
-
-            cur.execute("""
-
-                SELECT id
-
-                FROM vendors
-
-                WHERE gst_number=%s
-                LIMIT 1
-
-            """, (
-
-                gst_number,
-
-            ))
-
-        gst_exists = cur.fetchone() is not None
+    email_exists = exists("email", email)
+    phone_exists = exists("phone", phone)
+    gst_exists = exists("gst_number", gst_number) if gst_number else False
 
     cur.close()
     conn.close()

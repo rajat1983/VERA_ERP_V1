@@ -7,8 +7,11 @@
   <div>
     <h1>Users and roles</h1>
     <p>New registrations stay pending until you approve them. Approve activates the account immediately.</p>
+    <p class="mb-0 text-muted">Seats: {{ seats_used }} / {{ max_users }}{% if access is defined and access and access.extra_users %} ({{ access.included_users }} included + {{ access.extra_users }} extra){% endif %}</p>
   </div>
+  {% if not seats_full %}
   <a class="btn btn-primary" href="{{ url_for('users.add_user') }}">New user</a>
+  {% endif %}
 </div>
 <div class="page-card">
   <div class="table-responsive">

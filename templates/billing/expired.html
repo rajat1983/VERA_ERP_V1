@@ -1,0 +1,18 @@
+{% extends "auth/layout.html" %}
+{% block content %}
+<h1 class="h4 mb-1">Subscription required</h1>
+<p class="text-muted mb-3">
+  {{ access.message or "This shop cannot use the ERP until a plan is active." }}
+</p>
+{% if access.plan_name %}
+<p class="mb-1">Plan: <strong>{{ access.plan_name }}</strong></p>
+{% endif %}
+{% if access.ends_on %}
+<p class="mb-3">Ended: {{ access.ends_on }}</p>
+{% endif %}
+<meta name="csrf-token" content="{{ get_csrf_token() }}">
+{% include "billing/_pay.html" %}
+<p class="mt-4 mb-0">
+  <a class="btn btn-outline-secondary" href="{{ url_for('auth.logout') }}">Sign out</a>
+</p>
+{% endblock %}

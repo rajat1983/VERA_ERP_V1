@@ -1,4 +1,5 @@
 from db import get_db_connection
+from utils.tenant import tid
 
 
 def get_all_batches():
@@ -9,8 +10,10 @@ def get_all_batches():
         SELECT b.*, p.name AS product_name
         FROM production_batches b
         JOIN products p ON p.id = b.product_id
+        WHERE b.tenant_id=%s
         ORDER BY b.id DESC
-        """
+        """,
+        (tid(),),
     )
     rows = cur.fetchall()
     cur.close()
@@ -22,7 +25,7 @@ def cancel_production(batch_id):
     conn = get_db_connection()
     cur = conn.cursor()
     try:
-        cur.execute("SELECT * FROM production_batches WHERE id=%s", (batch_id,))
+        cur.execute("SELECT * FROM production_batches WHERE id=%s AND tenant_id=%s", (batch_id, tid()))
         batch = cur.fetchone()
         if not batch:
             raise ValueError("Batch not found.")

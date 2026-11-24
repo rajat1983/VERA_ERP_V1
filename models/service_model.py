@@ -1,4 +1,5 @@
 from db import get_db_connection
+from utils.tenant import tid
 
 
 UNITS = ("page", "piece", "set")
@@ -12,11 +13,11 @@ def list_services(search="", limit=10, offset=0):
         """
         SELECT id, name, category, unit, price, is_active, created_at
         FROM services
-        WHERE name LIKE %s OR IFNULL(category, '') LIKE %s OR unit LIKE %s
+        WHERE tenant_id=%s AND (name LIKE %s OR IFNULL(category, '') LIKE %s OR unit LIKE %s)
         ORDER BY name
         LIMIT %s OFFSET %s
         """,
-        (like, like, like, int(limit), int(offset)),
+        (tid(), like, like, like, int(limit), int(offset)),
     )
     rows = cur.fetchall()
     cur.close()
@@ -32,9 +33,9 @@ def count_services(search=""):
         """
         SELECT COUNT(*) AS total
         FROM services
-        WHERE name LIKE %s OR IFNULL(category, '') LIKE %s OR unit LIKE %s
+        WHERE tenant_id=%s AND (name LIKE %s OR IFNULL(category, '') LIKE %s OR unit LIKE %s)
         """,
-        (like, like, like),
+        (tid(), like, like, like),
     )
     total = cur.fetchone()["total"]
     cur.close()
@@ -45,7 +46,7 @@ def count_services(search=""):
 def get_service(service_id):
     conn = get_db_connection()
     cur = conn.cursor()
-    cur.execute("SELECT * FROM services WHERE id=%s", (service_id,))
+    cur.execute("SELECT * FROM services WHERE id=%s AND tenant_id=%s", (service_id, tid()))
     row = cur.fetchone()
     cur.close()
     conn.close()
@@ -57,11 +58,14 @@ def name_exists(name, exclude_id=None):
     cur = conn.cursor()
     if exclude_id:
         cur.execute(
-            "SELECT id FROM services WHERE LOWER(name)=LOWER(%s) AND id<>%s LIMIT 1",
-            (name, exclude_id),
+            "SELECT id FROM services WHERE tenant_id=%s AND LOWER(name)=LOWER(%s) AND id<>%s LIMIT 1",
+            (tid(), name, exclude_id),
         )
     else:
-        cur.execute("SELECT id FROM services WHERE LOWER(name)=LOWER(%s) LIMIT 1", (name,))
+        cur.execute(
+            "SELECT id FROM services WHERE tenant_id=%s AND LOWER(name)=LOWER(%s) LIMIT 1",
+            (tid(), name),
+        )
     row = cur.fetchone()
     cur.close()
     conn.close()
@@ -73,10 +77,10 @@ def add_service(name, category, unit, price, is_active):
     cur = conn.cursor()
     cur.execute(
         """
-        INSERT INTO services (name, category, unit, price, is_active)
-        VALUES (%s, %s, %s, %s, %s)
+        INSERT INTO services (tenant_id, name, category, unit, price, is_active)
+        VALUES (%s, %s, %s, %s, %s, %s)
         """,
-        (name, category or None, unit, price, 1 if is_active else 0),
+        (tid(), name, category or None, unit, price, 1 if is_active else 0),
     )
     conn.commit()
     service_id = cur.lastrowid
@@ -93,9 +97,9 @@ def update_service(service_id, name, category, unit, price, is_active):
         """
         UPDATE services
         SET name=%s, category=%s, unit=%s, price=%s, is_active=%s
-        WHERE id=%s
+        WHERE id=%s AND tenant_id=%s
         """,
-        (name, category or None, unit, price, 1 if is_active else 0, service_id),
+        (name, category or None, unit, price, 1 if is_active else 0, service_id, tid()),
     )
     conn.commit()
     cur.close()
@@ -106,7 +110,7 @@ def update_service(service_id, name, category, unit, price, is_active):
 def delete_service(service_id):
     conn = get_db_connection()
     cur = conn.cursor()
-    cur.execute("DELETE FROM services WHERE id=%s", (service_id,))
+    cur.execute("DELETE FROM services WHERE id=%s AND tenant_id=%s", (service_id, tid()))
     conn.commit()
     cur.close()
     conn.close()
@@ -120,19 +124,21 @@ def search_categories(q=""):
         cur.execute(
             """
             SELECT id, name FROM service_categories
-            WHERE name LIKE %s
+            WHERE tenant_id=%s AND name LIKE %s
             ORDER BY name
             LIMIT 20
             """,
-            (f"%{q}%",),
+            (tid(), f"%{q}%"),
         )
     else:
         cur.execute(
             """
             SELECT id, name FROM service_categories
+            WHERE tenant_id=%s
             ORDER BY name
             LIMIT 50
-            """
+            """,
+            (tid(),),
         )
     rows = cur.fetchall()
     cur.close()
@@ -145,13 +151,13 @@ def category_exists(name, exclude_id=None):
     cur = conn.cursor()
     if exclude_id:
         cur.execute(
-            "SELECT id FROM service_categories WHERE LOWER(name)=LOWER(%s) AND id<>%s LIMIT 1",
-            (name, exclude_id),
+            "SELECT id FROM service_categories WHERE tenant_id=%s AND LOWER(name)=LOWER(%s) AND id<>%s LIMIT 1",
+            (tid(), name, exclude_id),
         )
     else:
         cur.execute(
-            "SELECT id FROM service_categories WHERE LOWER(name)=LOWER(%s) LIMIT 1",
-            (name,),
+            "SELECT id FROM service_categories WHERE tenant_id=%s AND LOWER(name)=LOWER(%s) LIMIT 1",
+            (tid(), name),
         )
     row = cur.fetchone()
     cur.close()
@@ -167,7 +173,7 @@ def add_category(name):
         raise ValueError("This category already exists.")
     conn = get_db_connection()
     cur = conn.cursor()
-    cur.execute("INSERT INTO service_categories (name) VALUES (%s)", (name,))
+    cur.execute("INSERT INTO service_categories (tenant_id, name) VALUES (%s, %s)", (tid(), name))
     conn.commit()
     category_id = cur.lastrowid
     cur.close()
@@ -188,8 +194,8 @@ def ensure_category(name):
 def active_catalog(search="", category=""):
     conn = get_db_connection()
     cur = conn.cursor()
-    where = ["is_active=1"]
-    params = []
+    where = ["tenant_id=%s", "is_active=1"]
+    params = [tid()]
     if category:
         where.append("category=%s")
         params.append(category)

@@ -1,4 +1,5 @@
 from db import get_db_connection
+from utils.tenant import tid
 from utils.totals import calculate_document_totals
 
 def create_purchase(
@@ -28,6 +29,7 @@ def create_purchase(
         cur.execute("""
             INSERT INTO purchases
             (
+                tenant_id,
                 purchase_no,
                 vendor_id,
                 vendor_invoice_no,
@@ -41,9 +43,10 @@ def create_purchase(
             )
             VALUES
             (
-                %s, %s, %s, %s, %s, %s, %s, %s, %s, 'confirmed'
+                %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, 'confirmed'
             )
         """, (
+            tid(),
             purchase_no,
             vendor_id,
             vendor_invoice_no,
@@ -62,6 +65,7 @@ def create_purchase(
             cur.execute("""
                 INSERT INTO purchase_items
                 (
+                    tenant_id,
                     purchase_id,
                     product_id,
                     quantity,
@@ -74,9 +78,11 @@ def create_purchase(
                     %s,
                     %s,
                     %s,
+                    %s,
                     %s
                 )
             """, (
+                tid(),
                 purchase_id,
                 item["product_id"],
                 item["qty"],
@@ -144,12 +150,13 @@ def get_all_purchases(search="", limit=10, offset=0):
                v.name AS vendor_name
         FROM purchases p
         JOIN vendors v ON p.vendor_id = v.id
-        WHERE p.purchase_no LIKE %s
+        WHERE p.tenant_id=%s
+          AND (p.purchase_no LIKE %s
            OR p.vendor_invoice_no LIKE %s
-           OR v.name LIKE %s
+           OR v.name LIKE %s)
         ORDER BY p.id DESC
         LIMIT %s OFFSET %s
-    """, (like, like, like, limit, offset))
+    """, (tid(), like, like, like, limit, offset))
 
     purchases = cur.fetchall()
 
@@ -167,10 +174,11 @@ def get_purchase_count(search=""):
         SELECT COUNT(*) AS total
         FROM purchases p
         JOIN vendors v ON p.vendor_id = v.id
-        WHERE p.purchase_no LIKE %s
+        WHERE p.tenant_id=%s
+          AND (p.purchase_no LIKE %s
            OR p.vendor_invoice_no LIKE %s
-           OR v.name LIKE %s
-    """, (like, like, like))
+           OR v.name LIKE %s)
+    """, (tid(), like, like, like))
     total = cur.fetchone()["total"]
     cur.close()
     conn.close()
@@ -187,8 +195,8 @@ def get_purchase_by_id(purchase_id):
         SELECT p.*, v.name AS vendor_name
         FROM purchases p
         JOIN vendors v ON p.vendor_id = v.id
-        WHERE p.id = %s
-    """, (purchase_id,))
+        WHERE p.id = %s AND p.tenant_id = %s
+    """, (purchase_id, tid()))
 
     purchase = cur.fetchone()
 
@@ -244,7 +252,7 @@ def delete_purchase(purchase_id):
         cur.execute("DELETE FROM purchase_items WHERE purchase_id = %s", (purchase_id,))
 
         # 4️⃣ Delete purchase
-        cur.execute("DELETE FROM purchases WHERE id = %s", (purchase_id,))
+        cur.execute("DELETE FROM purchases WHERE id = %s AND tenant_id = %s", (purchase_id, tid()))
 
         conn.commit()
 
@@ -263,7 +271,8 @@ def generate_purchase_number():
     cur.execute("""
         SELECT MAX(id) AS last_id
         FROM purchases
-    """)
+        WHERE tenant_id=%s
+    """, (tid(),))
 
     row = cur.fetchone()
 
@@ -296,11 +305,13 @@ def purchase_invoice_exists(
         query = """
             SELECT id
             FROM purchases
-            WHERE vendor_id = %s
+            WHERE tenant_id = %s
+              AND vendor_id = %s
               AND vendor_invoice_no = %s
         """
 
         params = [
+            tid(),
             vendor_id,
             vendor_invoice_no
         ]
@@ -342,7 +353,7 @@ def update_purchase(
 
     try:
 
-        cur.execute("SELECT status FROM purchases WHERE id=%s", (purchase_id,))
+        cur.execute("SELECT status FROM purchases WHERE id=%s AND tenant_id=%s", (purchase_id, tid()))
         existing = cur.fetchone()
         if not existing:
             raise ValueError("Purchase not found.")
@@ -423,6 +434,7 @@ def update_purchase(
             cur.execute("""
                 INSERT INTO purchase_items
                 (
+                    tenant_id,
                     purchase_id,
                     product_id,
                     quantity,
@@ -435,9 +447,11 @@ def update_purchase(
                     %s,
                     %s,
                     %s,
+                    %s,
                     %s
                 )
             """, (
+                tid(),
                 purchase_id,
                 item["product_id"],
                 item["qty"],

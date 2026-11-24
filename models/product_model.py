@@ -63,9 +63,9 @@ def get_vendors():
     cur.execute("""
     SELECT id, name
     FROM vendors
-    WHERE status = 'Active'
+    WHERE status = 'Active' AND tenant_id=%s
     ORDER BY name ASC
-""")
+""", (current_tenant_id(),))
     vendors = cur.fetchall()
     cur.close()
     conn.close()
@@ -263,7 +263,6 @@ def update_product(id, data):
             cost_price=%s,
             selling_price=%s,
             mrp=%s,
-            stock_qty=%s,
             reorder_level=%s,
             low_stock_threshold=%s,
             tax_rate=%s,
@@ -286,7 +285,6 @@ def update_product(id, data):
         data["cost_price"],
         data["selling_price"],
         _num(data.get("mrp"), None),
-        data["stock_qty"],
         data["reorder_level"],
         _num(data.get("low_stock_threshold"), 0),
         data.get("tax_rate") or 0,
@@ -530,4 +528,22 @@ def can_delete_product(id):
     row = get_product_by_id(id)
     if not row:
         return False, "Product not found."
+    conn = get_db_connection()
+    cur = conn.cursor()
+    tenant_id = _tid()
+    checks = (
+        ("SELECT COUNT(*) AS c FROM sale_items WHERE tenant_id=%s AND product_id=%s", "sales invoices"),
+        ("SELECT COUNT(*) AS c FROM purchase_items WHERE tenant_id=%s AND product_id=%s", "purchase orders"),
+        ("SELECT COUNT(*) AS c FROM pos_sale_items WHERE tenant_id=%s AND product_id=%s", "POS bills"),
+        ("SELECT COUNT(*) AS c FROM production_batches WHERE tenant_id=%s AND product_id=%s", "production batches"),
+        ("SELECT COUNT(*) AS c FROM production_materials WHERE tenant_id=%s AND raw_material_id=%s", "production recipes"),
+    )
+    try:
+        for sql, label in checks:
+            cur.execute(sql, (tenant_id, id))
+            if cur.fetchone()["c"]:
+                return False, f"Cannot delete: this product is used on {label}."
+    finally:
+        cur.close()
+        conn.close()
     return True, ""

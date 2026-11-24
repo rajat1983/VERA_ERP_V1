@@ -1,0 +1,100 @@
+{% extends "platform/layout.html" %}
+{% block title %}Plans — VERA Platform{% endblock %}
+{% block content %}
+{% set active_plans = plans | selectattr('is_active') | list %}
+{% set public_plans = plans | selectattr('is_public') | list %}
+<div class="page-header">
+  <div>
+    <h1>Plans</h1>
+    <p>Included users, extra-user rates, and modules for each 3 / 6 / 9 / 12 month plan.</p>
+  </div>
+</div>
+
+<div class="row g-3 mb-3">
+  <div class="col-md-4">
+    <div class="page-card">
+      <div class="page-card-title">Plans</div>
+      <div class="card-body">
+        <div class="fs-6">{{ plans|length }}</div>
+        <div class="text-muted small mt-1">Total configured</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="page-card">
+      <div class="page-card-title">Active</div>
+      <div class="card-body">
+        <div class="fs-6">{{ active_plans|length }}</div>
+        <div class="text-muted small mt-1">Available to assign</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="page-card">
+      <div class="page-card-title">Public</div>
+      <div class="card-body">
+        <div class="fs-6">{{ public_plans|length }}</div>
+        <div class="text-muted small mt-1">Shown on shop signup</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="page-card page-card-open">
+  <div class="page-card-title">Subscription plans</div>
+  <div class="table-responsive">
+    <table class="table vera-table mb-0">
+      <thead>
+        <tr>
+          <th>Code</th>
+          <th>Name</th>
+          <th>Duration</th>
+          <th>Price (ex GST)</th>
+          <th>Included users</th>
+          <th>Extra user</th>
+          <th>Modules</th>
+          <th>Status</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for plan in plans %}
+        <tr>
+          <td><code>{{ plan.code }}</code></td>
+          <td>{{ plan.name }}</td>
+          <td>{{ plan.duration_days }} days</td>
+          <td>{{ format_price(plan.price_paise) }}</td>
+          <td>{{ plan.max_users }}</td>
+          <td>{{ format_price(plan.extra_user_price_paise) }} / user</td>
+          <td>
+            {% if plan.allow_pos %}<span class="badge text-bg-light border me-1">POS</span>{% endif %}
+            {% if plan.allow_production %}<span class="badge text-bg-light border me-1">Production</span>{% endif %}
+            {% if plan.allow_services %}<span class="badge text-bg-light border me-1">Services</span>{% endif %}
+            {% if not plan.allow_pos and not plan.allow_production and not plan.allow_services %}
+            <span class="text-muted">—</span>
+            {% endif %}
+          </td>
+          <td>
+            {% if plan.is_active %}
+            <span class="badge text-bg-success">Active</span>
+            {% else %}
+            <span class="badge text-bg-secondary">Inactive</span>
+            {% endif %}
+            {% if plan.is_public %}
+            <span class="badge text-bg-primary">Public</span>
+            {% else %}
+            <span class="badge text-bg-light border">Private</span>
+            {% endif %}
+          </td>
+          <td class="table-actions">
+            <a href="{{ url_for('platform.plan_edit', id=plan.id) }}">Edit</a>
+          </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="9" class="text-muted">No plans.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

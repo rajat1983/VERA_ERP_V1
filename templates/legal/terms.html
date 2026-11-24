@@ -1,0 +1,13 @@
+{% extends "legal/layout.html" %}
+{% block title %}Terms of service — VERA ERP{% endblock %}
+{% block heading %}Terms of service{% endblock %}
+{% block content %}
+<p>These terms govern use of {{ platform_name }} by shops that sign up on this platform.</p>
+<ul>
+  <li>Each shop is a separate tenant. You must not attempt to access another shop’s data.</li>
+  <li>Shop admins are responsible for users they invite and for GST data they store.</li>
+  <li>Access to the ERP depends on an active subscription (including any grace period).</li>
+  <li>We may suspend a shop for non-payment, abuse, or legal risk.</li>
+</ul>
+<p>Questions: <a href="mailto:{{ support_email }}">{{ support_email }}</a>.</p>
+{% endblock %}

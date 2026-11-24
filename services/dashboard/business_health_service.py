@@ -1,6 +1,7 @@
 from db import get_db_connection
 from config.business_health_rules import BUSINESS_HEALTH
 from config.business_health_rules import ( BUSINESS_HEALTH, STATUS)
+from utils.tenant import tid
 class BusinessHealthService:
 
     @staticmethod
@@ -19,8 +20,8 @@ class BusinessHealthService:
         cur.execute("""
             SELECT COUNT(*) total
             FROM products
-            WHERE stock_qty <= low_stock_threshold
-        """)
+            WHERE tenant_id=%s AND stock_qty <= low_stock_threshold
+        """, (tid(),))
 
         low_stock = cur.fetchone()["total"]
 
@@ -44,8 +45,9 @@ class BusinessHealthService:
         cur.execute("""
             SELECT COUNT(*) total
             FROM sales
-            WHERE payment_status='Pending'
-        """)
+            WHERE tenant_id=%s AND payment_status='Pending'
+              AND IFNULL(sale_status, 'Confirmed') <> 'Cancelled'
+        """, (tid(),))
 
         pending = cur.fetchone()["total"]
 
@@ -67,10 +69,15 @@ class BusinessHealthService:
         # ==========================================
 
         cur.execute("""
-            SELECT COUNT(*) total
-            FROM sales
-            WHERE DATE(sale_date)=CURDATE()
-        """)
+            SELECT
+                (SELECT COUNT(*) FROM sales
+                  WHERE tenant_id=%s AND DATE(sale_date)=CURDATE()
+                    AND IFNULL(sale_status, 'Confirmed') <> 'Cancelled')
+                +
+                (SELECT COUNT(*) FROM pos_sales
+                  WHERE tenant_id=%s AND DATE(sale_date)=CURDATE())
+                AS total
+        """, (tid(), tid()))
 
         today_sales = cur.fetchone()["total"]
 

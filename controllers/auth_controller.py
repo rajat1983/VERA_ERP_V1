@@ -1,5 +1,5 @@
 from flask import Blueprint, render_template, request, redirect, url_for, session, flash
-from models import user_model
+from models import subscription_model, tenant_model, user_model
 from utils.audit import clear_failures, is_locked, record_failure, write_audit
 from utils.auth import safe_next
 from utils.mailer import send_email, ADMIN_EMAIL
@@ -94,6 +94,56 @@ def register():
         except Exception:
             flash("Could not complete registration.", "danger")
     return render_template("auth/register.html", form=form)
+
+
+@auth_bp.route("/signup", methods=["GET", "POST"])
+def signup():
+    if session.get("user_id"):
+        return redirect(url_for("dashboard.dashboard"))
+    plans = subscription_model.list_plans(public_only=True)
+    form = {
+        "shop_name": request.form.get("shop_name", ""),
+        "plan_id": request.form.get("plan_id", ""),
+        "owner_name": request.form.get("owner_name", ""),
+        "owner_email": request.form.get("owner_email", ""),
+        "owner_username": request.form.get("owner_username", ""),
+    }
+    if request.method != "POST":
+        return render_template("auth/signup.html", form=form, plans=plans)
+    tenant = None
+    try:
+        if not plans:
+            raise ValueError("No public plans are available. Contact the platform operator.")
+        tenant = tenant_model.create_tenant(form["shop_name"])
+        roles = {r["name"]: r["id"] for r in user_model.list_roles()}
+        if "admin" not in roles:
+            raise ValueError("Admin role is missing.")
+        user_model.create_user(
+            form["owner_username"],
+            request.form.get("owner_password", ""),
+            roles["admin"],
+            is_active=1,
+            full_name=form["owner_name"],
+            email=form["owner_email"],
+            tenant_id=tenant["id"],
+        )
+        subscription_model.ensure_pending(tenant["id"], int(form["plan_id"]))
+    except ValueError as exc:
+        if tenant:
+            tenant_model.delete_tenant(tenant["id"])
+        flash(str(exc), "danger")
+        return render_template("auth/signup.html", form=form, plans=plans)
+    except Exception:
+        if tenant:
+            tenant_model.delete_tenant(tenant["id"])
+        flash("Could not create the shop. Try a different username or email.", "danger")
+        return render_template("auth/signup.html", form=form, plans=plans)
+    write_audit("CREATE", "signup", "tenant", tenant["id"], tenant["shop_code"])
+    flash(
+        f"Shop created. Your shop code is {tenant['shop_code']}. Sign in after Super Admin activates the plan.",
+        "success",
+    )
+    return redirect(url_for("auth.login"))
 
 
 @auth_bp.route("/activate/<token>")

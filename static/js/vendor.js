@@ -66,17 +66,17 @@ function autoSearchVendor() {
 
                             <td>${index + 1}</td>
 
-                            <td><strong>${vr.vendor_code ?? "-"}</strong></td>
+                            <td><strong>${veraEscapeHtml(vr.vendor_code ?? "-")}</strong></td>
 
-                            <td>${vr.name ?? "-"}</td>
+                            <td>${veraEscapeHtml(vr.name ?? "-")}</td>
 
-                            <td>${vr.phone ?? "-"}</td>
+                            <td>${veraEscapeHtml(vr.phone ?? "-")}</td>
 
-                            <td>${vr.email ?? "-"}</td>
+                            <td>${veraEscapeHtml(vr.email ?? "-")}</td>
 
-                            <td>${vr.gst_number ?? "-"}</td>
+                            <td>${veraEscapeHtml(vr.gst_number ?? "-")}</td>
 
-                            <td>${vr.city ?? "-"}</td>
+                            <td>${veraEscapeHtml(vr.city ?? "-")}</td>
 
                             <td class="text-center">
 
@@ -249,37 +249,9 @@ async function searchVendor() {
 // ==========================================
 
 function confirmVendorDelete(id) {
-    if (window.veraPathAllowed && !window.veraPathAllowed("/vendors/delete/" + id, "GET")) {
-        if (window.veraShowDenied) {
-            window.veraShowDenied();
-        }
-        return;
-    }
-
-    Swal.fire({
-
-        title: "Delete Vendor?",
-
-        text: "This action cannot be undone.",
-
-        icon: "warning",
-
-        showCancelButton: true,
-
-        confirmButtonColor: "#dc3545",
-
-        confirmButtonText: "Delete",
-
-        cancelButtonText: "Cancel"
-
-    }).then((result) => {
-
-        if (result.isConfirmed) {
-
-            window.location.href = "/vendor/delete/" + id;
-
-        }
-
-    });
-
+    veraConfirmPost(
+        "/vendors/delete/" + id,
+        "Delete Vendor?",
+        "This action cannot be undone."
+    );
 }

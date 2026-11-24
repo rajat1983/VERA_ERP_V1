@@ -19,6 +19,7 @@
         {% endif %}
       {% endwith %}
       {% block content %}{% endblock %}
+      {% include "legal/_links.html" %}
     </div>
   </div>
   <script src="{{ url_for('static', filename='js/common.js') }}"></script>

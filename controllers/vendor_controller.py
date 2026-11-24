@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
+from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, abort
 from models import vendor_model
 from utils.mailer import send_email, ADMIN_EMAIL
 vendor_bp = Blueprint("vendor", __name__)
@@ -245,15 +245,7 @@ def edit_vendor(id):
     vendor = vendor_model.get_vendor(id)
 
     if not vendor:
-
-        flash(
-            "Vendor not found.",
-            "danger"
-        )
-
-        return redirect(
-            url_for("vendor.list_vendors")
-        )
+        abort(404)
 
     if request.method == "POST":
 
@@ -366,8 +358,12 @@ def edit_vendor(id):
     )
 
 
-@vendor_bp.route("/vendors/delete/<int:id>")
+@vendor_bp.route("/vendors/delete/<int:id>", methods=["POST"])
 def delete_vendor(id):
+    can_delete, message = vendor_model.can_delete_vendor(id)
+    if not can_delete:
+        flash(message, "danger")
+        return redirect(url_for("vendor.list_vendors"))
     vendor_model.delete_vendor(id)
     flash("Vendor deleted", "warning")
     return redirect(url_for("vendor.list_vendors"))
@@ -413,15 +409,7 @@ def view_vendor(id):
     vendor = vendor_model.get_vendor_by_id(id)
 
     if not vendor:
-
-        flash(
-            "Vendor not found.",
-            "danger"
-        )
-
-        return redirect(
-            url_for("vendor.list_vendors")
-        )
+        abort(404)
 
     return render_template(
         "vendor/view.html",

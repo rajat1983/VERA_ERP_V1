@@ -153,6 +153,51 @@ def get_user(user_id):
     return row
 
 
+def _occupies_seat(user):
+    if not user:
+        return False
+    status = (user.get("status") or "active").lower()
+    if status == "rejected":
+        return False
+    if status == "pending":
+        return True
+    return bool(user.get("is_active") not in (0, "0", False))
+
+
+def count_seat_users(tenant_id=None):
+    tenant_id = _tenant_id_or_session(tenant_id)
+    conn = get_db_connection()
+    cur = conn.cursor()
+    try:
+        cur.execute(
+            """
+            SELECT COUNT(*) AS c
+            FROM users
+            WHERE tenant_id=%s
+              AND IFNULL(status, 'active') <> 'rejected'
+              AND (is_active=1 OR IFNULL(status, 'active')='pending')
+            """,
+            (tenant_id,),
+        )
+        return int(cur.fetchone()["c"])
+    finally:
+        cur.close()
+        conn.close()
+
+
+def assert_seat_available(tenant_id, extra=1):
+    from models import subscription_model
+
+    access = subscription_model.access(tenant_id)
+    max_users = int(access.get("max_users") or 5)
+    used = count_seat_users(tenant_id)
+    if used + int(extra) > max_users:
+        raise ValueError(
+            f"This shop allows {max_users} users ({used} in use). "
+            "Deactivate a user or ask Super Admin to add extra seats."
+        )
+
+
 def count_active_admins(exclude_id=None):
     conn = get_db_connection()
     cur = conn.cursor()
@@ -182,6 +227,7 @@ def create_user(username, password, role_id, is_active=1, full_name="", email=""
     cur = conn.cursor()
     try:
         tenant_id = int(tenant_id) if tenant_id is not None else _tenant_id_or_session()
+        assert_seat_available(tenant_id)
         cur.execute(
             "SELECT id FROM users WHERE tenant_id=%s AND username=%s",
             (tenant_id, username),
@@ -249,6 +295,8 @@ def update_user(user_id, role_id, is_active, password=None, full_name="", email=
         if not role:
             raise ValueError("Invalid role.")
         becoming_non_admin = role["name"] != "admin" or not is_active
+        if is_active and not _occupies_seat(existing):
+            assert_seat_available(existing.get("tenant_id") or _tenant_id_or_session())
         if existing.get("role") == "admin" and becoming_non_admin:
             if count_active_admins(exclude_id=user_id) < 1:
                 raise ValueError("Keep at least one active admin.")
@@ -367,6 +415,7 @@ def register_user(full_name, email, mobile, username, password, shop_code):
     tenant = get_by_shop_code(shop_code)
     if not tenant or (tenant.get("status") or "").lower() != "active":
         raise ValueError("Enter a valid shop code.")
+    assert_seat_available(tenant["id"])
     full_name, email, mobile = _clean_profile(full_name, email, mobile, require_email=True)
     conn = get_db_connection()
     cur = conn.cursor()

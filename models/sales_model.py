@@ -1,5 +1,6 @@
 from db import get_db_connection
 from datetime import datetime
+from utils.tenant import tid
 from utils.totals import calculate_document_totals
 
 
@@ -15,12 +16,12 @@ def _next_invoice_number(cur):
         """
         SELECT invoice_no
         FROM sales
-        WHERE invoice_no LIKE %s
+        WHERE tenant_id=%s AND invoice_no LIKE %s
         ORDER BY invoice_no DESC
         LIMIT 1
         FOR UPDATE
         """,
-        (year + "%",),
+        (tid(), year + "%"),
     )
     row = cur.fetchone()
     if row and row["invoice_no"]:
@@ -50,9 +51,12 @@ def _sale_user_label():
 
 
 def _sale_filters(search, from_date, to_date, created_by):
-    where = ["(s.invoice_no LIKE %s OR c.name LIKE %s OR IFNULL(u.full_name,'') LIKE %s OR IFNULL(u.username,'') LIKE %s)"]
+    where = [
+        "s.tenant_id=%s",
+        "(s.invoice_no LIKE %s OR c.name LIKE %s OR IFNULL(u.full_name,'') LIKE %s OR IFNULL(u.username,'') LIKE %s)",
+    ]
     like = f"%{search or ''}%"
-    params = [like, like, like, like]
+    params = [tid(), like, like, like, like]
     if from_date:
         where.append("DATE(s.sale_date) >= %s")
         params.append(from_date)
@@ -142,8 +146,8 @@ def create_sale(customer_id, sale_date, remarks, discount, items, created_by=Non
                 )
 
             cur.execute(
-                "SELECT tax_rate FROM products WHERE id=%s",
-                (item["product_id"],),
+                "SELECT tax_rate FROM products WHERE id=%s AND tenant_id=%s",
+                (item["product_id"], tid()),
             )
             prod = cur.fetchone()
             item["tax_rate"] = float(prod["tax_rate"] if prod else 0)
@@ -155,6 +159,7 @@ def create_sale(customer_id, sale_date, remarks, discount, items, created_by=Non
         cur.execute("""
             INSERT INTO sales
             (
+                tenant_id,
                 invoice_no,
                 customer_id,
                 sale_date,
@@ -167,8 +172,9 @@ def create_sale(customer_id, sale_date, remarks, discount, items, created_by=Non
                 payment_status,
                 created_by
             )
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, 'Confirmed', 'Pending', %s)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, 'Confirmed', 'Pending', %s)
         """, (
+            tid(),
             invoice_no,
             customer_id,
             sale_date,
@@ -202,14 +208,16 @@ def create_sale(customer_id, sale_date, remarks, discount, items, created_by=Non
             cur.execute("""
                 INSERT INTO sale_items
                 (
+                    tenant_id,
                     sale_id,
                     product_id,
                     qty,
                     price,
                     line_total
                 )
-                VALUES (%s, %s, %s, %s, %s)
+                VALUES (%s, %s, %s, %s, %s, %s)
             """, (
+                tid(),
                 sale_id,
                 item["product_id"],
                 item["qty"],
@@ -225,10 +233,12 @@ def create_sale(customer_id, sale_date, remarks, discount, items, created_by=Non
                 UPDATE products
                 SET stock_qty = stock_qty - %s
                 WHERE id = %s
+                  AND tenant_id = %s
                   AND stock_qty >= %s
             """, (
                 item["qty"],
                 item["product_id"],
+                tid(),
                 item["qty"]
             ))
 
@@ -245,6 +255,7 @@ def create_sale(customer_id, sale_date, remarks, discount, items, created_by=Non
             cur.execute("""
                 INSERT INTO stock_movements
                 (
+                    tenant_id,
                     product_id,
                     movement_type,
                     quantity,
@@ -254,12 +265,14 @@ def create_sale(customer_id, sale_date, remarks, discount, items, created_by=Non
                 VALUES
                 (
                     %s,
+                    %s,
                     'sale',
                     %s,
                     %s,
                     'sale'
                 )
             """, (
+                tid(),
                 item["product_id"],
                 -item["qty"],
                 sale_id
@@ -291,7 +304,7 @@ def create_sale(customer_id, sale_date, remarks, discount, items, created_by=Non
 def get_product(id):
     conn = get_db_connection()
     cur = conn.cursor()
-    cur.execute("SELECT name FROM products WHERE id=%s", (id,))
+    cur.execute("SELECT name FROM products WHERE id=%s AND tenant_id=%s", (id, tid()))
     pname = cur.fetchone()
     cur.close()
     conn.close()
@@ -323,8 +336,8 @@ def get_sale_by_id(sale_id):
         JOIN customers c
             ON s.customer_id = c.id
         LEFT JOIN users u ON u.id = s.created_by
-        WHERE s.id = %s
-    """, (sale_id,))
+        WHERE s.id = %s AND s.tenant_id = %s
+    """, (sale_id, tid()))
 
     sale = cur.fetchone()
 
@@ -375,7 +388,7 @@ def update_sale(sale_id, customer_id, discount, items):
     cur = conn.cursor()
     
     try:
-        cur.execute("SELECT sale_status FROM sales WHERE id=%s", (sale_id,))
+        cur.execute("SELECT sale_status FROM sales WHERE id=%s AND tenant_id=%s", (sale_id, tid()))
         existing = cur.fetchone()
         if not existing:
             raise ValueError("Sale not found.")
@@ -402,8 +415,8 @@ def update_sale(sale_id, customer_id, discount, items):
 
         for item in items:
             cur.execute(
-                "SELECT tax_rate FROM products WHERE id=%s",
-                (item["product_id"],),
+                "SELECT tax_rate FROM products WHERE id=%s AND tenant_id=%s",
+                (item["product_id"], tid()),
             )
             prod = cur.fetchone()
             item["tax_rate"] = float(prod["tax_rate"] if prod else 0)
@@ -431,10 +444,11 @@ def update_sale(sale_id, customer_id, discount, items):
             cur.execute("""
                 UPDATE products
                 SET stock_qty = stock_qty + %s
-                WHERE id = %s
+                WHERE id = %s AND tenant_id = %s
             """, (
                 item["qty"],
-                item["product_id"]
+                item["product_id"],
+                tid(),
             ))
 
             if cur.rowcount == 0:
@@ -447,6 +461,7 @@ def update_sale(sale_id, customer_id, discount, items):
             cur.execute("""
                 INSERT INTO stock_movements
                 (
+                    tenant_id,
                     product_id,
                     movement_type,
                     quantity,
@@ -456,12 +471,14 @@ def update_sale(sale_id, customer_id, discount, items):
                 VALUES
                 (
                     %s,
+                    %s,
                     'sale',
                     %s,
                     %s,
                     'sale'
                 )
             """, (
+                tid(),
                 item["product_id"],
                 item["qty"],
                 sale_id
@@ -487,22 +504,23 @@ def update_sale(sale_id, customer_id, discount, items):
                 discount_amount = %s,
                 gst_amount = %s,
                 total_amount = %s
-            WHERE id = %s
+            WHERE id = %s AND tenant_id = %s
         """, (
             customer_id,
             totals["discount_percent"],
             totals["discount_amount"],
             totals["gst_amount"],
             totals["grand_total"],
-            sale_id
+            sale_id,
+            tid(),
         ))
 
         if cur.rowcount == 0:
             cur.execute("""
                 SELECT invoice_no
                 FROM sales
-                WHERE id = %s
-            """, (sale_id,))
+                WHERE id = %s AND tenant_id = %s
+            """, (sale_id, tid()))
 
             sale = cur.fetchone()
 
@@ -528,10 +546,12 @@ def update_sale(sale_id, customer_id, discount, items):
                 UPDATE products
                 SET stock_qty = stock_qty - %s
                 WHERE id = %s
+                  AND tenant_id = %s
                   AND stock_qty >= %s
             """, (
                 item["qty"],
                 item["product_id"],
+                tid(),
                 item["qty"]
             ))
 
@@ -545,14 +565,16 @@ def update_sale(sale_id, customer_id, discount, items):
             cur.execute("""
                 INSERT INTO sale_items
                 (
+                    tenant_id,
                     sale_id,
                     product_id,
                     qty,
                     price,
                     line_total
                 )
-                VALUES (%s, %s, %s, %s, %s)
+                VALUES (%s, %s, %s, %s, %s, %s)
             """, (
+                tid(),
                 sale_id,
                 item["product_id"],
                 item["qty"],
@@ -564,6 +586,7 @@ def update_sale(sale_id, customer_id, discount, items):
             cur.execute("""
                 INSERT INTO stock_movements
                 (
+                    tenant_id,
                     product_id,
                     movement_type,
                     quantity,
@@ -573,12 +596,14 @@ def update_sale(sale_id, customer_id, discount, items):
                 VALUES
                 (
                     %s,
+                    %s,
                     'sale',
                     %s,
                     %s,
                     'sale'
                 )
             """, (
+                tid(),
                 item["product_id"],
                 -item["qty"],
                 sale_id
@@ -627,7 +652,7 @@ def sale_search(q):
     conn = get_db_connection()
     cur = conn.cursor()
     cur.execute("""
-        SELECT id, invoice_no, customer_id , sale_date,total_amount,discount FROM sales WHERE invoice_no LIKE %s """, (f"%{q}%"))
+        SELECT id, invoice_no, customer_id , sale_date,total_amount,discount FROM sales WHERE tenant_id=%s AND invoice_no LIKE %s """, (tid(), f"%{q}%"))
     rows = cur.fetchall()
     cur.close()
     conn.close()
@@ -638,16 +663,10 @@ def reduce_stock(product_id, qty):
     cur = conn.cursor()
 
     cur.execute("""
-        UPDATE products 
-        SET stock_qty = stock_qty - %s 
-        WHERE id = %s
-    """, (qty, product_id))
-
-    cur.execute("""
     UPDATE products
     SET stock_qty = stock_qty - %s
-    WHERE id=%s AND stock_qty >= %s
-    """, (qty, product_id, qty))
+    WHERE id=%s AND tenant_id=%s AND stock_qty >= %s
+    """, (qty, product_id, tid(), qty))
 
     if cur.rowcount == 0:
         raise Exception("Insufficient stock!")
@@ -662,8 +681,8 @@ def check_stock(product_id, qty):
     cur.execute("""
         SELECT stock_qty 
         FROM products 
-        WHERE id=%s
-    """, (product_id,))
+        WHERE id=%s AND tenant_id=%s
+    """, (product_id, tid()))
 
     row = cur.fetchone()
 
@@ -689,8 +708,8 @@ def cancel_sale(sale_id):
         cur.execute("""
             SELECT sale_status
             FROM sales
-            WHERE id = %s
-        """, (sale_id,))
+            WHERE id = %s AND tenant_id = %s
+        """, (sale_id, tid()))
 
         sale = cur.fetchone()
 
@@ -725,10 +744,11 @@ def cancel_sale(sale_id):
             cur.execute("""
                 UPDATE products
                 SET stock_qty = stock_qty + %s
-                WHERE id = %s
+                WHERE id = %s AND tenant_id = %s
             """, (
                 item["qty"],
-                item["product_id"]
+                item["product_id"],
+                tid(),
             ))
 
             if cur.rowcount == 0:
@@ -741,6 +761,7 @@ def cancel_sale(sale_id):
             cur.execute("""
                 INSERT INTO stock_movements
                 (
+                    tenant_id,
                     product_id,
                     movement_type,
                     quantity,
@@ -750,12 +771,14 @@ def cancel_sale(sale_id):
                 VALUES
                 (
                     %s,
+                    %s,
                     'sale',
                     %s,
                     %s,
                     'sale'
                 )
             """, (
+                tid(),
                 item["product_id"],
                 item["qty"],
                 sale_id
@@ -765,11 +788,11 @@ def cancel_sale(sale_id):
         # 4. Update Sale Status
         # ==========================================
 
-        cur.execute("""
+            cur.execute("""
             UPDATE sales
             SET sale_status = 'Cancelled'
-            WHERE id = %s
-        """, (sale_id,))
+            WHERE id = %s AND tenant_id = %s
+        """, (sale_id, tid()))
 
         if cur.rowcount == 0:
             raise ValueError(

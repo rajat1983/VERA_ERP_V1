@@ -1,0 +1,12 @@
+{% extends "legal/layout.html" %}
+{% block title %}Refund policy — VERA ERP{% endblock %}
+{% block heading %}Refund policy{% endblock %}
+{% block content %}
+<p>Subscription fees are for access to {{ platform_name }} for the plan duration shown at checkout.</p>
+<ul>
+  <li>Fees already used for an active period are generally not refundable.</li>
+  <li>If a payment is captured in error, contact us within 7 days with the platform invoice number.</li>
+  <li>Approved refunds are returned through the original Razorpay payment method where possible.</li>
+</ul>
+<p>Billing support: <a href="mailto:{{ support_email }}">{{ support_email }}</a>.</p>
+{% endblock %}

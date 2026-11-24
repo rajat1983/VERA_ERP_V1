@@ -1,7 +1,6 @@
-from flask import  Blueprint, render_template, request, redirect, url_for, flash, jsonify, current_app
+from flask import  Blueprint, render_template, request, redirect, url_for, flash, jsonify, abort, session
 from models import product_model, vendor_model
-import os
-from werkzeug.utils import secure_filename
+from utils.uploads import save_product_image
 
 product_bp = Blueprint("product", __name__)
 
@@ -67,24 +66,7 @@ def add_product():
             # -----------------------------
             # Upload Image
             # -----------------------------
-            image_name = None
-            image = request.files.get("image")
-
-            if image and image.filename:
-
-                image_name = secure_filename(image.filename)
-
-                upload_path = os.path.join(
-                    current_app.static_folder,
-                    "uploads",
-                    "products"
-                )
-
-                os.makedirs(upload_path, exist_ok=True)
-
-                image.save(
-                    os.path.join(upload_path, image_name)
-                )
+            image_name = save_product_image(request.files.get("image"), session.get("tenant_id"))
 
             # -----------------------------
             # Prepare Data
@@ -145,8 +127,7 @@ def edit_product(id):
     vendors = product_model.get_vendors()
 
     if not product:
-        flash("Product not found.", "danger")
-        return redirect(url_for("product.index"))
+        abort(404)
 
     if request.method == "POST":
 
@@ -154,22 +135,8 @@ def edit_product(id):
         image_name = product["image"]
 
         image = request.files.get("image")
-
         if image and image.filename:
-
-            image_name = secure_filename(image.filename)
-
-            upload_path = os.path.join(
-                current_app.static_folder,
-                "uploads",
-                "products"
-            )
-
-            os.makedirs(upload_path, exist_ok=True)
-
-            image.save(
-                os.path.join(upload_path, image_name)
-            )
+            image_name = save_product_image(image, session.get("tenant_id"))
 
         data = _product_form_data(image_name)
 
@@ -215,7 +182,7 @@ def quick_add_category():
         return jsonify(ok=False, error=str(ex)), 400
     return jsonify(ok=True, id=row["id"], name=row["name"])
 
-@product_bp.route("/products/delete/<int:id>")
+@product_bp.route("/products/delete/<int:id>", methods=["POST"])
 def delete(id):
 
     can_delete, message = product_model.can_delete_product(id)
@@ -249,8 +216,7 @@ def view_product(id):
 
     product = product_model.get_product_by_id(id)
     if not product:
-        flash("Product not found.", "danger")
-        return redirect(url_for("product.index"))
+        abort(404)
 
     back_href = _safe_return_path(request.args.get("next"), "/products")
     if back_href.startswith("/stock-movements"):

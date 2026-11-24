@@ -108,8 +108,11 @@ def list_tenants(status=None, search=""):
         cur.execute(
             f"""
             SELECT t.id, t.shop_code, t.name, t.slug, t.status, t.created_at,
-                   (SELECT COUNT(*) FROM users u WHERE u.tenant_id=t.id) AS user_count
+                   (SELECT COUNT(*) FROM users u WHERE u.tenant_id=t.id) AS user_count,
+                   s.status AS subscription_status, s.ends_on, p.name AS plan_name
             FROM tenants t
+            LEFT JOIN subscriptions s ON s.tenant_id = t.id
+            LEFT JOIN subscription_plans p ON p.id = s.plan_id
             WHERE {" AND ".join(where)}
             ORDER BY t.id DESC
             """,
@@ -189,6 +192,10 @@ def delete_tenant(tenant_id):
     conn = get_db_connection()
     cur = conn.cursor()
     try:
+        if _has_table(cur, "subscription_events"):
+            cur.execute("DELETE FROM subscription_events WHERE tenant_id=%s", (tenant_id,))
+        if _has_table(cur, "subscriptions"):
+            cur.execute("DELETE FROM subscriptions WHERE tenant_id=%s", (tenant_id,))
         if _has_table(cur, "users"):
             cur.execute("DELETE FROM users WHERE tenant_id=%s", (tenant_id,))
         if _has_table(cur, "company") and _has_column(cur, "company", "tenant_id"):

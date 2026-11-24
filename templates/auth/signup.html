@@ -1,0 +1,43 @@
+{% extends "auth/layout.html" %}
+{% block content %}
+<h1 class="h4 mb-1">Open a shop</h1>
+<p class="text-muted mb-4">Creates an isolated VERA ERP shop. Super Admin activates the plan before ERP use.</p>
+<form method="POST">
+  <input type="hidden" name="csrf_token" value="{{ get_csrf_token() }}">
+  <div class="mb-3">
+    <label class="form-label" for="shop_name">Shop name</label>
+    <input class="form-control" id="shop_name" name="shop_name" required maxlength="160" value="{{ form.shop_name }}">
+  </div>
+  <div class="mb-3">
+    <label class="form-label" for="plan_id">Plan</label>
+    <select class="form-select" id="plan_id" name="plan_id" required>
+      {% for plan in plans %}
+      <option value="{{ plan.id }}" {% if form.plan_id == plan.id|string %}selected{% endif %}>
+        {{ plan.name }} · {{ plan.duration_days }} days
+      </option>
+      {% endfor %}
+    </select>
+  </div>
+  <hr>
+  <div class="mb-3">
+    <label class="form-label" for="owner_name">Your name</label>
+    <input class="form-control" id="owner_name" name="owner_name" required maxlength="120" value="{{ form.owner_name }}">
+  </div>
+  <div class="mb-3">
+    <label class="form-label" for="owner_email">Email</label>
+    <input class="form-control" id="owner_email" name="owner_email" type="email" required maxlength="120" value="{{ form.owner_email }}">
+  </div>
+  <div class="mb-3">
+    <label class="form-label" for="owner_username">Username</label>
+    <input class="form-control" id="owner_username" name="owner_username" required maxlength="80" value="{{ form.owner_username }}">
+  </div>
+  <div class="mb-3">
+    <label class="form-label" for="owner_password">Password</label>
+    <input class="form-control" id="owner_password" name="owner_password" type="password" required minlength="6">
+  </div>
+  <button class="btn btn-primary w-100" type="submit">Create shop</button>
+</form>
+<p class="text-muted small mt-3 mb-0">
+  Already have a shop? <a href="{{ url_for('auth.login') }}">Sign in</a>
+</p>
+{% endblock %}

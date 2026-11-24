@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, redirect, request, flash, url_for, jsonify
+from flask import Blueprint, render_template, redirect, request, flash, url_for, jsonify, abort
 from models import customer_model
 import math
 
@@ -146,6 +146,8 @@ def add():
 def edit(id):
 
     customer = customer_model.get_customer_by_id(id)
+    if not customer:
+        abort(404)
 
     if request.method == "POST":
 
@@ -254,8 +256,12 @@ def edit(id):
     )
 
 
-@customer_bp.route("/customer/delete/<int:id>")
+@customer_bp.route("/customer/delete/<int:id>", methods=["POST"])
 def delete(id):
+    can_delete, message = customer_model.can_delete_customer(id)
+    if not can_delete:
+        flash(message, "danger")
+        return redirect(url_for("customer.index"))
     customer_model.delete_customer(id)
     flash("Customer deleted", "warning")
     return redirect(url_for("customer.index"))
@@ -276,15 +282,7 @@ def view(id):
     customer = customer_model.get_customer_by_id(id)
 
     if not customer:
-
-        flash(
-            "Customer not found.",
-            "danger"
-        )
-
-        return redirect(
-            url_for("customer.index")
-        )
+        abort(404)
 
     return render_template(
         "customer/view.html",

@@ -1,0 +1,100 @@
+{% extends "platform/layout.html" %}
+{% from "_macros.html" import csrf_input %}
+{% block title %}Edit {{ plan.code }} — VERA Platform{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1>Edit {{ plan.code }}</h1>
+    <p>{{ plan.name }} · {{ plan.duration_days }} days</p>
+  </div>
+  <a class="btn btn-outline-secondary" href="{{ url_for('platform.plans') }}">Back to plans</a>
+</div>
+
+<form method="post">
+  {{ csrf_input() }}
+  <div class="row g-3">
+    <div class="col-lg-6">
+      <div class="page-card h-100">
+        <div class="page-card-title">Plan details</div>
+        <div class="card-body">
+          <div class="mb-3">
+            <label class="form-label" for="name">Name</label>
+            <input class="form-control" id="name" name="name" required value="{{ plan.name }}">
+          </div>
+          <div class="mb-3">
+            <label class="form-label" for="duration_days">Duration (days)</label>
+            <input class="form-control" id="duration_days" name="duration_days" type="number" min="1" required value="{{ plan.duration_days }}">
+          </div>
+          <div class="mb-3">
+            <label class="form-label" for="price_rupees">Price excluding GST (₹)</label>
+            <input class="form-control" id="price_rupees" name="price_rupees" type="number" min="0" step="1" required value="{{ (plan.price_paise / 100)|int }}">
+          </div>
+          <div class="mb-0">
+            <label class="form-label" for="gst_rate">GST %</label>
+            <input class="form-control" id="gst_rate" name="gst_rate" type="number" min="0" step="0.01" required value="{{ plan.gst_rate }}">
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-lg-6">
+      <div class="page-card h-100">
+        <div class="page-card-title">Users and extra seats</div>
+        <div class="card-body">
+          <div class="mb-3">
+            <label class="form-label" for="max_users">Included users</label>
+            <input class="form-control" id="max_users" name="max_users" type="number" min="1" required value="{{ plan.max_users }}">
+          </div>
+          <div class="mb-0">
+            <label class="form-label" for="extra_user_price_rupees">Price per extra user (₹)</label>
+            <input class="form-control" id="extra_user_price_rupees" name="extra_user_price_rupees" type="number" min="0" step="1" required value="{{ ((plan.extra_user_price_paise or 0) / 100)|int }}">
+            <div class="form-text">Charged per extra user for this plan duration. Super Admin can override the rate on a shop.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-12">
+      <div class="page-card">
+        <div class="page-card-title">Modules and visibility</div>
+        <div class="card-body">
+          <div class="row g-3">
+            <div class="col-md-4">
+              <div class="form-check">
+                <input class="form-check-input" type="checkbox" id="allow_pos" name="allow_pos" value="1" {% if plan.allow_pos %}checked{% endif %}>
+                <label class="form-check-label" for="allow_pos">Point of Sale</label>
+              </div>
+            </div>
+            <div class="col-md-4">
+              <div class="form-check">
+                <input class="form-check-input" type="checkbox" id="allow_production" name="allow_production" value="1" {% if plan.allow_production %}checked{% endif %}>
+                <label class="form-check-label" for="allow_production">Production</label>
+              </div>
+            </div>
+            <div class="col-md-4">
+              <div class="form-check">
+                <input class="form-check-input" type="checkbox" id="allow_services" name="allow_services" value="1" {% if plan.allow_services %}checked{% endif %}>
+                <label class="form-check-label" for="allow_services">Services</label>
+              </div>
+            </div>
+            <div class="col-md-4">
+              <div class="form-check">
+                <input class="form-check-input" type="checkbox" id="is_public" name="is_public" value="1" {% if plan.is_public %}checked{% endif %}>
+                <label class="form-check-label" for="is_public">Public on shop signup</label>
+              </div>
+            </div>
+            <div class="col-md-4">
+              <div class="form-check">
+                <input class="form-check-input" type="checkbox" id="is_active" name="is_active" value="1" {% if plan.is_active %}checked{% endif %}>
+                <label class="form-check-label" for="is_active">Active</label>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="d-flex flex-wrap gap-2 mt-3">
+    <button class="btn btn-primary" type="submit">Save plan</button>
+    <a class="btn btn-outline-secondary" href="{{ url_for('platform.plans') }}">Cancel</a>
+  </div>
+</form>
+{% endblock %}

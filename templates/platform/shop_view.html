@@ -18,31 +18,103 @@
     {% endif %}
   </form>
 </div>
-<div class="row g-3 mb-4">
+
+<div class="row g-3 mb-3">
   <div class="col-md-4">
-    <div class="page-card card-body">
-      <div class="text-muted small">Access</div>
-      <div>{% if shop.status == 'active' %}Active — ERP login allowed{% else %}Suspended — shop login blocked{% endif %}</div>
+    <div class="page-card">
+      <div class="page-card-title">Access</div>
+      <div class="card-body">
+        <div class="fs-6">{% if shop.status == 'active' %}Active{% else %}Suspended{% endif %}</div>
+        <div class="text-muted small mt-1">{% if shop.status == 'active' %}ERP login allowed{% else %}Shop login blocked{% endif %}</div>
+      </div>
     </div>
   </div>
   <div class="col-md-4">
-    <div class="page-card card-body">
-      <div class="text-muted small">Subscription</div>
-      <div>Not configured</div>
-      <div class="form-text">Plans, Razorpay and expiry lock are Phase 3.</div>
+    <div class="page-card">
+      <div class="page-card-title">Subscription</div>
+      <div class="card-body">
+        <div class="fs-6">{{ access.plan_name or "None" }} · {{ access.status }}</div>
+        {% if access.ends_on %}<div class="text-muted small mt-1">Ends {{ access.ends_on }}</div>{% endif %}
+        {% if access.message %}<div class="text-muted small mt-1">{{ access.message }}</div>{% endif %}
+      </div>
     </div>
   </div>
   <div class="col-md-4">
-    <div class="page-card card-body">
-      <div class="text-muted small">Users</div>
-      <div>{{ users|length }}</div>
+    <div class="page-card">
+      <div class="page-card-title">Seats</div>
+      <div class="card-body">
+        <div class="fs-6">{{ seats_used }} / {{ access.max_users }} in use</div>
+        <div class="text-muted small mt-1">
+          {{ access.included_users or 0 }} included{% if access.extra_users %} + {{ access.extra_users }} extra{% endif %}
+        </div>
+      </div>
     </div>
   </div>
 </div>
-<div class="page-card">
-  <div class="card-header bg-light"><strong>Shop users</strong></div>
+
+<div class="row g-3 mb-3">
+  <div class="col-lg-6">
+    <div class="page-card h-100">
+      <div class="page-card-title">Change plan</div>
+      <div class="card-body">
+        <form method="post" action="{{ url_for('platform.shop_subscription', id=shop.id) }}">
+          {{ csrf_input() }}
+          <div class="mb-3">
+            <label class="form-label" for="plan_id">Plan</label>
+            <select class="form-select" id="plan_id" name="plan_id">
+              {% for plan in plans %}
+              <option value="{{ plan.id }}" {% if plan.code == access.plan_code %}selected{% endif %}>
+                {{ plan.code }} · {{ plan.name }} · {{ plan.max_users }} users
+              </option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="d-flex flex-wrap gap-2">
+            <button class="btn btn-primary" name="action" value="activate" type="submit">Activate / mark paid</button>
+            <button class="btn btn-outline-secondary" name="action" value="extend" type="submit">Extend</button>
+            <button class="btn btn-outline-secondary" name="action" value="suspend" type="submit">Suspend plan</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-6">
+    <div class="page-card h-100">
+      <div class="page-card-title">Extra users</div>
+      <div class="card-body">
+        {% if access.extra_users %}
+        <p class="mb-3">
+          Extra charge <strong>{{ format_price(access.extra_charge_paise) }}</strong>
+          for this plan term
+          ({{ access.extra_users }} × {{ format_price(access.extra_user_price_paise) }}).
+        </p>
+        {% else %}
+        <p class="text-muted mb-3">Add paid seats on top of the plan’s included users.</p>
+        {% endif %}
+        <form method="post" action="{{ url_for('platform.shop_seats', id=shop.id) }}">
+          {{ csrf_input() }}
+          <div class="row g-3">
+            <div class="col-sm-6">
+              <label class="form-label" for="extra_users">Extra users</label>
+              <input class="form-control" id="extra_users" name="extra_users" type="number" min="0" required value="{{ access.extra_users or 0 }}">
+            </div>
+            <div class="col-sm-6">
+              <label class="form-label" for="extra_user_price_rupees">Price per extra user (₹)</label>
+              <input class="form-control" id="extra_user_price_rupees" name="extra_user_price_rupees" type="number" min="0" step="1" required value="{{ ((access.extra_user_price_paise or 0) / 100)|int }}">
+            </div>
+          </div>
+          <p class="form-text mt-2 mb-3">Plan default is {{ format_price(access.plan_extra_user_price_paise or 0) }} per extra user. You can set a different rate for this shop.</p>
+          <button class="btn btn-primary" type="submit">Save extra users</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="page-card page-card-open">
+  <div class="page-card-title">Shop users</div>
   <div class="table-responsive">
-    <table class="table mb-0">
+    <table class="table vera-table mb-0">
       <thead>
         <tr>
           <th>Username</th>
@@ -68,5 +140,27 @@
     </table>
   </div>
 </div>
+
+{% if events %}
+<div class="page-card page-card-open mt-3">
+  <div class="page-card-title">Subscription history</div>
+  <div class="table-responsive">
+    <table class="table vera-table mb-0">
+      <thead>
+        <tr><th>When</th><th>Event</th><th>Notes</th></tr>
+      </thead>
+      <tbody>
+        {% for ev in events %}
+        <tr>
+          <td>{{ ev.created_at }}</td>
+          <td>{{ ev.event_type }}</td>
+          <td>{{ ev.notes or "—" }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
 <p class="mt-3"><a href="{{ url_for('platform.shops') }}">Back to shops</a></p>
 {% endblock %}

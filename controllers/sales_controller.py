@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, session
+from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, session, abort
 from datetime import date
 from utils.audit import write_audit
 from models import sales_model, product_model, customer_model, company_model, user_model
@@ -309,6 +309,8 @@ def add_sale():
 def sale_view(sale_id):
     company = company_model.get_company()
     sale, items = sales_model.get_sale_by_id(sale_id)
+    if not sale:
+        abort(404)
 
     sale["amount_in_words"] = (
     num2words(

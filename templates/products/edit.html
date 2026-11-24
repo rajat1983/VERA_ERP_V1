@@ -340,11 +340,15 @@
 
                                         <input
                                             type="number"
-                                            min="0"
-                                            name="stock_qty"
                                             class="form-control"
                                             value="{{ product.stock_qty }}"
-                                            required>
+                                            readonly
+                                            disabled>
+
+                                        <div class="form-text">
+                                            Stock is updated from inventory, sales, purchases, and POS.
+                                            <a href="{{ url_for('inventory.adjust_stock') }}">Adjust stock</a>
+                                        </div>
 
                                     </div>
 

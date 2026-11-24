@@ -96,8 +96,64 @@ function veraPathAllowed(path, method) {
     return false;
 }
 
+function veraEscapeHtml(value) {
+    return String(value == null ? "" : value)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#39;");
+}
+
+function veraCsrfToken() {
+    const meta = document.querySelector('meta[name="csrf-token"]');
+    return meta ? meta.content : "";
+}
+
+function veraSubmitPost(url) {
+    const form = document.createElement("form");
+    form.method = "POST";
+    form.action = url;
+    const input = document.createElement("input");
+    input.type = "hidden";
+    input.name = "csrf_token";
+    input.value = veraCsrfToken();
+    form.appendChild(input);
+    document.body.appendChild(form);
+    form.submit();
+}
+
+function veraConfirmPost(url, title, text) {
+    if (window.veraPathAllowed && !window.veraPathAllowed(url, "POST")) {
+        veraShowDenied();
+        return;
+    }
+    const run = function () {
+        veraSubmitPost(url);
+    };
+    if (window.Swal) {
+        Swal.fire({
+            title: title || "Delete?",
+            text: text || "This cannot be undone.",
+            icon: "warning",
+            showCancelButton: true,
+            confirmButtonColor: "#dc3545",
+            confirmButtonText: "Delete",
+            cancelButtonText: "Cancel"
+        }).then(function (result) {
+            if (result.isConfirmed) {
+                run();
+            }
+        });
+    } else if (window.confirm(title || "Delete?")) {
+        run();
+    }
+}
+
 window.veraShowDenied = veraShowDenied;
 window.veraPathAllowed = veraPathAllowed;
+window.veraEscapeHtml = veraEscapeHtml;
+window.veraConfirmPost = veraConfirmPost;
 
 document.addEventListener("click", function (e) {
     const a = e.target.closest("a[href]");

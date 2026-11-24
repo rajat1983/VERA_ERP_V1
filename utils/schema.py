@@ -568,6 +568,219 @@ def _ensure_tenants(cur):
                     _drop_index(cur, "products", idx["INDEX_NAME"])
         _ensure_unique(cur, "products", "uq_products_tenant_sku", ("tenant_id", "sku"))
 
+    if _has_table(cur, "customers"):
+        for idx in _indexes_on_column(cur, "customers", "customer_code"):
+            if idx["NON_UNIQUE"] == 0 and idx["INDEX_NAME"] not in (
+                "uq_customers_tenant_code",
+                "PRIMARY",
+            ):
+                cur.execute(
+                    """
+                    SELECT COUNT(DISTINCT COLUMN_NAME) AS c FROM information_schema.STATISTICS
+                    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME='customers' AND INDEX_NAME=%s
+                    """,
+                    (idx["INDEX_NAME"],),
+                )
+                if cur.fetchone()["c"] == 1:
+                    _drop_index(cur, "customers", idx["INDEX_NAME"])
+        _ensure_unique(cur, "customers", "uq_customers_tenant_code", ("tenant_id", "customer_code"))
+
+    if _has_table(cur, "vendors"):
+        for idx in _indexes_on_column(cur, "vendors", "vendor_code"):
+            if idx["NON_UNIQUE"] == 0 and idx["INDEX_NAME"] not in (
+                "uq_vendors_tenant_code",
+                "PRIMARY",
+            ):
+                cur.execute(
+                    """
+                    SELECT COUNT(DISTINCT COLUMN_NAME) AS c FROM information_schema.STATISTICS
+                    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME='vendors' AND INDEX_NAME=%s
+                    """,
+                    (idx["INDEX_NAME"],),
+                )
+                if cur.fetchone()["c"] == 1:
+                    _drop_index(cur, "vendors", idx["INDEX_NAME"])
+        _ensure_unique(cur, "vendors", "uq_vendors_tenant_code", ("tenant_id", "vendor_code"))
+
+    _ensure_billing(cur)
+
+
+def _ensure_billing(cur):
+    if not _has_table(cur, "subscription_plans"):
+        cur.execute(
+            """
+            CREATE TABLE subscription_plans (
+                id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+                code VARCHAR(16) NOT NULL,
+                name VARCHAR(80) NOT NULL,
+                duration_days INT NOT NULL,
+                price_paise INT NOT NULL DEFAULT 0,
+                gst_rate DECIMAL(5,2) NOT NULL DEFAULT 18.00,
+                max_users INT NOT NULL DEFAULT 5,
+                allow_pos TINYINT(1) NOT NULL DEFAULT 1,
+                allow_production TINYINT(1) NOT NULL DEFAULT 1,
+                allow_services TINYINT(1) NOT NULL DEFAULT 1,
+                extra_user_price_paise INT NOT NULL DEFAULT 0,
+                is_public TINYINT(1) NOT NULL DEFAULT 1,
+                is_active TINYINT(1) NOT NULL DEFAULT 1,
+                created_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE KEY uq_plans_code (code)
+            )
+            """
+        )
+    _add_column(cur, "subscription_plans", "allow_pos", "allow_pos TINYINT(1) NOT NULL DEFAULT 1")
+    _add_column(cur, "subscription_plans", "allow_production", "allow_production TINYINT(1) NOT NULL DEFAULT 1")
+    _add_column(cur, "subscription_plans", "allow_services", "allow_services TINYINT(1) NOT NULL DEFAULT 1")
+    _add_column(
+        cur,
+        "subscription_plans",
+        "extra_user_price_paise",
+        "extra_user_price_paise INT NOT NULL DEFAULT 0",
+    )
+    if not _has_table(cur, "subscriptions"):
+        cur.execute(
+            """
+            CREATE TABLE subscriptions (
+                id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+                tenant_id INT NOT NULL,
+                plan_id INT NOT NULL,
+                status VARCHAR(20) NOT NULL DEFAULT 'pending',
+                starts_on DATE DEFAULT NULL,
+                ends_on DATE DEFAULT NULL,
+                grace_days INT NOT NULL DEFAULT 7,
+                extra_users INT NOT NULL DEFAULT 0,
+                extra_user_price_paise INT DEFAULT NULL,
+                created_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE KEY uq_subscriptions_tenant (tenant_id),
+                KEY idx_subscriptions_status_ends (status, ends_on)
+            )
+            """
+        )
+    if _has_table(cur, "subscriptions"):
+        _add_column(
+            cur,
+            "subscriptions",
+            "extra_users",
+            "extra_users INT NOT NULL DEFAULT 0",
+        )
+        _add_column(
+            cur,
+            "subscriptions",
+            "extra_user_price_paise",
+            "extra_user_price_paise INT DEFAULT NULL",
+        )
+    if not _has_table(cur, "subscription_events"):
+        cur.execute(
+            """
+            CREATE TABLE subscription_events (
+                id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+                tenant_id INT NOT NULL,
+                subscription_id INT DEFAULT NULL,
+                event_type VARCHAR(40) NOT NULL,
+                notes VARCHAR(255) DEFAULT NULL,
+                created_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+                KEY idx_sub_events_tenant (tenant_id)
+            )
+            """
+        )
+    if not _has_table(cur, "platform_settings"):
+        cur.execute(
+            """
+            CREATE TABLE platform_settings (
+                setting_key VARCHAR(80) NOT NULL PRIMARY KEY,
+                setting_value VARCHAR(255) NOT NULL
+            )
+            """
+        )
+    cur.execute(
+        "INSERT IGNORE INTO platform_settings (setting_key, setting_value) VALUES ('default_grace_days', '7')"
+    )
+    for key, value in (
+        ("razorpay_key_id", ""),
+        ("razorpay_key_secret", ""),
+        ("razorpay_webhook_secret", ""),
+        ("platform_gstin", ""),
+        ("support_email", "support@vera-erp.local"),
+    ):
+        cur.execute(
+            "INSERT IGNORE INTO platform_settings (setting_key, setting_value) VALUES (%s, %s)",
+            (key, value),
+        )
+    if not _has_table(cur, "platform_invoices"):
+        cur.execute(
+            """
+            CREATE TABLE platform_invoices (
+                id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+                tenant_id INT NOT NULL,
+                invoice_no VARCHAR(32) NOT NULL,
+                plan_id INT NOT NULL,
+                amount_ex_paise INT NOT NULL,
+                gst_paise INT NOT NULL,
+                total_paise INT NOT NULL,
+                gst_rate DECIMAL(5,2) NOT NULL,
+                created_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE KEY uq_platform_invoices_no (invoice_no),
+                KEY idx_platform_invoices_tenant (tenant_id)
+            )
+            """
+        )
+    if not _has_table(cur, "platform_payments"):
+        cur.execute(
+            """
+            CREATE TABLE platform_payments (
+                id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+                tenant_id INT NOT NULL,
+                invoice_id INT DEFAULT NULL,
+                gateway VARCHAR(20) NOT NULL DEFAULT 'razorpay',
+                gateway_order_id VARCHAR(80) DEFAULT NULL,
+                gateway_payment_id VARCHAR(80) DEFAULT NULL,
+                amount_paise INT NOT NULL,
+                status VARCHAR(20) NOT NULL DEFAULT 'captured',
+                created_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE KEY uq_platform_payments_gateway_id (gateway_payment_id),
+                KEY idx_platform_payments_tenant (tenant_id)
+            )
+            """
+        )
+    seeds = (
+        ("Q3", "3 months", 90, 300000),
+        ("Q6", "6 months", 180, 540000),
+        ("Q9", "9 months", 270, 720000),
+        ("Q12", "12 months", 365, 900000),
+    )
+    for code, name, days, paise in seeds:
+        cur.execute(
+            """
+            INSERT IGNORE INTO subscription_plans
+            (code, name, duration_days, price_paise, gst_rate, max_users, is_public, is_active)
+            VALUES (%s, %s, %s, %s, 18.00, 5, 1, 1)
+            """,
+            (code, name, days, paise),
+        )
+    extra_defaults = (("Q3", 20000), ("Q6", 40000), ("Q9", 60000), ("Q12", 80000))
+    for code, extra_paise in extra_defaults:
+        cur.execute(
+            """
+            UPDATE subscription_plans
+            SET extra_user_price_paise=%s
+            WHERE code=%s AND extra_user_price_paise=0
+            """,
+            (extra_paise, code),
+        )
+    cur.execute("SELECT id FROM subscription_plans WHERE code='Q12' LIMIT 1")
+    plan = cur.fetchone()
+    plan_id = plan["id"] if plan else None
+    if plan_id:
+        cur.execute(
+            """
+            INSERT INTO subscriptions (tenant_id, plan_id, status, starts_on, ends_on, grace_days)
+            SELECT t.id, %s, 'active', CURDATE(), DATE_ADD(CURDATE(), INTERVAL 365 DAY), 7
+            FROM tenants t
+            WHERE NOT EXISTS (SELECT 1 FROM subscriptions s WHERE s.tenant_id = t.id)
+            """,
+            (plan_id,),
+        )
+
 
 def ensure_roles_users():
     """Always create login tables, even if other schema ALTERs fail."""

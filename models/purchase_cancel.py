@@ -1,11 +1,12 @@
 from db import get_db_connection
+from utils.tenant import tid
 
 
 def cancel_purchase(purchase_id):
     conn = get_db_connection()
     cur = conn.cursor()
     try:
-        cur.execute("SELECT status FROM purchases WHERE id=%s", (purchase_id,))
+        cur.execute("SELECT status FROM purchases WHERE id=%s AND tenant_id=%s", (purchase_id, tid()))
         purchase = cur.fetchone()
         if not purchase:
             raise ValueError("Purchase not found.")

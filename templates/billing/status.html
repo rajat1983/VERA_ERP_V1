@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% block title %}Billing — VERA ERP{% endblock %}
+{% block page_title %}Billing{% endblock %}
+{% block extra_head %}
+<meta name="csrf-token" content="{{ get_csrf_token() }}">
+{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1>Subscription</h1>
+    <p>Plan status and platform invoices for this shop.</p>
+  </div>
+</div>
+<div class="page-card mb-3" style="max-width: 40rem;">
+  <div class="card-body">
+    <div class="mb-2 text-muted small">Status</div>
+    <div class="fs-5 mb-3">{{ access.status }}</div>
+    <div class="mb-2"><strong>Plan</strong> {{ access.plan_name or "—" }}</div>
+    <div class="mb-2"><strong>Ends</strong> {{ access.ends_on or "—" }}</div>
+    <div class="mb-2">
+      <strong>Users</strong> up to {{ access.max_users or 5 }}
+      ({{ access.included_users or access.max_users or 5 }} included
+      {% if access.extra_users %} + {{ access.extra_users }} extra{% endif %})
+    </div>
+    {% if access.extra_users %}
+    <div class="mb-2">
+      <strong>Extra users</strong>
+      {{ access.extra_users }} × {{ format_price(access.extra_user_price_paise) }}
+      = {{ format_price(access.extra_charge_paise) }} for this plan term
+    </div>
+    {% endif %}
+    <div class="mb-2">
+      <strong>Modules</strong>
+      POS {{ "on" if access.allow_pos else "off" }}
+      · Production {{ "on" if access.allow_production else "off" }}
+      · Services {{ "on" if access.allow_services else "off" }}
+    </div>
+    {% if access.message %}
+    <p class="text-muted">{{ access.message }}</p>
+    {% endif %}
+    {% include "billing/_pay.html" %}
+  </div>
+</div>
+{% if invoices %}
+<div class="page-card" style="max-width: 40rem;">
+  <div class="card-header bg-light"><strong>Invoices</strong></div>
+  <div class="table-responsive">
+    <table class="table mb-0">
+      <thead>
+        <tr><th>Invoice</th><th>Amount</th><th>Payment</th><th>Date</th></tr>
+      </thead>
+      <tbody>
+        {% for inv in invoices %}
+        <tr>
+          <td>{{ inv.invoice_no }}</td>
+          <td>{{ format_price(inv.total_paise) }}</td>
+          <td>{{ inv.status or "—" }}</td>
+          <td>{{ inv.created_at }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+{% endblock %}

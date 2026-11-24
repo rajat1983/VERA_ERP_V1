@@ -2,6 +2,7 @@ from datetime import date, datetime
 
 from db import get_db_connection
 from models import service_model
+from utils.tenant import tid
 from utils.totals import calculate_document_totals
 
 
@@ -35,8 +36,8 @@ def catalog(kind="product", category="", search=""):
         return items
     conn = get_db_connection()
     cur = conn.cursor()
-    where = ["LOWER(IFNULL(p.status, 'active')) = 'active'"]
-    params = []
+    where = ["p.tenant_id=%s", "LOWER(IFNULL(p.status, 'active')) = 'active'"]
+    params = [tid()]
     where.append("LOWER(IFNULL(p.product_type, 'finished_goods')) <> 'raw_material'")
     where.append("LOWER(IFNULL(p.product_type, 'finished_goods')) <> 'service'")
     if category:
@@ -87,10 +88,12 @@ def categories():
         """
         SELECT DISTINCT category
         FROM products
-        WHERE category IS NOT NULL AND TRIM(category) <> ''
+        WHERE tenant_id=%s
+          AND category IS NOT NULL AND TRIM(category) <> ''
           AND LOWER(IFNULL(status, 'active')) = 'active'
         ORDER BY category
-        """
+        """,
+        (tid(),),
     )
     rows = [r["category"] for r in cur.fetchall()]
     cur.close()
@@ -107,11 +110,11 @@ def current_session(user_id):
         """
         SELECT id, user_id, business_date, started_at, status
         FROM pos_sessions
-        WHERE user_id=%s AND status='open'
+        WHERE user_id=%s AND tenant_id=%s AND status='open'
         ORDER BY id DESC
         LIMIT 1
         """,
-        (user_id,),
+        (user_id, tid()),
     )
     row = cur.fetchone()
     cur.close()
@@ -138,10 +141,10 @@ def start_session(user_id):
     try:
         cur.execute(
             """
-            INSERT INTO pos_sessions (user_id, business_date, started_at, status)
-            VALUES (%s, %s, %s, 'open')
+            INSERT INTO pos_sessions (tenant_id, user_id, business_date, started_at, status)
+            VALUES (%s, %s, %s, %s, 'open')
             """,
-            (user_id, today, datetime.now()),
+            (tid(), user_id, today, datetime.now()),
         )
         conn.commit()
         session_id = cur.lastrowid
@@ -172,12 +175,12 @@ def _next_bill_no(cur):
     cur.execute(
         """
         SELECT bill_no FROM pos_sales
-        WHERE bill_no LIKE %s
+        WHERE tenant_id=%s AND bill_no LIKE %s
         ORDER BY bill_no DESC
         LIMIT 1
         FOR UPDATE
         """,
-        ("POS" + year + "%",),
+        (tid(), "POS" + year + "%"),
     )
     row = cur.fetchone()
     if row and row["bill_no"]:
@@ -262,9 +265,9 @@ def complete_sale(user_id, customer_id, items, discount_amount, payment_mode, pa
             cur.execute(
                 """
                 SELECT name, stock_qty, tax_rate, selling_price
-                FROM products WHERE id=%s FOR UPDATE
+                FROM products WHERE id=%s AND tenant_id=%s FOR UPDATE
                 """,
-                (item["product_id"],),
+                (item["product_id"], tid()),
             )
             product = cur.fetchone()
             if not product:
@@ -287,11 +290,12 @@ def complete_sale(user_id, customer_id, items, discount_amount, payment_mode, pa
         cur.execute(
             """
             INSERT INTO pos_sales
-            (bill_no, session_id, customer_id, sale_date, subtotal, discount_amount,
+            (tenant_id, bill_no, session_id, customer_id, sale_date, subtotal, discount_amount,
              gst_amount, total_amount, payment_mode, paid_amount, payment_status, created_by)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, 'Paid', %s)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, 'Paid', %s)
             """,
             (
+                tid(),
                 bill_no,
                 session_row["id"],
                 customer_id,
@@ -311,10 +315,11 @@ def complete_sale(user_id, customer_id, items, discount_amount, payment_mode, pa
             cur.execute(
                 """
                 INSERT INTO pos_sale_items
-                (pos_sale_id, product_id, item_type, name, qty, price, tax_rate, line_total, line_gst)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+                (tenant_id, pos_sale_id, product_id, item_type, name, qty, price, tax_rate, line_total, line_gst)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                 """,
                 (
+                    tid(),
                     sale_id,
                     item["product_id"],
                     item["item_type"],
@@ -331,28 +336,28 @@ def complete_sale(user_id, customer_id, items, discount_amount, payment_mode, pa
                     """
                     UPDATE products
                     SET stock_qty = stock_qty - %s
-                    WHERE id = %s AND stock_qty >= %s
+                    WHERE id = %s AND tenant_id = %s AND stock_qty >= %s
                     """,
-                    (item["qty"], item["product_id"], item["qty"]),
+                    (item["qty"], item["product_id"], tid(), item["qty"]),
                 )
                 if cur.rowcount == 0:
                     raise ValueError(f"Insufficient stock for {item['name']}.")
                 cur.execute(
                     """
                     INSERT INTO stock_movements
-                    (product_id, movement_type, quantity, reference_id, reference_type)
-                    VALUES (%s, 'sale', %s, %s, 'pos')
+                    (tenant_id, product_id, movement_type, quantity, reference_id, reference_type)
+                    VALUES (%s, %s, 'sale', %s, %s, 'pos')
                     """,
-                    (item["product_id"], -item["qty"], sale_id),
+                    (tid(), item["product_id"], -item["qty"], sale_id),
                 )
 
         for pay in cleaned_payments:
             cur.execute(
                 """
-                INSERT INTO pos_payments (pos_sale_id, payment_mode, amount)
-                VALUES (%s, %s, %s)
+                INSERT INTO pos_payments (tenant_id, pos_sale_id, payment_mode, amount)
+                VALUES (%s, %s, %s, %s)
                 """,
-                (sale_id, pay["mode"], pay["amount"]),
+                (tid(), sale_id, pay["mode"], pay["amount"]),
             )
 
         conn.commit()

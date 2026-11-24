@@ -1,5 +1,5 @@
 import re
-from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
+from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, abort
 from models import employee_model as model
 
 
@@ -82,8 +82,10 @@ def update():
     return redirect(url_for("employee.index"))
 
 
-@employee_bp.route("/delete/<int:id>")
+@employee_bp.route("/delete/<int:id>", methods=["POST"])
 def delete(id):
+    if not model.get_employee_by_id(id):
+        abort(404)
     model.delete(id)
     
     flash("Employee deleted successfully", "success")

@@ -83,9 +83,18 @@ def enforce_request():
         "auth.login",
         "auth.logout",
         "auth.register",
+        "auth.signup",
         "auth.activate",
         "platform.login",
         "platform.logout",
+        "billing.expired",
+        "billing.home",
+        "billing.create_order",
+        "billing.verify",
+        "billing.webhook",
+        "legal.terms",
+        "legal.privacy",
+        "legal.refund",
     ):
         return
     role = current_role()

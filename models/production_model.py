@@ -1,4 +1,5 @@
 from db import get_db_connection
+from utils.tenant import tid
 from datetime import datetime, timedelta
 
 
@@ -12,8 +13,8 @@ def generate_batch_code():
     cur.execute("""
         SELECT COUNT(*) AS count
         FROM production_batches
-        WHERE DATE(created_at)=CURDATE()
-    """)
+        WHERE tenant_id=%s AND DATE(created_at)=CURDATE()
+    """, (tid(),))
 
     count = cur.fetchone()["count"] + 1
 
@@ -74,9 +75,10 @@ def create_production(product_id, quantity, wastage, batch_date):
         # Create batch
         cur.execute("""
             INSERT INTO production_batches
-            (batch_code, product_id, quantity_produced, wastage, batch_date, expiry_date)
-            VALUES (%s,%s,%s,%s,%s,%s)
+            (tenant_id, batch_code, product_id, quantity_produced, wastage, batch_date, expiry_date)
+            VALUES (%s,%s,%s,%s,%s,%s,%s)
         """, (
+            tid(),
             batch_code,
             product_id,
             quantity,
@@ -94,9 +96,10 @@ def create_production(product_id, quantity, wastage, batch_date):
 
             cur.execute("""
                 INSERT INTO production_materials
-                (batch_id, raw_material_id, quantity_used)
-                VALUES (%s,%s,%s)
+                (tenant_id, batch_id, raw_material_id, quantity_used)
+                VALUES (%s,%s,%s,%s)
             """, (
+                tid(),
                 batch_id,
                 r["raw_material_id"],
                 used_qty
@@ -113,9 +116,10 @@ def create_production(product_id, quantity, wastage, batch_date):
 
             cur.execute("""
                 INSERT INTO stock_movements
-                (product_id, movement_type, quantity, reference_id, reference_type)
-                VALUES (%s,'production_out',-%s,%s,'production')
+                (tenant_id, product_id, movement_type, quantity, reference_id, reference_type)
+                VALUES (%s,%s,'production_out',-%s,%s,'production')
             """, (
+                tid(),
                 r["raw_material_id"],
                 used_qty,
                 batch_id
@@ -133,9 +137,10 @@ def create_production(product_id, quantity, wastage, batch_date):
 
         cur.execute("""
             INSERT INTO stock_movements
-            (product_id, movement_type, quantity, reference_id, reference_type)
-            VALUES (%s,'production_in',%s,%s,'production')
+            (tenant_id, product_id, movement_type, quantity, reference_id, reference_type)
+            VALUES (%s,%s,'production_in',%s,%s,'production')
         """, (
+            tid(),
             product_id,
             quantity,
             batch_id

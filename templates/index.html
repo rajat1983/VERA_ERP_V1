@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "_macros.html" import post_button %}
 {% block title %}Employees — VERA ERP{% endblock %}
 {% block page_title %}Employees{% endblock %}
 {% block content %}
@@ -49,7 +50,7 @@
               <a href="/edit/{{ emp.id }}" class="btn btn-sm btn-outline-primary">Edit</a>
               {% endif %}
               {% if can('delete') %}
-              <a href="/delete/{{ emp.id }}" class="btn btn-sm btn-outline-danger" onclick="return confirm('Delete this employee?');">Delete</a>
+              {{ post_button(url_for('employee.delete', id=emp.id), 'Delete this employee?', 'Delete', 'btn btn-sm btn-outline-danger', label='Delete') }}
               {% endif %}
             </td>
           </tr>
@@ -109,11 +110,11 @@ function autoSearch() {
       table.innerHTML = data.map(emp => `
         <tr>
           <td>${emp.id}</td>
-          <td>${emp.name}</td>
-          <td>${emp.email}</td>
+          <td>${veraEscapeHtml(emp.name)}</td>
+          <td>${veraEscapeHtml(emp.email)}</td>
           <td class="text-end table-actions">
             {% if can('edit', 'employee') %}<a href="/edit/${emp.id}" class="btn btn-sm btn-outline-primary">Edit</a>{% endif %}
-            {% if can('delete') %}<a href="/delete/${emp.id}" class="btn btn-sm btn-outline-danger">Delete</a>{% endif %}
+            {% if can('delete') %}<button type="button" class="btn btn-sm btn-outline-danger" onclick="veraConfirmPost('/delete/' + emp.id, 'Delete this employee?', 'This cannot be undone.')">Delete</button>{% endif %}
           </td>
         </tr>
       `).join("");
